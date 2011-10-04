@@ -1,0 +1,125 @@
+* {
+  margin:0;
+  padding:0;
+}
+html, body {
+  color: #333;
+  background-color: #a7a09a;
+  font-size: medium;
+  font-family: verdana,arial,helvetica,sans-serif;
+}
+body {
+  min-width: 950px;
+  text-align: center; /* to center layout-container in IE6 */
+}
+p {
+  margin: 1em 0;
+  line-height: 1.3em;
+}
+b {
+  color:#666;
+  font-weight: bold;
+}
+tt {
+  font-size: medium;
+  font-family: fixedsys,monospace;
+}
+a {
+  color:#333;
+}
+a:link, a:active {
+  color:#366;
+}
+a:visited {
+  color:#333;
+}
+a:hover {
+  color: #fff;
+  background-color: #a7a09a;
+  text-decoration:none;
+}
+h1 {
+  color: #666;
+  font-size: xx-large;
+  margin: .5em 0 .2em 0;
+}
+h2, h3, h4 {
+  color: #555;
+  margin: 1.2em 0 .5em 0;
+}
+h2 {
+  font-size: large;
+}
+h3 {
+  font-size: medium;
+}
+h4 {
+  font-size: small;
+}
+
+.smaller {
+  font-size: smaller;
+}
+
+#layout-container {
+  position: relative;
+  background-color: #eee;
+  margin: 10px auto; /* to center layout-container in modern browsers */
+  width: 950px;
+  text-align: left; /* to keep the above from being inherited */
+  overflow: hidden;
+}
+#layout-header {
+  position: relative;
+  background-color: #eee;
+  padding: 5px 10px 5px 20px;
+}
+#layout-header p {
+  font-style: italic;
+  font-weight: bold;
+  font-size: smaller;
+}
+#layout-hmenu {
+  position: relative;
+  left: 1px;
+  width: 918px;
+  background-color: #c99;
+  padding: 5px 10px 5px 20px;
+}
+#layout-main-col {
+  padding: 10px 20px 20px 20px;
+  background-color: #eee;
+  overflow: hidden;
+}
+#layout-main-col ul {
+  margin-left: 20px;
+}
+#layout-main-col ul ul {
+  margin-top: 7px;
+}
+#layout-main-col ol {
+  margin-left: 28px;
+}
+#layout-main-col li {
+  line-height: 1.3em;
+  margin-bottom: 7px;
+}
+#layout-footer {
+  clear: both;
+  position: relative;
+  padding: 5px 20px 5px 20px;
+  font-size: smaller;
+  background-color: #eee;
+  border-top: 1px solid #fff;
+  text-align: right;
+}
+
+#layout-container,
+#layout-header,
+#layout-hmenu,
+#layout-main-col,
+#layout-footer {
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+  -khtml-border-radius: 5px;
+}
