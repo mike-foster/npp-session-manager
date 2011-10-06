@@ -80,11 +80,13 @@ h4 {
   font-size: smaller;
 }
 #layout-hmenu {
+  font-size: smaller;
   position: relative;
   left: 1px;
   width: 918px;
   background-color: #c99;
   padding: 5px 10px 5px 20px;
+  text-align: right;
 }
 #layout-main-col {
   padding: 10px 20px 20px 20px;

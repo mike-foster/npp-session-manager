@@ -21,8 +21,6 @@
 #ifndef NPP_PLUGIN_SYSTEM_H
 #define NPP_PLUGIN_SYSTEM_H
 
-#define UNICODE
-#define _UNICODE
 #define MAX_PATH_1 (MAX_PATH + 1)
 #define SES_DEFAULT_NAME _T("default")
 #define SES_DEFAULT_CONTENTS "<NotepadPlus>\r\n<Session activeView=\"0\">\r\n<mainView activeIndex=\"0\">\r\n</mainView>\r\n</Session>\r\n</NotepadPlus>\r\n"

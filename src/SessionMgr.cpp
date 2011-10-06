@@ -99,7 +99,8 @@ void app_onNotify(SCNotification *pscn)
                 case NPPN_FILEOPENED: msgBox(_T("NPPN_FILEOPENED"), M_DBG); break;
                 case NPPN_FILECLOSED: msgBox(_T("NPPN_FILECLOSED"), M_DBG); break;
                 case NPPN_LANGCHANGED:     msgBox(_T("NPPN_LANGCHANGED"), M_DBG); break;
-                case NPPN_DOCORDERCHANGED: msgBox(_T("NPPN_DOCORDERCHANGED"), M_DBG); break;
+                case NPPN_DOCORDERCHANGED: msgBox(_T("NPPN_DOCORDERCHANGED"), M_DBG); break; // I'm not sure what this does
+                case NPPN_BUFFERACTIVATED: msgBox(_T("NPPN_BUFFERACTIVATED"), M_DBG); break; //
             }
         }
         switch (pscn->nmhdr.code) {
@@ -112,7 +113,7 @@ void app_onNotify(SCNotification *pscn)
             case NPPN_FILESAVED:
             case NPPN_FILEOPENED:
             case NPPN_LANGCHANGED:
-            case NPPN_DOCORDERCHANGED:
+            //case NPPN_DOCORDERCHANGED:
                 if (_appReady && !_sesLoading) {
                     if (gCfg.getAutoSave()) {
                         app_saveSession(_sesCurIdx);

@@ -22,8 +22,8 @@
 #define NPP_PLUGIN_VERSION_H
 
 
-#define RES_VERSION_B  0,3,1,0
-#define RES_VERSION_S  "0.3.1.0 Unicode"
+#define RES_VERSION_B  0,3,1,1
+#define RES_VERSION_S  "0.3.1.1 Unicode"
 #define PLUGIN_VERSION _T(RES_VERSION_S)
 
 

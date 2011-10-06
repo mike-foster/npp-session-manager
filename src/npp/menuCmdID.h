@@ -40,7 +40,7 @@
     #define    IDM_FILE_DELETE                  (IDM_FILE + 16)
     #define    IDM_FILE_RENAME                  (IDM_FILE + 17)
  
- // A mettre à jour si on ajoute nouveau menu item dans le menu "File"
+ // To be updated if new menu item(s) is (are) added in menu "File"
     #define    IDM_FILEMENU_LASTONE             IDM_FILE_RENAME
  
 #define    IDM_EDIT       (IDM + 2000)
@@ -104,6 +104,8 @@
 	#define    IDM_EDIT_COPY_BINARY                 (IDM_EDIT + 48)
 	#define    IDM_EDIT_CUT_BINARY                  (IDM_EDIT + 49)
 	#define    IDM_EDIT_PASTE_BINARY                (IDM_EDIT + 50)
+	#define    IDM_EDIT_CHAR_PANEL                  (IDM_EDIT + 51)
+	#define    IDM_EDIT_CLIPBOARDHISTORY_PANEL      (IDM_EDIT + 52)
 
     #define    IDM_EDIT_AUTOCOMPLETE                (50000 + 0)
     #define    IDM_EDIT_AUTOCOMPLETE_CURRENTFILE    (50000 + 1)
@@ -167,6 +169,7 @@
     #define    IDM_SEARCH_SETANDFINDPREV       (IDM_SEARCH + 49)
     #define    IDM_SEARCH_INVERSEMARKS         (IDM_SEARCH + 50)
 	#define    IDM_SEARCH_DELETEUNMARKEDLINES  (IDM_SEARCH + 51)
+	#define    IDM_SEARCH_FINDCHARINRANGE      (IDM_SEARCH + 52)
 
 #define IDM_VIEW    (IDM + 4000)                
     //#define    IDM_VIEW_TOOLBAR_HIDE            (IDM_VIEW + 1)
@@ -229,7 +232,7 @@
         #define    IDM_VIEW_FOLD_7    (IDM_VIEW_FOLD + 7)
         #define    IDM_VIEW_FOLD_8    (IDM_VIEW_FOLD + 8)
 
-    #define    IDM_VIEW_UNFOLD                    (IDM_VIEW + 60)        
+    #define    IDM_VIEW_UNFOLD                    (IDM_VIEW + 60)
         #define    IDM_VIEW_UNFOLD_1    (IDM_VIEW_UNFOLD + 1)
         #define    IDM_VIEW_UNFOLD_2    (IDM_VIEW_UNFOLD + 2)
         #define    IDM_VIEW_UNFOLD_3    (IDM_VIEW_UNFOLD + 3)
@@ -238,14 +241,21 @@
         #define    IDM_VIEW_UNFOLD_6    (IDM_VIEW_UNFOLD + 6)
         #define    IDM_VIEW_UNFOLD_7    (IDM_VIEW_UNFOLD + 7)
         #define    IDM_VIEW_UNFOLD_8    (IDM_VIEW_UNFOLD + 8)
-        
+    
+	#define    IDM_VIEW_FILESWITCHER_PANEL        (IDM_VIEW + 70)
+	#define    IDM_VIEW_SWITCHTO_OTHER_VIEW       (IDM_VIEW + 72)
+
+	//#define    IDM_VIEW_LAUNCH_PROJECT_PANEL      (IDM_VIEW + 80)
+	#define    IDM_VIEW_PROJECT_PANEL_1           (IDM_VIEW + 81)
+	#define    IDM_VIEW_PROJECT_PANEL_2           (IDM_VIEW + 82)
+	#define    IDM_VIEW_PROJECT_PANEL_3           (IDM_VIEW + 83)
+
     #define    IDM_VIEW_GOTO_ANOTHER_VIEW        10001
     #define    IDM_VIEW_CLONE_TO_ANOTHER_VIEW    10002
     #define    IDM_VIEW_GOTO_NEW_INSTANCE        10003
     #define    IDM_VIEW_LOAD_IN_NEW_INSTANCE     10004
 
-    #define    IDM_VIEW_SWITCHTO_OTHER_VIEW       (IDM_VIEW + 72)
-    
+
 #define    IDM_FORMAT    (IDM + 5000)
     #define    IDM_FORMAT_TODOS             (IDM_FORMAT + 1)
     #define    IDM_FORMAT_TOUNIX            (IDM_FORMAT + 2)
@@ -391,17 +401,17 @@
 
 
 #define    IDM_SETTING    (IDM + 8000)
-    #define    IDM_SETTING_TAB_SIZE                 (IDM_SETTING + 1)
-    #define    IDM_SETTING_TAB_REPLCESPACE          (IDM_SETTING + 2)
-    #define    IDM_SETTING_HISTORY_SIZE             (IDM_SETTING + 3)
-    #define    IDM_SETTING_EDGE_SIZE                (IDM_SETTING + 4)
+//    #define    IDM_SETTING_TAB_SIZE                 (IDM_SETTING + 1)
+//    #define    IDM_SETTING_TAB_REPLCESPACE          (IDM_SETTING + 2)
+//    #define    IDM_SETTING_HISTORY_SIZE             (IDM_SETTING + 3)
+//    #define    IDM_SETTING_EDGE_SIZE                (IDM_SETTING + 4)
     #define    IDM_SETTING_IMPORTPLUGIN             (IDM_SETTING + 5)
     #define    IDM_SETTING_IMPORTSTYLETHEMS         (IDM_SETTING + 6)
     #define    IDM_SETTING_TRAYICON                 (IDM_SETTING + 8)
     #define    IDM_SETTING_SHORTCUT_MAPPER          (IDM_SETTING + 9)
     #define    IDM_SETTING_REMEMBER_LAST_SESSION    (IDM_SETTING + 10)
     #define    IDM_SETTING_PREFERECE                (IDM_SETTING + 11)
-    #define    IDM_SETTING_AUTOCNBCHAR              (IDM_SETTING + 15)
+//    #define    IDM_SETTING_AUTOCNBCHAR              (IDM_SETTING + 15)
     #define	   IDM_SETTING_SHORTCUT_MAPPER_MACRO	(IDM_SETTING + 16)
 	#define	   IDM_SETTING_SHORTCUT_MAPPER_RUN		(IDM_SETTING + 17)
 	#define	   IDM_SETTING_EDITCONTEXTMENU  	    (IDM_SETTING + 18)
