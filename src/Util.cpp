@@ -63,6 +63,13 @@ void errBox(TCHAR *lpszFunction, DWORD errorCode)
     LocalFree(lpDisplayBuf);
 }
 
+INT dbgBox(const TCHAR *msg, INT i1, INT i2, INT i3)
+{
+    TCHAR buf[MAX_PATH_1];
+    StringCchPrintf(buf, MAX_PATH, _T("%s\ni1=%d\ni2=%d\ni3=%d\n"), msg, i1, i2, i3);
+    return msgBox(buf, M_DBG);
+}
+
 void createIfNotPresent(TCHAR *filename, const char *contents)
 {
     BOOL suc;
@@ -248,6 +255,26 @@ INT getLbSelData(HWND hDlg, UINT idDlgCtrl)
         i = (INT)SendMessage(hLst, LB_GETITEMDATA, i, 0);
     }
     return i;
+}
+
+INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data)
+{
+    HWND hLst;
+    INT count, i, d, idx = -1;
+    hLst = GetDlgItem(hDlg, idDlgCtrl);
+    if (hLst) {
+        count = (INT)SendMessage(hLst, LB_GETCOUNT, 0, 0);
+        if (count != LB_ERR) {
+            for (i = 0; i < count; ++i) {
+                d = (INT)SendMessage(hLst, LB_GETITEMDATA, i, 0);
+                if (d == data) {
+                    idx = i;
+                    break;
+                }
+            }
+        }
+    }
+    return idx;
 }
 
 // Set the control's position and size relative to the right and bottom edges of the dialog.

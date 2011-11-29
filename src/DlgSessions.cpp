@@ -234,16 +234,13 @@ bool fillListBox(HWND hDlg, INT sesCurIdx)
             sesCurIdx = app_getSesIndex();
         }
         for (sesIdx = 0; sesIdx < sesCount; ++sesIdx) {
-            //addSession(hLst, sesIdx, sesCurIdx);
             i = (INT)SendMessage(hLst, LB_ADDSTRING, 0, (LPARAM)app_getSesName(sesIdx));
             SendMessage(hLst, LB_SETITEMDATA, i, (LPARAM)sesIdx);
-            if (sesIdx == sesCurIdx) {
-                SendMessage(hLst, LB_SETCURSEL, i, 0);
-            }
         }
-        /* When the listbox is displayed, the focused item and selected item
-        are not the same - haven't solved that yet. */
-        //dlg::focus(hDlg, IDC_SES_LST_SES);
+        i = dlg::getLbIdxByData(hDlg, IDC_SES_LST_SES, sesCurIdx);
+        if (i >= 0) {
+            SendMessage(hLst, LB_SETCURSEL, i, 0);
+        }
         return true;
     }
     return false;

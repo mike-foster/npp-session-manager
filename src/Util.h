@@ -35,6 +35,7 @@ namespace NppPlugin {
 
 INT msgBox(const TCHAR *m, TCHAR *title = NULL, UINT options = MB_OK);
 void errBox(TCHAR *lpszFunction, DWORD errorCode);
+INT dbgBox(const TCHAR *msg, INT i1, INT i2, INT i3);
 void createIfNotPresent(TCHAR *filename, const char *contents);
 inline const TCHAR* boolToStr(const bool b) { return b ? _T("true") : _T("false"); }
 inline const bool uintToBool(UINT n) { return n == 0 ? false : true; }
@@ -62,6 +63,7 @@ bool setCheck(HWND hDlg, UINT idDlgCtrl, bool bChecked);
 bool getCheck(HWND hDlg, UINT idDlgCtrl);
 bool focus(HWND hDlg, UINT idDlgCtrl);
 INT getLbSelData(HWND hDlg, UINT idDlgCtrl);
+INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data);
 void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT xRight, INT yBottom, INT wRight, INT hBottom);
 
 } // end namespace dlg
