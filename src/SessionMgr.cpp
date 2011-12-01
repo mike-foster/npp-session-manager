@@ -100,7 +100,7 @@ void app_onNotify(SCNotification *pscn)
                 case NPPN_FILECLOSED: msgBox(_T("NPPN_FILECLOSED"), M_DBG); break;
                 case NPPN_LANGCHANGED:     msgBox(_T("NPPN_LANGCHANGED"), M_DBG); break;
                 case NPPN_DOCORDERCHANGED: msgBox(_T("NPPN_DOCORDERCHANGED"), M_DBG); break; // I'm not sure what this does
-                case NPPN_BUFFERACTIVATED: msgBox(_T("NPPN_BUFFERACTIVATED"), M_DBG); break; //
+                case NPPN_BUFFERACTIVATED: msgBox(_T("NPPN_BUFFERACTIVATED"), M_DBG); break; // Occurs twice if file in other view
             }
         }
         switch (pscn->nmhdr.code) {

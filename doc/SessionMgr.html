@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 0.3</h1>
+  <h1>Session Manager 0.4</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -94,7 +94,7 @@
         <li>when any file is saved;</li>
         <li>when a file's Language changes;</li>
         <li>before a new session is loaded;</li>
-        <li>when the order of file tabs changes;</li>
+        <!-- <li>when the order of file tabs changes;</li> -->
         <li>when any file is opened, except when files are being opened due to a session being loaded;</li>
         <li>when any file is closed, except when files are being closed due to a session being loaded or due to a Notepad++ shutdown.</li>
       </ul>
@@ -132,7 +132,7 @@
 <h2>Known Issues</h2>
 <div>
   <ul>
-    <li>When the Sessions listbox is displayed, the focused item and selected item are not the same - haven't solved that yet.</li>
+    <li>Reference user bug report (post 8 at the <a href="https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017/index/page/2">sourceforge forum</a>): "strange characters at the end of my saved session names". I have not yet discovered the cause of this. If anyone else has this problem please let us know at the forum.</li>
   </ul>
 </div>
 
@@ -144,6 +144,15 @@
 
 <h2>Revision History</h2>
 <div>
+  <h3>0.4, 29Nov2011</h3>
+  <ul>
+    <li>Changed Sessions and Settings dialogs to have TOOLWINDOW style.</li>
+    <li>Bugfix: When the Sessions listbox was displayed the focused item and selected item were not always the same.</li>
+    <li>Added getLbIdxByData and dbgBox in Util.cpp.</li>
+    <li>Added enableLIC and disableLWC to DEFAULT_INI_CONTENTS.</li>
+    <li>Commented-out saving of current session on NPPN_DOCORDERCHANGED - this event never occurs?</li>
+    <li>Moved definition of unicode constants from System.h to Makefile.</li>
+  </ul>
   <h3>0.3, 03Oct2011</h3>
   <ul>
     <li>The 0.2 source archive did not include the build files. They are included now.</li>
@@ -169,7 +178,7 @@
     <li>Sessions and Settings dialogs are sizable but do not yet save user size/position.</li>
     <li>The session list is read from disk every time the Sessions dialog is displayed. Removed "Refresh Session List" from the menu.</li>
   </ul>
-  <h3>0.1.0.0 Unicode, 03Aug2011</h3>
+  <h3>0.1, 03Aug2011</h3>
   <ul>
     <li>Initial release. Compiled with VC++ 2010. Tested with Notepad++ v5.9.2 on WinXP-SP3. Unicode only.</li>
   </ul>
