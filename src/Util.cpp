@@ -1,6 +1,6 @@
 /*
     Util.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -156,6 +156,12 @@ bool addSlash(TCHAR *p)
     return added;
 }
 
+bool dirExists(TCHAR *p)
+{
+  DWORD a = GetFileAttributes(p);
+  return (bool)(a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY));
+}
+
 } // end namespace pth
 
 //------------------------------------------------------------------------------
@@ -194,8 +200,10 @@ bool getText(HWND hDlg, UINT idDlgCtrl, TCHAR *buf)
 {
     HWND hEdit = GetDlgItem(hDlg, idDlgCtrl);
     if (hEdit) {
-        buf[0] = SES_MAX_LEN;
-        SendMessage(hEdit, EM_GETLINE, 0, (LPARAM)buf);
+        //buf[0] = SES_MAX_LEN;
+        //SendMessage(hEdit, EM_GETLINE, 0, (LPARAM)buf);
+        buf[0] = 0;
+        GetWindowText(hEdit, (LPTSTR)buf, SES_MAX_LEN);
         return true;
     }
     return false;

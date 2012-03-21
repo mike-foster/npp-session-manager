@@ -1,6 +1,6 @@
 /*
     Config.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -23,6 +23,7 @@
 #include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
+#include <shlobj.h>
 
 //------------------------------------------------------------------------------
 
@@ -139,30 +140,43 @@ BOOL Config::saveCurrent(TCHAR *s)
     return status;
 }
 
-void Config::setSesDir(TCHAR *p)
+bool Config::setSesDir(TCHAR *p)
 {
-    if (*p == 0) {
-        StringCchCopy(_directory, MAX_PATH, sys_getCfgDir());
-        StringCchCat(_directory, MAX_PATH, DEFAULT_SES_DIR);
+    TCHAR buf[MAX_PATH_1];
+    if (!p || !*p) {
+        StringCchCopy(buf, MAX_PATH, sys_getCfgDir());
+        StringCchCat(buf, MAX_PATH, DEFAULT_SES_DIR);
     }
     else {
-        StringCchCopy(_directory, MAX_PATH, p);
-        pth::addSlash(_directory);
+        //msgBox(p, M_DBG); // DEBUG
+        StringCchCopy(buf, MAX_PATH, p);
+        pth::addSlash(buf);
+        if (!pth::dirExists(buf)) {
+            if (SHCreateDirectoryEx(NULL, buf, NULL) != ERROR_SUCCESS ) {
+                errBox(_T("Config::setSesDir"), GetLastError());
+                return false; // ses dir not changed
+            }
+        }
     }
+    StringCchCopy(_directory, MAX_PATH, buf);
+    //msgBox(_directory, M_DBG); // DEBUG
+    return true;
 }
 
 void Config::setSesExt(TCHAR *p)
 {
-    if (*p == 0) {
+    if (!p || !*p) {
         StringCchCopy(_extension, MAX_PATH, DEFAULT_SES_EXT);
     }
     else {
+        //msgBox(p, M_DBG); // DEBUG
         _extension[0] = _T('\0');
         if (*p != _T('.')) {
             _extension[0] = _T('.');
             _extension[1] = _T('\0');
         }
         StringCchCat(_extension, MAX_PATH, p);
+        //msgBox(_extension, M_DBG); // DEBUG
     }
 }
 

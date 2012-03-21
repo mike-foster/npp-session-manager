@@ -1,6 +1,6 @@
 /*
     DlgSettings.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -35,10 +35,13 @@ namespace NppPlugin {
 
 namespace {
 
+TCHAR *MSG_NO_CHANGES = _T("There were no changes.");
+TCHAR *MSG_DIR_ERROR = _T("An error occurred while creating the new session directory.\nThis setting was not changed.");
+
 RECT _iniRect = {0, 0, 0, 0};
 bool _inInit, _opChanged, _dirChanged;
 
-bool onOk(HWND hDlg);
+INT onOk(HWND hDlg);
 bool onInit(HWND hDlg);
 void onResize(HWND hDlg, INT w, INT h);
 void onGetSize(HWND hDlg, LPMINMAXINFO p);
@@ -49,15 +52,22 @@ void onGetSize(HWND hDlg, LPMINMAXINFO p);
 
 INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam)
 {
+    INT okStat;
+
     if (uMessage == WM_COMMAND) {
         WORD ctrl = LOWORD(wParam);
         WORD ntfy = HIWORD(wParam);
         switch (ctrl) {
             case IDOK:
-                if (onOk(hDlg)) {
-                    EndDialog(hDlg, 1);
-                    return TRUE;
+                okStat = onOk(hDlg);
+                EndDialog(hDlg, 1);
+                if (okStat == 1) {
+                    msgBox(MSG_NO_CHANGES, M_INFO);
                 }
+                else if (okStat == 2) {
+                    msgBox(MSG_DIR_ERROR, M_WARN);
+                }
+                return TRUE;
                 break;
             case IDCANCEL:
                 EndDialog(hDlg, 0);
@@ -120,8 +130,9 @@ bool onInit(HWND hDlg)
 
 /* Get values, if changed, from dialog box controls. Update the global
    Config object and save them to the ini file. */
-bool onOk(HWND hDlg)
+INT onOk(HWND hDlg)
 {
+    INT stat = 0;
     bool change = false;
     TCHAR buf[MAX_PATH_1];
 
@@ -135,7 +146,9 @@ bool onOk(HWND hDlg)
     if (_dirChanged) {
         change = true;
         dlg::getText(hDlg, IDC_CFG_EDT_DIR, buf);
-        gCfg.setSesDir(buf);
+        if (!gCfg.setSesDir(buf)) {
+            stat = 2; // error creating ses dir
+        }
         dlg::getText(hDlg, IDC_CFG_EDT_EXT, buf);
         gCfg.setSesExt(buf);
     }
@@ -148,10 +161,10 @@ bool onOk(HWND hDlg)
         }
     }
     else {
-        msgBox(_T("There were no changes."), M_INFO);
+        stat = 1; // no changes
     }
 
-    return true;
+    return stat;
 }
 
 void onResize(HWND hDlg, INT w, INT h)

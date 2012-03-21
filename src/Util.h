@@ -1,6 +1,6 @@
 /*
     Util.h
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -48,6 +48,7 @@ TCHAR* remExt(TCHAR *p);
 TCHAR* remPath(TCHAR *p);
 TCHAR* remName(TCHAR *p);
 bool addSlash(TCHAR *p);
+bool dirExists(TCHAR *p);
 
 } // end namespace pth
 

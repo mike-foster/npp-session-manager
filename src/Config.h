@@ -1,6 +1,6 @@
 /*
     Config.h
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -48,7 +48,7 @@ class Config
     bool save();
     void readCurrent(TCHAR *buf);
     BOOL saveCurrent(TCHAR *s);
-    void setSesDir(TCHAR *p);
+    bool setSesDir(TCHAR *p);
     TCHAR *getSesDir() { return _directory; }
     void setSesExt(TCHAR *p);
     TCHAR *getSesExt() { return _extension; }

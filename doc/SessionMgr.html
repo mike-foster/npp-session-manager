@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 0.4</h1>
+  <h1>Session Manager 0.4.1</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -22,7 +22,7 @@
 
 <h2>Installation</h2>
 <div>
-  <p>Use the Notepad++ <a href="http://www.brotherstone.co.uk/npp/pm/">Plugin Manager</a> for easy installation or upgrade of Session Manager. New releases of Session Manager may be available here before they are available in the Plugin Manager. In that case use the following manual installation/upgrade procedure.</p>
+  <p>Use the Notepad++ <a href="http://www.brotherstone.co.uk/npp/pm/">Plugin Manager</a> for easy installation or upgrade of Session Manager. New releases of Session Manager may be available <a href="http://mfoster.com/npp/download.html">here</a> before they are available in the Plugin Manager. In that case use the following manual installation/upgrade procedure.</p>
   <ol>
     <li><a href="http://mfoster.com/npp/download.html">Download</a> the Session Manager plugin archive file.</li>
     <li>Exit Notepad++.</li>
@@ -82,7 +82,7 @@
   </ul>
   <p><b>Rename</b>: Rename the selected session.</p>
   <p><b>Delete</b>: Delete the selected session. This does not delete the session's files &ndash; only the session file itself, and it will be removed from the list. You will be asked for confirmation before the deletion.</p>
-  <p><b>Cancel</b>: Press the ESCape key, or click the Cancel button, to close the Session Manager dialog.</p>
+  <p><b>Close</b>: Press the ESCape key, or click the Close button, to close the Session Manager dialog.</p>
   <p>The Session Manager dialog is sizable. Drag one of the corners or sides of the dialog to resize it.</p>
 </div>
 
@@ -128,11 +128,10 @@
   </ul>
 </div>
 
-
 <h2>Known Issues</h2>
 <div>
   <ul>
-    <li>Reference user bug report (post 8 at the <a href="https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017/index/page/2">sourceforge forum</a>): "strange characters at the end of my saved session names". I have not yet discovered the cause of this. If anyone else has this problem please let us know at the forum.</li>
+    <li>Reference user bug reports regarding "strange characters in names" at <a href="https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017">the forum</a>. I think I may have fixed this bug in rev 0.4.1.</li>
   </ul>
 </div>
 
@@ -144,6 +143,12 @@
 
 <h2>Revision History</h2>
 <div>
+  <h3>0.4.1, 20Mar2012</h3>
+  <ul>
+    <li>Possible bugfix (strange characters in names): I think I have found and corrected this problem.</li>
+    <li>Changed button name from Cancel to Close on the Session Manager dialog.</li>
+    <li>If the session directory specified in the Settings dialog does not exist then it is created.</li>
+  </ul>
   <h3>0.4, 29Nov2011</h3>
   <ul>
     <li>Changed Sessions and Settings dialogs to have TOOLWINDOW style.</li>
