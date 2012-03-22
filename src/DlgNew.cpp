@@ -1,6 +1,6 @@
 /*
     DlgNew.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -67,6 +67,12 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             case IDC_NEW_RAD_OPEN:
             case IDC_NEW_RAD_COPY:
                 if (HIWORD(wParam) == BN_CLICKED) {
+                    TCHAR buf[SES_MAX_LEN];
+                    buf[0] = 0;
+                    dlg::getText(hDlg, IDC_NEW_EDT_NAME, buf);
+                    if (buf[0] == 0) {
+                        dlg::setText(hDlg, IDC_NEW_EDT_NAME, app_getSesName(dlgSes_getLbSelectedData()));
+                    }
                     dlg::focus(hDlg, IDC_NEW_EDT_NAME);
                     return TRUE;
                 }
