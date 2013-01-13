@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 0.6</h1>
+  <h1>Session Manager 0.7</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -20,7 +20,7 @@
 
 <div id='layout-main-col'>
 
-<h2>Installation</h2>
+<h2 id="Installation">Installation</h2>
 <div>
   <p>Use the Notepad++ <a href="http://www.brotherstone.co.uk/npp/pm/">Plugin Manager</a> for easy installation or upgrade of Session Manager. New releases of Session Manager may be available <a href="http://mfoster.com/npp/download.html">here</a> before they are available in the Plugin Manager. In that case use the following manual installation/upgrade procedure.</p>
   <ol>
@@ -31,48 +31,51 @@
     <li>Open the Settings dialog (<tt>alt+p,s,t</tt>) and configure Session Manager as you wish.</li>
   </ol>
   <p>That completes the manual installation/upgrade procedure, but please note...</p>
-  <p>Session Manager will create its configuration files, if they do not already exist, in the plugin configuration folder reported by Notepad++. You must configure Notepad++ to use one of the following locations.</p>
-  <ol>
-    <li><tt>%APPDATA%\Notepad++\plugins\config</tt></li>
-    <li><tt>&lt;NPP-INSTALLATION-FOLDER&gt;\plugins\config</tt></li>
-  </ol>
-  <p>By default Notepad++ will use #1. If you prefer it to use #2 then create an empty file, named <tt>doLocalConf.xml</tt>, in the Notepad++ installation folder.</p>
+  <p>Session Manager will create its configuration files, if they do not already exist, in the plugin configuration folder reported by Notepad++. For more information see the <a href="https://sourceforge.net/apps/mediawiki/notepad-plus/index.php?title=Notepad%2B%2B_Install_Folder">Installation Folder</a> and <a href="https://sourceforge.net/apps/mediawiki/notepad-plus/index.php?title=Configuration_Files">Configuration Files</a> Notepad++ wiki pages (search for "doLocalConf.xml" and "allowAppDataPlugins.xml").</p>
 </div>
 
-<h2>Basic Concepts</h2>
+<h2 id="BasicConcepts">Basic Concepts</h2>
 <div>
   <ul>
     <li><b>Session</b>: A Notepad++ session consists of the pathnames of all the currently open files, their containing view, their tab order, their language setting, their cursor position, and more. This information is stored in an XML file and is referred to as a session file.</li>
-    <li><b>Selected</b>: The selected session is the one that is highlighted in the Sessions list of the Session Manager dialog.</li>
-    <li><b>Current</b>: The current session is the active session &ndash; the one most recently loaded from the Sessions list.</li>
+    <li><b>Selected</b>: The selected session is the highlighted session in the list of session names on the Sessions dialog.</li>
+    <li><b>Current</b>: The current session is the active session &ndash; the one most recently loaded.</li>
+    <li><b>Previous</b>: The previous session is the prior current session.</li>
     <li><b>Default</b>: When there is no current session a default session is used. It is located in the Session Manager configuration folder.</li>
     <li><b>Loading</b>: In general when loading a session, the current session will be saved then all its files closed. The selected sessions' files will be opened and it then becomes the current session. See below for options that affect how a session is loaded.</li>
     <li><b>Saving</b>: Saving a session means saving information about the currently open files in a session file. Saving a session does not save the session's open files.</li>
   </ul>
 </div>
 
-<h2>Session Manager Plugin Menu</h2>
+<h2 id="PluginMenu">Plugin Menu</h2>
 <div>
-  <p>Configure your own shortcuts for Session Manager plugin menu items with the Notepad++ Shortcut Mapper. The default menu shortcuts are shown below.</p>
+  <p>You can customize Session Manager's plugin menu items (see <a href="#settings-ini">settings.ini</a>). The default labels and shortcuts follow. Configure your own shortcuts with the Notepad++ Shortcut Mapper.</p>
+  <h3>Main (Plugin) Menu Item</h3>
   <ul>
-    <li><b>Sessions</b> (<tt>alt+p,s,s</tt>): Opens the Session Manager dialog.</li>
-    <li><b>Settings</b> (<tt>alt+p,s,t</tt>): Opens the Session Manager Settings dialog.</li>
-    <li><b>Save</b> (<tt>alt+p,s,v</tt>): Saves the current (or default) session.</li>
+    <li><b>Session Manager</b> (<tt>alt+p,s</tt>): Opens the Session Manager submenu.</li>
+  </ul>
+  <h3>Submenu Items</h3>
+  <ul>
+    <li><b>Sessions</b> (<tt>alt+p,s,s</tt>): Opens the Sessions dialog.</li>
+    <li><b>Settings</b> (<tt>alt+p,s,t</tt>): Opens the Settings dialog.</li>
+    <li><b>Save current</b> (<tt>alt+p,s,v</tt>): Saves the current (or default) session.</li>
+    <li><b>Load previous</b> (<tt>alt+p,s,p</tt>): Loads the previous session.</li>
     <li><b>Help</b> (<tt>alt+p,s,h</tt>): Opens this HTML help file in your default web browser.</li>
     <li><b>About</b> (<tt>alt+p,s,a</tt>): Displays Session Manager version and other information.</li>
   </ul>
 </div>
 
-<h2>Session Manager Dialog</h2>
+<h2 id="SessionsDialog">Sessions Dialog</h2>
 <div>
-  <p><b>Load</b>: To load a session double-click a session name in the list, or select it then click the Load button. It then becomes the current session.</p>
-  <p><b>Default</b>: Load the default session.</p>
-  <p>The following options affect how a session is loaded with either the Load or Default buttons. They provide for the combining of sessions.</p>
+  <p><b>Load</b>: To load a session double-click a session name in the list, or select it then click the <tt>Load</tt> button. It then becomes the current session.</p>
+  <p><b>Previous</b>: Loads the previous session.</p>
+  <p><b>Default</b>: Loads the default session.</p>
+  <p>The following options affect how a session is loaded. They provide for the combining of sessions.</p>
   <ul>
-    <li><b>Load into the current session</b>: If this option is enabled the selected session will be loaded but it will not become the current session, although its files will be closed unless you enable the next option:</li>
-    <li><b>Load without closing open files</b>: If this option is enabled the currently opened files will not be closed before the selected session is loaded. This option is enabled automatically when the above option is enabled.</li>
+    <li><b>Load into the current session</b>: If this option is checked the selected session will be loaded but it will not become the current session, although the currently open files will be closed unless you check the next option.</li>
+    <li><b>Load without closing open files</b>: If this option is checked the currently open files will not be closed before the selected session is loaded. For convenience this option is checked automatically when the above option is checked.</li>
   </ul>
-  <p><b>Save</b>: Save the current (or default) session.</p>
+  <p><b>Save</b>: Saves the current (or default) session.</p>
   <p><b>New</b>: Creating a new session does not load the new session &ndash; it creates it, adds it to the list and selects it. You can then load it if you wish. There are three options for creating a new session.</p>
   <p></p>
   <ul>
@@ -80,16 +83,16 @@
     <li><b>From the currently open files</b>: Create a new session containing the currently open files.</li>
     <li><b>By copying the selected session</b>: Create a new session by copying the selected session.</li>
   </ul>
-  <p><b>Rename</b>: Rename the selected session.</p>
-  <p><b>Delete</b>: Delete the selected session. This does not delete the session's files &ndash; only the session file itself, and it will be removed from the list. You will be asked for confirmation before the deletion.</p>
-  <p><b>Close</b>: Press the ESCape key, or click the Close button, to close the Session Manager dialog.</p>
-  <p>The Session Manager dialog is sizable. Drag one of the corners or sides of the dialog to resize it.</p>
+  <p><b>Rename</b>: Renames the selected session.</p>
+  <p><b>Delete</b>: Deletes the selected session. This does not delete the session's files &ndash; only the session file itself, and it will be removed from the list. You will be asked for confirmation before the deletion.</p>
+  <p><b>Close</b>: Press the ESCape key, or click the <tt>Close</tt> button, to close the Sessions dialog.</p>
+  <p>The Sessions dialog is resizable and remembers its size. Drag one of the corners or sides of the dialog to resize it.</p>
 </div>
 
-<h2>Session Manager Settings Dialog</h2>
+<h2 id="SettingsDialog">Settings Dialog</h2>
 <div>
   <ul>
-    <li><b>Auto Save</b>: If this is enabled the current session is saved...
+    <li><b>Auto save</b>: If this is enabled the current session is saved...
       <ul>
         <li>when any file is saved;</li>
         <li>when a file's Language changes;</li>
@@ -98,31 +101,74 @@
         <li>when any file is opened, except when files are being opened due to a session being loaded;</li>
         <li>when any file is closed, except when files are being closed due to a session being loaded or due to a Notepad++ shutdown.</li>
       </ul>
-      <p>If <tt>Auto Save</tt> is disabled sessions will only be saved when you select Save from the plugin menu or click the Save button on the Session Manager dialog. The default value for <tt>Auto Save</tt> is <tt>1</tt> (enabled).</p>
+      <p>If <tt>Auto save</tt> is disabled sessions will only be saved when you select <tt>Save current</tt> from the plugin menu or click the <tt>Save</tt> button on the Sessions dialog. The default value for <tt>Auto save</tt> is <tt>1</tt> (enabled).</p>
     </li>
-    <li><b>Auto Load</b>: If this is enabled the most recently opened session will be loaded when Notepad++ starts up. If you enable <tt>Auto Load</tt> you should disable the Notepad++ <i class="smaller">Remember current session for next launch</i> feature. The default value for <tt>Auto Load</tt> is <tt>0</tt> (disabled).</li>
-    <li><b>Enable 'Load into current'</b>: If this is enabled the <tt>Load into the current session</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
-    <li><b>Disable 'Load without closing'</b>: If this is enabled the <tt>Load without closing open files</tt> checkbox will be unchecked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
-    <li><b>Folder</b> and <b>Extension</b>: The folder and file name extension for Notepad++ session files. Set to an empty string to get the default values. By default Session Manager will use this folder: <tt>plugins\config\SessionMgr\sessions</tt> and this extension: <tt>.npp-session</tt>.</li>
-    <li><b>saveDelay</b>: This property is not accessible via the Settings dialog but must be edited directly in the ".ini" file. You probably will not need to change this property, but if you do... Session Manager does not immediately save the current session when a file is closed. It must determine whether a shutdown is in progress, in which case all files will be closed but we don't want to save the session then. When Notepad++ is about to shutdown it sends file-closed notifications before it sends the shutdown notification. To work around this, when a file is closed Session Manager waits for <tt>saveDelay</tt> seconds. If the shutdown notification has not been received at the end of that time then the current session is saved. The default value is <tt>3</tt>.</li>
+    <li><b>Auto load</b>: If this is enabled the most recently opened session will be loaded when Notepad++ starts up. If you enable <tt>Auto load</tt> you should disable the Notepad++ <i class="smaller">Remember current session for next launch</i> feature. The default value for <tt>Auto load</tt> is <tt>0</tt> (disabled).</li>
+    <li><b>Load into current</b>: If this is enabled the <tt>Load into the current session</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
+    <li><b>Load without closing</b>: If this is enabled the <tt>Load without closing open files</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
+    <li><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default value is <tt>0</tt>.</li>
+    <li><b>Show in status bar</b>: If this is enabled the previous and current session names will be displayed in the Notepad++ status bar. The default value is <tt>0</tt>.</li>
+    <li><b>Session files folder</b>: This specifies the location of the session files Session Manager will display in the Sessions dialog. Click the <tt>...</tt> button to browse for a folder. Set to an empty string to get the default value: <tt>plugins\config\SessionMgr\sessions</tt>.</li>
+    <li><b>Session file extension</b>: This specifies the file name extension of the session files Session Manager will display in the Sessions dialog. Think of it as a filter. Set to an empty string to get the default value: <tt>.npp-session</tt>.</li>
   </ul>
-  <p>Click the OK button to save and activate your changes. Press the ESCape key, or click the Cancel button, to cancel your changes and close the Settings dialog.</p>
-  <p>The Settings dialog is sizable. Drag one of the corners or sides of the dialog to resize it.</p>
+  <p>Click the <tt>OK</tt> button to save and activate your changes. Press the ESCape key, or click the <tt>Cancel</tt> button, to cancel your changes and close the Settings dialog.</p>
+  <p>The Settings dialog is resizable and remembers its size. Drag one of the corners or sides of the dialog to resize it.</p>
 </div>
 
-<h2>Tips &amp; Ideas</h2>
+<h2 id="settings-ini">settings.ini</h2>
 <div>
-  <p>Here are some tips and ideas for utilizing Session Manager.</p>
+  <p>The following properties are not accessible via the Settings dialog but must be edited directly in the "settings.ini" file.</p>
   <ul>
-    <li><b>Shortcuts</b>: Get in the habit of using the keyboard shortcuts, instead of the mouse, to open Session Manager dialogs. Open the Sessions dialog with <tt>alt+p,s,s</tt>. Open the Settings dialog with <tt>alt+p,s,t</tt>. Or, assign your own shortcuts with the Notepad++ Shortcut Mapper.</li>
+    <li><b>saveDelay</b>: You probably will not need to change this property, but if you do... Session Manager does not immediately save the current session when a file is closed. It must determine whether a shutdown is in progress, in which case all files will be closed but we don't want to save the session then. When Notepad++ is about to shutdown it sends file-closed notifications before it sends the shutdown notification. To work around this, when a file is closed Session Manager waits for <tt>saveDelay</tt> seconds. If the shutdown notification has not been received at the end of that time then the current session is saved. The default value is <tt>3</tt>.</li>
+    <li><b>sessionsW</b>, <b>sessionsH</b>, <b>settingsW</b> and <b>settingsH</b>: These properties are in the <tt>[dialog]</tt> section. They store the sizes of the Sessions and Settings dialogs. You can set these to <tt>0</tt> to reset their sizes to the defaults.</li>
+    <li>
+      <b>main</b>, <b>sub1</b>, <b>sub2</b>, etc.: These properties are in the <tt>[menu]</tt> section. They optionally define the labels for the Session Manager plugin menu. Session Manager will use default values (see <a href="#PluginMenu">Plugin Menu</a>) for any items not defined here. Here is an example of customizing the menu items:
+      <pre>
+[menu]
+main=Session &amp;Manager
+sub1=&amp;Open...
+sub2=&amp;Configure...
+sub3=&amp;Save current
+sub4=&amp;Load previous
+sub5=&amp;Help
+sub6=&amp;About...</pre>
+    </li>
+    <li><b>debug</b>: This property is in the <tt>[debug]</tt> section. This is not useful unless you are debugging SessionMgr itself. The default value is <tt>0</tt>.</li>
+  </ul>
+</div>
+
+<h2 id="Tips">Tips</h2>
+<div>
+  <p>Here are some tips for using Session Manager more efficiently.</p>
+  <ul>
+    <li><b>Shortcuts</b>: Get in the habit of using the keyboard shortcuts, instead of the mouse, to open Session Manager dialogs.</li>
     <li><b>Favorites</b>: Make a session containing the favorite file(s). Any time you need those files just click "Load into the current session" then load that session.</li>
-    <li><b>Categories</b>: The Sessions list is sorted alphabetically, so name your sessions with categorized prefixes or suffixes. This will group related sessions together in the list. For example, I prefix my "favorites" sessions with an underscore because I want those to appear at the top of the list. I have many web-related projects and I prefix those session names with "www_". An example of using a suffix is: "my-project_trunk", "my-project_rev-123", etc. That keeps them grouped together in the list.</li>
-    <li><b>Large Projects</b>: Sometimes I'll have a large project and end up creating many different sessions for it. Usually it's the type of project that may last for a relatively long time, but after the project is finished I don't want all those sessions cluttering the Sessions list &ndash; but I also may not want to delete all of them. Here's how Session Manager can help in this situation: use different session folders, and/or file name extensions. Using a different session file name extension works quite well. It keeps all session files in one folder and then the extension acts as a filter for what sessions are displayed in the Sessions list. Also, a different default session is created for each different extension. Changing the extension back to the default is easy &ndash; just leave the extension field blank, at the Settings dialog, and the default will be used.</li>
-    <li><b>Usage Scenarios</b>: The default session is a new feature and is still experimental. It has made me consider two different fundamental ways of using Session Manager.
+    <li><b>Categories</b>: The Sessions list is sorted alphabetically so name your sessions with categorized prefixes or suffixes. This will group related sessions together in the list. For example, I prefix my "favorites" sessions with an underscore because I want those to appear at the top of the list. I have many web-related projects and I prefix those session names with "www_". An example of using a suffix is: "my-project_trunk", "my-project_rev-123", etc. That keeps them grouped together in the list.</li>
+    <li><b>Large Projects</b>: Sometimes I'll have a large project and end up creating many different sessions for it. Usually it's the type of project that may last for a relatively long time, but after the project is finished I don't want all those sessions cluttering the Sessions list &ndash; but I also may not want to delete all of them. Here's how Session Manager can help in this situation: use different session folders, and/or file name extensions. Using a different session file name extension works quite well. It keeps all session files in one folder and then the extension acts as a filter for what sessions are displayed in the Sessions list. Also, a different default session is created for each different extension. Changing the extension back to the default is easy &ndash; just leave the extension field blank, in the Settings dialog, and the default will be used.</li>
+    <li><b>Usage Scenarios</b>: Here are two basic usage scenarios.
       <ul>
-        <li>Enable <tt>Auto Load</tt> so that some session is always current. Loaded sessions become current and change to always reflect the latest changes to that session. This scenario does not use the default session.</li>
-        <li>Disable <tt>Auto Load</tt>, enable <tt>Enable 'Load into current'</tt> and enable <tt>Disable 'Load without closing'</tt>. In this scenario the default session is always current. When other sessions are loaded they are loaded into the default session. Other sessions do not change but always contain the same files, and the default session always represents the most recent editing session.</li>
-        <li>Of course, the above scenarios are not necessarily mutually exclusive. You can utilize a combination of both by manually enabling/disabling the relevant options.</li>
+        <li>Enable the <tt>Auto load</tt> setting so that some session is always current. Loaded sessions become current and change to always reflect the latest changes to that session. This scenario does not use the default session.</li>
+        <li>Disable the <tt>Auto load</tt> setting, enable the <tt>Load into current</tt> setting and disable the <tt>Load without closing</tt> setting. In this scenario the default session is always current. When other sessions are loaded they are loaded into the default session. Other sessions do not change but always contain the same files, and the default session always represents the most recent editing session.</li>
+      </ul>
+    </li>
+    <li><b>Context Menu</b>: This great tip was contributed by danrathbun. He shows us how to add a Session Manager submenu to the context (right-click) menu.
+      <ul>
+        <li>From the Notepad++ main menu select <tt>Settings</tt> then <tt>Edit Popup ContextMenu</tt>.</li>
+        <li>Insert the following. Where you insert it will determine the submenu's position in the Context Menu. The values of the <tt>PluginEntryName</tt> attributes must match the Session Manager main (plugin) menu item name. The values of the <tt>PluginCommandItemName</tt> attributes must match the Session Manager submenu item names. You can customize the values of the <tt>FolderName</tt> and <tt>ItemNameAs</tt> attributes.
+<pre>&lt;Item FolderName="Session &Manager" PluginEntryName="Session Manager" PluginCommandItemName="Sessions..." ItemNameAs="&Open..."/&gt;
+&lt;Item FolderName="Session &Manager" PluginEntryName="Session Manager" PluginCommandItemName="Settings..." ItemNameAs="&Configure..."/&gt;
+&lt;Item FolderName="Session &Manager" PluginEntryName="Session Manager" PluginCommandItemName="Save current" ItemNameAs="&Save current"/&gt;
+&lt;Item FolderName="Session &Manager" PluginEntryName="Session Manager" PluginCommandItemName="Load previous" ItemNameAs="&Load previous"/&gt;
+&lt;Item FolderName="Session &Manager" id="0"/&gt;
+&lt;Item FolderName="Session &Manager" PluginEntryName="Session Manager" PluginCommandItemName="Help" ItemNameAs="&Help"/&gt;
+&lt;Item FolderName="Session &Manager" PluginEntryName="Session Manager" PluginCommandItemName="About..." ItemNameAs="&About..."/&gt;</pre>
+        </li>
+        <li>Optionally you can make the following change so that <tt>right-click,s</tt> properly executes "Select All", since "Session Manager" also begins with an "S". Change this line:
+<pre>&lt;Item MenuEntryName="Edit" MenuItemName="Select All"/&gt;</pre>
+To this:
+<pre>&lt;Item MenuEntryName="Edit" MenuItemName="Select All" ItemNameAs="&Select All"/&gt;</pre>
+        </li>
+        <li>Save your changes to the "contextMenu.xml" file and restart Notepad++. Now try <tt>right-click,m,o</tt>. There are many possibilites. Configure it to what is most convenient for yourself. Read more about this tip at the forum. This discussion began at <a href='https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017/index/page/3'>post #17</a>.</li>
       </ul>
     </li>
   </ul>
@@ -137,14 +183,29 @@
 </div>
 -->
 
-<h2>Your feedback is very welcome!</h2>
+<h2 id="Feedback">Your feedback is very welcome!</h2>
 <div>
   <p>There is an ongoing <a href='https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017'>discussion at sourceforge</a>, join us!</p>
   <p>A very special <i>thank you!</i> to those who are testing and providing excellent feedback at the forum.</p>
 </div>
 
-<h2>Revision History</h2>
+<h2 id="RevisionHistory">Revision History</h2>
 <div>
+  <h3>0.7, 13Jan2013</h3>
+  <ul>
+    <li>This is a candidate for version 1.0.</li>
+    <li>The Sessions dialog and the Settings dialog now remember their sizes after being resized.</li>
+    <li>The <i>previous</i> session is now remembered and can be loaded via a new menu option, "Load previous", and a new button on the Sessions dialog, "Previous".</li>
+    <li>The name of the current session is now prepended to the text in the Notepad++ title bar. This is enabled by a new option on the Settings dialog, "Show in title bar".</li>
+    <li>The names of the current and previous sessions are now displayed in the Notepad++ status bar. This is enabled by a new option on the Settings dialog, "Show in status bar".</li>
+    <li>The labels for the Session Manager plugin menu are now optionally defined in the settings.ini file.</li>
+    <li>The setting "Enable 'Load into current'" was renamed to "Load into current". The setting "Disable 'Load without closing'" was simplified to "Load without closing".</li>
+    <li>There is now a <i>folder browse</i> button next to the "Session files folder" edit control on the Settings dialog.</li>
+  </ul>
+  <h3>0.6.0.1, 17Jun2012</h3>
+  <ul>
+    <li>Added danrathbun's Context Menu tip to the Help file. There were no code changes.</li>
+  </ul>
   <h3>0.6, 21Mar2012</h3>
   <ul>
     <li>The bugfix in the previous release has been confirmed.</li>
@@ -174,7 +235,7 @@
     <li>A Save button has been added to the Sessions dialog. It saves the current (or default) session.</li>
     <li>Sessions are auto-saved on two additional NPP events: NPPN_LANGCHANGED and NPPN_DOCORDERCHANGED.</li>
     <li>The second option for creating a new session has changed to "From the currently open files", which basically is a session "save as" feature.</li>
-    <li>Previously if you opened files by passing them on the Notepad++ command line and <tt>Auto Load</tt> was enabled then Session Manager would close the file(s) Notepad++ had just opened (passed on the command line). This has been corrected. Now Session Manager will not close open files when auto-loading.</li>
+    <li>Previously if you opened files by passing them on the Notepad++ command line and <tt>Auto load</tt> was enabled then Session Manager would close the file(s) Notepad++ had just opened (passed on the command line). This has been corrected. Now Session Manager will not close open files when auto-loading.</li>
     <li>Increased the initial width of the Settings dialog. Removed all debug properties except one, named "debug". Added two more boolean properties: enableLIC and disableLWC.</li>
     <li>Add a trailing slash, if needed, to the user-entered session folder. Add a leading dot, if needed, to the user-entered session file extension.</li>
     <li>Made general improvements to the code. Fixed a dependency-related bug in the Makefile. Made big improvements to the help file.</li>

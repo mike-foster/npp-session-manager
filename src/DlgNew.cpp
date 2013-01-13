@@ -1,6 +1,6 @@
 /*
     DlgNew.cpp
-    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -139,21 +139,21 @@ bool onOk(HWND hDlg)
     return succ;
 }
 
-/* Create a new, empty session. */
+/* Creates a new, empty session. */
 bool newAsEmpty(TCHAR *dstPathname)
 {
     createIfNotPresent(dstPathname, SES_DEFAULT_CONTENTS);
     return true;
 }
 
-/* Create a new session containing the currently open files. */
+/* Creates a new session containing the currently open files. */
 bool newFromOpen(TCHAR *dstPathname)
 {
     SendMessage(sys_getNppHwnd(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)dstPathname);
     return true;
 }
 
-/* Create a new session by copying the selected session. */
+/* Creates a new session by copying the selected session. */
 bool newByCopy(TCHAR *dstPathname)
 {
     bool status = false;

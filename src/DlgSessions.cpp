@@ -1,6 +1,6 @@
 /*
     DlgSessions.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -28,6 +28,9 @@
 #include "Util.h"
 #include "res\resource.h"
 
+// DEBUG
+#include <strsafe.h>
+
 //------------------------------------------------------------------------------
 
 namespace NppPlugin {
@@ -37,7 +40,7 @@ namespace NppPlugin {
 namespace {
 
 INT _lbSelectedData;
-RECT _iniRect = {0, 0, 0, 0};
+INT _minWidth = 0, _minHeight = 0;
 
 bool onInit(HWND hDlg);
 bool onOk(HWND hDlg);
@@ -45,9 +48,10 @@ bool onNew(HWND hDlg);
 bool onRename(HWND hDlg);
 bool onDelete(HWND hDlg);
 bool onDefault(HWND hDlg);
+bool onPrevious(HWND hDlg);
 bool fillListBox(HWND hDlg, INT sesCurIdx = SES_CURRENT);
 void onResize(HWND hDlg, INT dlgW, INT dlgH);
-void onGetSize(HWND hDlg, LPMINMAXINFO p);
+void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 
 } // end namespace
 
@@ -71,6 +75,21 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 if (onOk(hDlg)) {
                     return TRUE;
                 }
+                break;
+            case IDC_SES_BTN_PRV:
+                if (onPrevious(hDlg)) {
+                    return TRUE;
+                }
+                break;
+            case IDC_SES_BTN_DEF:
+                if (onDefault(hDlg)) {
+                    return TRUE;
+                }
+                break;
+            case IDC_SES_BTN_SAVE:
+                app_saveSession(SES_CURRENT);
+                dlg::focus(hDlg, IDC_SES_BTN_LOAD);
+                return TRUE;
                 break;
             case IDC_SES_BTN_NEW:
                 if (ntfy == BN_CLICKED) {
@@ -96,16 +115,6 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                     }
                 }
                 break;
-            case IDC_SES_BTN_DEF:
-                if (onDefault(hDlg)) {
-                    return TRUE;
-                }
-                break;
-            case IDC_SES_BTN_SAVE:
-                app_saveSession(SES_CURRENT);
-                dlg::focus(hDlg, IDC_SES_BTN_LOAD);
-                return TRUE;
-                break;
             case IDCANCEL:
             case IDC_SES_BTN_CANCEL:
                 EndDialog(hDlg, 0);
@@ -123,7 +132,7 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
         onResize(hDlg, LOWORD(lParam), HIWORD(lParam));
     }
     else if (uMessage == WM_GETMINMAXINFO) {
-        onGetSize(hDlg, (LPMINMAXINFO)lParam);
+        onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
     }
     else if (uMessage == WM_INITDIALOG) {
         if (onInit(hDlg)) {
@@ -147,44 +156,61 @@ INT dlgSes_getLbSelectedData()
 
 namespace {
 
+/* Determines minimum dialog size. Populates controls. Resizes, centers and
+   displays the dialog window.
+   XXX Adding 6 and 24 is magic. */
 bool onInit(HWND hDlg)
 {
     bool ret = false;
-    dlg::setText(hDlg, IDC_SES_TXT_CUR, app_getSesName(SES_CURRENT));
-    dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.getEnableLIC());
-    if (gCfg.getDisableLWC()) {
-        dlg::setCheck(hDlg, IDC_SES_CHK_LWC, false);
+
+    if (_minWidth == 0) {
+        RECT rect = {0, 0, IDD_SES_W, IDD_SES_H};
+        MapDialogRect(hDlg, &rect);
+        _minWidth = rect.right - rect.left + 6;
+        _minHeight = rect.bottom - rect.top + 24;
     }
+    dlg::setText(hDlg, IDC_SES_TXT_CUR, app_getSesName(SES_CURRENT));
+    dlg::setText(hDlg, IDC_SES_TXT_PRV, app_getSesName(SES_PREVIOUS));
+    dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.getLoadIntoCurrent());
+    dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.getLoadWithoutClosing());
+
     if (fillListBox(hDlg)) {
-        dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, TRUE);
+        INT w, h;
+        gCfg.readSesDlgSize(&w, &h);
+        if (w <= 0 || h <= 0) {
+            w = 0;
+            h = 0;
+        }
+        else {
+            w += 6;
+            h += 24;
+        }
+        dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
         ShowWindow(hDlg, SW_SHOW);
         ret = true;
     }
-    GetWindowRect(hDlg, &_iniRect); // initial rect of dialog
+
     return ret;
 }
 
 bool onOk(HWND hDlg)
 {
-    INT selIdx;
-    bool lic, lwc;
-
-    selIdx = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    lic = dlg::getCheck(hDlg, IDC_SES_CHK_LIC);
-    lwc = dlg::getCheck(hDlg, IDC_SES_CHK_LWC);
     EndDialog(hDlg, 0);
-    app_loadSession(selIdx, lic, lwc);
+    app_loadSession(dlg::getLbSelData(hDlg, IDC_SES_LST_SES), dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
 }
 
 bool onDefault(HWND hDlg)
 {
-    bool lic, lwc;
-
-    lic = dlg::getCheck(hDlg, IDC_SES_CHK_LIC);
-    lwc = dlg::getCheck(hDlg, IDC_SES_CHK_LWC);
     EndDialog(hDlg, 0);
-    app_loadSession(SES_DEFAULT, lic, lwc);
+    app_loadSession(SES_DEFAULT, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
+    return true;
+}
+
+bool onPrevious(HWND hDlg)
+{
+    EndDialog(hDlg, 0);
+    app_loadSession(SES_PREVIOUS, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
 }
 
@@ -255,24 +281,39 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     MapDialogRect(hDlg, &r1);
     // Resize the session list
     dlg::adjToEdge(hDlg, IDC_SES_LST_SES, dlgW, dlgH, -1, -1, r0.right, r0.bottom);
-    // Resize the Current text
+    // Resize the Current and Previous text
     dlg::adjToEdge(hDlg, IDC_SES_TXT_CUR, dlgW, dlgH, -1, -1, r0.left, -1);
+    dlg::adjToEdge(hDlg, IDC_SES_TXT_PRV, dlgW, dlgH, -1, -1, r0.left, -1);
     // Move the buttons
-    INT btns[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_DEF, IDC_SES_BTN_SAVE, IDC_SES_BTN_CANCEL};
-    for (int i = 0; i < 7; ++i) {
+    INT btns[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_DEF, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_CANCEL};
+    int len = sizeof btns / sizeof INT;
+    for (int i = 0; i < len; ++i) {
         dlg::adjToEdge(hDlg, btns[i], dlgW, dlgH, r0.left, -1, -1, -1);
     }
     // Move the checkboxes
     dlg::adjToEdge(hDlg, IDC_SES_CHK_LIC, dlgW, dlgH, -1, r1.top, -1, -1);
     dlg::adjToEdge(hDlg, IDC_SES_CHK_LWC, dlgW, dlgH, -1, r0.top, -1, -1);
+    // Save new dialog size
+    gCfg.saveSesDlgSize(dlgW, dlgH);
+
+    if (gCfg.debug) {
+        TCHAR msgBuf[101];
+        TCHAR numBuf[21];
+        StringCchCopy(msgBuf, 100, _T("DlgSessions: w="));
+        _itot_s(dlgW, numBuf, 20, 10);
+        StringCchCat(msgBuf, 100, numBuf);
+        StringCchCat(msgBuf, 100, _T(", h="));
+        _itot_s(dlgH, numBuf, 20, 10);
+        StringCchCat(msgBuf, 100, numBuf);
+        SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)msgBuf);
+    }
 }
 
-void onGetSize(HWND hDlg, LPMINMAXINFO p)
+/* Sets the minimum size the user can resize to. */
+void onGetMinSize(HWND hDlg, LPMINMAXINFO p)
 {
-    if (_iniRect.left > 0) {
-        p->ptMinTrackSize.x = _iniRect.right - _iniRect.left;
-        p->ptMinTrackSize.y = _iniRect.bottom - _iniRect.top;
-    }
+    p->ptMinTrackSize.x = _minWidth;
+    p->ptMinTrackSize.y = _minHeight;
 }
 
 } // end namespace

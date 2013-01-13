@@ -1,6 +1,6 @@
 /*
     Menu.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -36,26 +36,29 @@ namespace NppPlugin {
 
 namespace {
 
-#define PLUGIN_ABOUT     PLUGIN_FULL_NAME SPACE_STR PLUGIN_VERSION _T("\nA plugin for Notepad++\nhttp://mfoster.com/npp/")
+#define PLUGIN_MENU_NAME _T("&") PLUGIN_FULL_NAME
+#define PLUGIN_ABOUT PLUGIN_FULL_NAME SPACE_STR PLUGIN_VERSION _T("\nA plugin for Notepad++\nhttp://mfoster.com/npp/")
 
 // Menu callback functions
 extern "C" {
     void cbSessions();
     void cbSettings();
-    void cbSave();
+    void cbSaveCurrent();
+    void cbLoadPrevious();
     void cbHelp();
     void cbAbout();
 };
 
-// Menu items
-const INT _mnuItmCnt = 6;
-FuncItem _mnuItems[] = {
-    { _T("&Sessions..."), cbSessions, 0, false, NULL },
-    { _T("Se&ttings..."), cbSettings, 0, false, NULL },
-    { _T("Sa&ve"),        cbSave,     0, false, NULL },
-    { EMPTY_STR,          NULL,       0, false, NULL },
-    { _T("&Help"),        cbHelp,     0, false, NULL },
-    { _T("&About..."),    cbAbout,    0, false, NULL }
+// Menu config
+TCHAR _menuMainLabel[MNU_MAX_NAME_LEN + 1];
+FuncItem _menuItems[] = {
+    { _T("&Sessions..."),   cbSessions,     0, false, NULL },
+    { _T("Se&ttings..."),   cbSettings,     0, false, NULL },
+    { _T("Sa&ve current"),  cbSaveCurrent,  0, false, NULL },
+    { _T("Load &previous"), cbLoadPrevious, 0, false, NULL },
+    { EMPTY_STR,            NULL,           0, false, NULL },
+    { _T("&Help"),          cbHelp,         0, false, NULL },
+    { _T("&About..."),      cbAbout,        0, false, NULL }
 };
 
 } // end namespace
@@ -75,15 +78,27 @@ void mnu_onUnload()
 
 void mnu_init()
 {
+    StringCchCopy(_menuMainLabel, MNU_MAX_NAME_LEN, PLUGIN_MENU_NAME);
+    gCfg.getMenuLabel(-1, _menuMainLabel);
+    for (int i = 0; i < MNU_MAX_ITEMS; ++i) {
+        gCfg.getMenuLabel(i, _menuItems[i]._itemName);
+    }
 }
 
 FuncItem* mnu_getItems(INT *pNum)
 {
-    *pNum = _mnuItmCnt;
-    return _mnuItems;
+    *pNum = MNU_MAX_ITEMS;
+    return _menuItems;
 }
 
 } // end namespace api
+
+//------------------------------------------------------------------------------
+
+TCHAR* mnu_getMainMenuLabel()
+{
+    return _menuMainLabel;
+}
 
 //------------------------------------------------------------------------------
 
@@ -100,9 +115,14 @@ extern "C" void cbSettings()
     DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_CFG_DLG), sys_getNppHwnd(), dlgCfg_msgProc);
 }
 
-extern "C" void cbSave()
+extern "C" void cbSaveCurrent()
 {
     app_saveSession(SES_CURRENT);
+}
+
+extern "C" void cbLoadPrevious()
+{
+    app_loadSession(SES_PREVIOUS);
 }
 
 extern "C" void cbHelp()
@@ -115,7 +135,7 @@ extern "C" void cbHelp()
 
 extern "C" void cbAbout()
 {
-    const size_t s = 6 * MAX_PATH;
+    const size_t s = 7 * MAX_PATH;
     TCHAR m[s + 1], b[MAX_PATH_1];
     StringCchCopy(m, s, PLUGIN_ABOUT);
     StringCchCat(m, s, _T("\n\nHelp file:\n"));
@@ -124,6 +144,9 @@ extern "C" void cbAbout()
     StringCchCat(m, s, sys_getIniFile());
     StringCchCat(m, s, _T("\n\nCurrent session file:\n"));
     app_getSesFile(SES_CURRENT, b);
+    StringCchCat(m, s, b);
+    StringCchCat(m, s, _T("\n\nPrevious session file:\n"));
+    app_getSesFile(SES_PREVIOUS, b);
     StringCchCat(m, s, b);
     msgBox(m);
 }

@@ -1,6 +1,6 @@
 /*
     Util.cpp
-    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -94,7 +94,7 @@ void createIfNotPresent(TCHAR *filename, const char *contents)
 
 namespace pth {
 
-// Remove the file name extension.
+/* Removes the file name extension. */
 TCHAR* remExt(TCHAR *p)
 {
     size_t len;
@@ -109,7 +109,7 @@ TCHAR* remExt(TCHAR *p)
     return p;
 }
 
-// Remove the path, leaving only the file name.
+/* Removes the path, leaving only the file name. */
 TCHAR* remPath(TCHAR *p)
 {
     size_t len;
@@ -126,7 +126,7 @@ TCHAR* remPath(TCHAR *p)
     return p;
 }
 
-// Remove the file name, leaving only the path and trailing slash.
+/* Removes the file name, leaving only the path and trailing slash. */
 TCHAR* remName(TCHAR *p)
 {
     size_t len;
@@ -141,7 +141,7 @@ TCHAR* remName(TCHAR *p)
     return p;
 }
 
-// Append a backslash if it is not already present on the end of the string.
+/* Append a backslash if it is not already present on the end of the string. */
 bool addSlash(TCHAR *p)
 {
     size_t len;
@@ -167,25 +167,6 @@ bool dirExists(TCHAR *p)
 //------------------------------------------------------------------------------
 
 namespace dlg {
-
-// Center window hWnd relative to window hParentWnd with the given offsets.
-bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, bool bRepaint)
-{
-    RECT rect, rectParent;
-    INT  x, y, width, height;
-    if (hParentWnd == NULL) {
-        hParentWnd = GetParent(hWnd);
-    }
-    GetWindowRect(hParentWnd, &rectParent);
-    GetWindowRect(hWnd, &rect);
-    width = rect.right - rect.left;
-    height = rect.bottom - rect.top;
-    x = ((rectParent.right - rectParent.left) - width) / 2;
-    x += rectParent.left + xOffset;
-    y = ((rectParent.bottom - rectParent.top) - height) / 2;
-    y += rectParent.top + yOffset;
-    return MoveWindow(hWnd, x, y, width, height, bRepaint) ? true : false;
-}
 
 bool setText(HWND hDlg, UINT idDlgCtrl, const TCHAR* pszText)
 {
@@ -285,7 +266,28 @@ INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data)
     return idx;
 }
 
-// Set the control's position and size relative to the right and bottom edges of the dialog.
+/* Centers window hWnd relative to window hParentWnd with the given sizes
+   and offsets. */
+bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, INT width, INT height, bool bRepaint)
+{
+    RECT rect, rectParent;
+    INT  x, y;
+    if (hParentWnd == NULL) {
+        hParentWnd = GetParent(hWnd);
+    }
+    GetWindowRect(hParentWnd, &rectParent);
+    GetWindowRect(hWnd, &rect);
+    width = width > 0 ? width : rect.right - rect.left;
+    height = height > 0 ? height : rect.bottom - rect.top;
+    x = ((rectParent.right - rectParent.left) - width) / 2;
+    x += rectParent.left + xOffset;
+    y = ((rectParent.bottom - rectParent.top) - height) / 2;
+    y += rectParent.top + yOffset;
+    return MoveWindow(hWnd, x, y, width, height, bRepaint) ? true : false;
+}
+
+/* Sets the control's position and size relative to the right and bottom edges
+   of the dialog. */
 void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT xRight, INT yBottom, INT wRight, INT hBottom)
 {
     HWND hCtrl = GetDlgItem(hDlg, idCtrl);
@@ -300,7 +302,7 @@ void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT xRight, INT yBotto
             INT h = hBottom < 0 ? r.bottom - r.top : dlgH - p.y - hBottom;
             INT x = xRight < 0 ? p.x : dlgW - w - xRight;
             INT y = yBottom < 0 ? p.y : dlgH - h - yBottom;
-            MoveWindow(hCtrl, x, y, w, h, TRUE);
+            MoveWindow(hCtrl, x, y, w, h, true);
             ShowWindow(hCtrl, SW_SHOW);
         }
     }

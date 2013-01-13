@@ -1,6 +1,6 @@
 /*
     DlgRename.cpp
-    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -70,7 +70,7 @@ INT_PTR CALLBACK dlgRen_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
     return FALSE;
 }
 
-// DlgSessions uses this to get the new name.
+/* DlgSessions uses this to get the new name. */
 TCHAR* dlgRen_getLbNewName()
 {
     return _lbNewName;
@@ -99,7 +99,6 @@ bool onOk(HWND hDlg)
     // Set the destination file pathname.
     newName[0] = 0;
     dlg::getText(hDlg, IDC_REN_EDT_NAME, newName);
-    //msgBox(newName, M_DBG); // DEBUG
     if (newName[0] == 0) {
         msgBox(_T("Missing file name."), M_WARN);
         return false;
@@ -107,7 +106,6 @@ bool onOk(HWND hDlg)
     StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
     StringCchCat(dstPathname, MAX_PATH, newName);
     StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
-    //msgBox(dstPathname, M_DBG); // DEBUG
 
     // Set the source file that will be renamed.
     INT sesSelIdx = dlgSes_getLbSelectedData();
@@ -118,7 +116,6 @@ bool onOk(HWND hDlg)
     if (MoveFileEx(srcPathname, dstPathname, 0)) {
         StringCchCopy(_lbNewName, SES_MAX_LEN - 1, newName);
         status = true;
-        //msgBox(srcPathname, M_DBG); // DEBUG
     }
     else {
         errBox(_T("Rename"), GetLastError());

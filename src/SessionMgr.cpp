@@ -1,6 +1,6 @@
 /*
     SessionMgr.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -37,8 +37,6 @@ namespace NppPlugin {
 
 namespace {
 
-#define PLUGIN_MENU_NAME _T("&") PLUGIN_FULL_NAME
-
 class Session
 {
     public:
@@ -51,11 +49,13 @@ class Session
 
 vector<Session> _sessions;
 INT _sesCurIdx; // the _sessions index of the current session
+INT _sesPrvIdx; // the _sessions index of the previous session
 bool _appReady;
 bool _sesLoading;
 time_t _sesTimer;
 
 void onNppReady();
+void removeBracketedPrefix(TCHAR *s);
 
 } // end namespace
 
@@ -69,6 +69,7 @@ void app_onLoad()
     _appReady = false;
     _sesLoading = false;
     _sesCurIdx = SES_DEFAULT;
+    _sesPrvIdx = SES_NONE;
 }
 
 void app_onUnload()
@@ -84,10 +85,10 @@ void app_init()
 
 const TCHAR* app_getName()
 {
-    return PLUGIN_MENU_NAME;
+    return mnu_getMainMenuLabel();
 }
 
-/* Handle Notepad++ notifications. */
+/* Handles Notepad++ notifications. */
 void app_onNotify(SCNotification *pscn)
 {
     if (pscn->nmhdr.hwndFrom == sys_getNppHwnd()) {
@@ -111,6 +112,8 @@ void app_onNotify(SCNotification *pscn)
                 _appReady = false;
                 break;
             case NPPN_FILESAVED:
+                app_showSesInNppBars();
+                // allow fall-thru
             case NPPN_FILEOPENED:
             case NPPN_LANGCHANGED:
             //case NPPN_DOCORDERCHANGED:
@@ -126,6 +129,9 @@ void app_onNotify(SCNotification *pscn)
                         _sesTimer = time(NULL);
                     }
                 }
+                break;
+            case NPPN_BUFFERACTIVATED:
+                app_showSesInNppBars();
                 break;
         }
     }
@@ -151,23 +157,29 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
 
 //------------------------------------------------------------------------------
 
-/* Read all session names from the session directory. If there is a current
-   session it is made current again if it is in the new list. */
+/* Reads all session names from the session directory. If there is a current
+   and/or previous session it is made current and/or previous again if it is
+   in the new list. */
 void app_readSesDir()
 {
     DWORD dwError=0;
     WIN32_FIND_DATA ffd;
     TCHAR sesFileSpec[MAX_PATH_1];
     TCHAR sesName[SES_MAX_LEN];
-    TCHAR sesPrev[SES_MAX_LEN];
+    TCHAR sesCur[SES_MAX_LEN];
+    TCHAR sesPrv[SES_MAX_LEN];
     HANDLE hFind = INVALID_HANDLE_VALUE;
 
     // Clear the sessions vector.
-    sesPrev[0] = 0;
+    sesCur[0] = 0;
+    sesPrv[0] = 0;
     if (!_sessions.empty()) {
-        // If a session is current save its name.
+        // If a session is current/previous save its name.
         if (_sesCurIdx > SES_NONE) {
-            StringCchCopy(sesPrev, MAX_PATH, _sessions[_sesCurIdx].name);
+            StringCchCopy(sesCur, MAX_PATH, _sessions[_sesCurIdx].name);
+        }
+        if (_sesPrvIdx > SES_NONE) {
+            StringCchCopy(sesPrv, MAX_PATH, _sessions[_sesPrvIdx].name);
         }
         _sessions.clear();
     }
@@ -191,9 +203,12 @@ void app_readSesDir()
     while (FindNextFile(hFind, &ffd) != 0);
     dwError = GetLastError();
     FindClose(hFind);
-    // If a session was current try to make it current again.
-    if (sesPrev[0] != 0) {
-        _sesCurIdx = app_getSesIndex(sesPrev);
+    // If a session was current/previous try to make it current/previous again.
+    if (sesCur[0] != 0) {
+        _sesCurIdx = app_getSesIndex(sesCur);
+    }
+    if (sesPrv[0] != 0) {
+        _sesPrvIdx = app_getSesIndex(sesPrv);
     }
     if (dwError != ERROR_NO_MORE_FILES) {
         errBox(_T("app_readSesDir"), dwError);
@@ -201,8 +216,12 @@ void app_readSesDir()
     _appReady = true;
 }
 
-/* Load the session at index si. Make it the current index unless lic is
-   true. Close the previous session before loading si, unless lwc is true. */
+/* Loads the session at index si. Makes it the current index unless lic is
+   true. Closes the previous session before loading si, unless lwc is true. */
+void app_loadSession(INT si)
+{
+    app_loadSession(si, gCfg.getLoadIntoCurrent(), gCfg.getLoadWithoutClosing());
+}
 void app_loadSession(INT si, bool lic, bool lwc)
 {
     TCHAR sesFile[MAX_PATH_1];
@@ -211,8 +230,16 @@ void app_loadSession(INT si, bool lic, bool lwc)
     if (!_appReady || _sesLoading) {
         return;
     }
+    if (si == SES_PREVIOUS) {
+        if (_sesPrvIdx <= SES_NONE) {
+            return;
+        }
+        si = _sesPrvIdx;
+    }
     if (!lic && _sesCurIdx > SES_NONE) {
         app_saveSession(_sesCurIdx); // Save the current session before closing it
+        _sesPrvIdx = _sesCurIdx;
+        gCfg.savePrevious(_sessions[_sesPrvIdx].name); // Write new previous session name to ini file
     }
     _sesLoading = true;
     app_getSesFile(si, sesFile);
@@ -226,7 +253,8 @@ void app_loadSession(INT si, bool lic, bool lwc)
     if (!lic) {
         if (si > SES_NONE) {
             _sesCurIdx = si;
-            gCfg.saveCurrent(_sessions[si].name); // Write new session name to ini file
+            gCfg.saveCurrent(_sessions[si].name); // Write new current session name to ini file
+            app_showSesInNppBars();
         }
         else {
             _sesCurIdx = SES_DEFAULT;
@@ -235,33 +263,38 @@ void app_loadSession(INT si, bool lic, bool lwc)
     }
 }
 
-/* Save the session at index si. Make it the current index. */
+/* Saves the session at index si. Makes it the current index. */
 void app_saveSession(INT si)
 {
     if (!_appReady || _sesLoading) {
         return;
     }
-    TCHAR sesFile[MAX_PATH_1];
     if (si == SES_CURRENT) {
         si = _sesCurIdx;
     }
+    else if (si == SES_PREVIOUS) {
+        si = _sesPrvIdx;
+    }
+    TCHAR sesFile[MAX_PATH_1];
     app_getSesFile(si, sesFile);
     SendMessage(sys_getNppHwnd(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
     _sesCurIdx = si > SES_NONE ? si : SES_DEFAULT;
 }
 
+/* Returns true if session index si is valid, else false. */
 bool app_validSesIndex(INT si)
 {
     return (si >= 0 && si < (signed)_sessions.size());
 }
 
+/* Returns the number of items in the _sessions vector. */
 INT app_getSesCount()
 {
     return _sessions.size();
 }
 
-/* Return the index of name in _sessions, else SES_NONE if not found. If name is
-   NULL return the current session's index. */
+/* Returns the index of name in _sessions, else SES_NONE if not found.
+   If name is NULL returns the current session's index. */
 INT app_getSesIndex(TCHAR *name)
 {
     if (name == NULL) {
@@ -278,24 +311,30 @@ INT app_getSesIndex(TCHAR *name)
     return SES_NONE;
 }
 
-/* Return a pointer to the session name at index si in _sessions. If si is
-   SES_CURRENT return a pointer to the current session's name. Else return a
-   pointer to the default session name. */
+/* Returns a pointer to the session name at index si in _sessions. If si is
+   SES_CURRENT or SES_PREVIOUS returns a pointer to the current or previous
+   session's name. Else returns a pointer to the default session name. */
 const TCHAR* app_getSesName(INT si)
 {
     if (si == SES_CURRENT) {
         si = _sesCurIdx;
     }
+    else if (si == SES_PREVIOUS) {
+        si = _sesPrvIdx;
+    }
     return app_validSesIndex(si) ? _sessions[si].name : SES_DEFAULT_NAME;
 }
 
-/* Copy into buf the full pathname of the session at index si. If si is
-   SES_CURRENT copy the current session's pathname. Else copy the default
-   session pathname. */
+/* Copies into buf the full pathname of the session at index si. If si is
+   SES_CURRENT or SES_PREVIOUS copies the current or previous session's
+   pathname. Else copies the default session pathname. */
 void app_getSesFile(INT si, TCHAR *buf)
 {
     if (si == SES_CURRENT) {
         si = _sesCurIdx;
+    }
+    else if (si == SES_PREVIOUS) {
+        si = _sesPrvIdx;
     }
     if (app_validSesIndex(si)) {
         StringCchCopy(buf, MAX_PATH, gCfg.getSesDir());
@@ -304,6 +343,35 @@ void app_getSesFile(INT si, TCHAR *buf)
     }
     else {
         StringCchCopy(buf, MAX_PATH, sys_getDefSesFile());
+    }
+}
+
+/* Displays the current and previous session names in the status bar if that
+   setting is enabled. Displays the current session name in the title bar if
+   that setting is enabled. */
+void app_showSesInNppBars()
+{
+    const int maxLen1 = MAX_PATH;
+    const int maxLen2 = 2 * MAX_PATH;
+    TCHAR buf1[maxLen1 + 1];
+    TCHAR buf2[maxLen2 + 1];
+
+    if (gCfg.getShowInStatusbar()) {
+        StringCchCopy(buf1, maxLen1, _T("session : "));
+        StringCchCat(buf1, maxLen1, app_getSesName(SES_CURRENT));
+        StringCchCat(buf1, maxLen1, _T("    previous : "));
+        StringCchCat(buf1, maxLen1, app_getSesName(SES_PREVIOUS));
+        SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buf1);
+    }
+
+    if (gCfg.getShowInTitlebar()) {
+        GetWindowText(sys_getNppHwnd(), buf1, maxLen1);
+        removeBracketedPrefix(buf1);
+        StringCchCopy(buf2, maxLen2, _T("["));
+        StringCchCat(buf2, maxLen2, app_getSesName(SES_CURRENT));
+        StringCchCat(buf2, maxLen2, _T("] "));
+        StringCchCat(buf2, maxLen2, buf1);
+        SendMessage(sys_getNppHwnd(), WM_SETTEXT, 0, (LPARAM)buf2);
     }
 }
 
@@ -317,10 +385,36 @@ void onNppReady()
     name[0] = 0;
     _appReady = true;
     if (gCfg.getAutoLoad()) {
+        gCfg.readPrevious(name);
+        _sesPrvIdx = app_getSesIndex(name);
         gCfg.readCurrent(name);
         if (name[0] != 0) {
             app_loadSession(app_getSesIndex(name));
         }
+    }
+}
+
+/* We need to remove any existing prefixes before adding a new one. */
+void removeBracketedPrefix(TCHAR *s)
+{
+    size_t i = 0, len;
+    const int maxLen = 2 * MAX_PATH;
+    TCHAR buf[maxLen + 1];
+
+    if (StringCchLength(s, maxLen, &len) == S_OK) {
+        while (i < len && *(s + i) == _T('[')) {
+            while (i < len && *(s + i) != _T(']')) {
+                ++i;
+            }
+            if (i < len && *(s + i) == _T(']')) {
+                ++i;
+            }
+            while (i < len && *(s + i) == _T(' ')) {
+                ++i;
+            }
+        }
+        StringCchCopy(buf, maxLen, s + i);
+        StringCchCopy(s, maxLen, buf);
     }
 }
 

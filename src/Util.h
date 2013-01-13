@@ -1,6 +1,6 @@
 /*
     Util.h
-    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -56,7 +56,6 @@ bool dirExists(TCHAR *p);
 
 namespace dlg {
 
-bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset = 0, INT yOffset = 0, bool bRepaint = FALSE);
 bool setText(HWND hDlg, UINT idDlgCtrl, const TCHAR* pszText);
 bool getText(HWND hDlg, UINT idDlgCtrl, TCHAR *buf);
 bool edtModified(HWND hDlg, UINT idDlgCtrl);
@@ -65,6 +64,7 @@ bool getCheck(HWND hDlg, UINT idDlgCtrl);
 bool focus(HWND hDlg, UINT idDlgCtrl);
 INT getLbSelData(HWND hDlg, UINT idDlgCtrl);
 INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data);
+bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset = 0, INT yOffset = 0, INT width = 0, INT height = 0, bool bRepaint = FALSE);
 void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT xRight, INT yBottom, INT wRight, INT hBottom);
 
 } // end namespace dlg

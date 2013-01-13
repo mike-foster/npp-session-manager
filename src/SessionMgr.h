@@ -1,6 +1,6 @@
 /*
     SessionMgr.h
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -32,7 +32,8 @@ namespace NppPlugin {
 #define SES_MAX_LEN      100
 #define SES_NONE         -1
 #define SES_CURRENT      -2
-#define SES_DEFAULT      -3
+#define SES_PREVIOUS     -3
+#define SES_DEFAULT      -4
 
 //------------------------------------------------------------------------------
 // The api namespace contains functions called only from DllMain.
@@ -51,13 +52,15 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam);
 //------------------------------------------------------------------------------
 
 void app_readSesDir();
-void app_loadSession(INT si, bool lic = false, bool lwc = true);
+void app_loadSession(INT si);
+void app_loadSession(INT si, bool lic, bool lwc);
 void app_saveSession(INT si = SES_CURRENT);
 bool app_validSesIndex(INT si);
 INT app_getSesCount();
 INT app_getSesIndex(TCHAR *name = NULL);
 const TCHAR* app_getSesName(INT si = SES_CURRENT);
 void app_getSesFile(INT si, TCHAR *buf);
+void app_showSesInNppBars();
 
 } // end namespace NppPlugin
 

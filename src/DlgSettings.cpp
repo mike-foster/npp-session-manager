@@ -1,6 +1,6 @@
 /*
     DlgSettings.cpp
-    Copyright 2011,2012 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -26,6 +26,7 @@
 #include "res\resource.h"
 #include <strsafe.h>
 #include <commdlg.h>
+#include <shlobj.h>
 
 //------------------------------------------------------------------------------
 
@@ -38,13 +39,14 @@ namespace {
 TCHAR *MSG_NO_CHANGES = _T("There were no changes.");
 TCHAR *MSG_DIR_ERROR = _T("An error occurred while creating the new session directory.\nThis setting was not changed.");
 
-RECT _iniRect = {0, 0, 0, 0};
+INT _minWidth = 0, _minHeight = 0;
 bool _inInit, _opChanged, _dirChanged;
 
 INT onOk(HWND hDlg);
 bool onInit(HWND hDlg);
 void onResize(HWND hDlg, INT w, INT h);
-void onGetSize(HWND hDlg, LPMINMAXINFO p);
+void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
+bool getFolderName(HWND parent, TCHAR *buf);
 
 } // end namespace
 
@@ -74,8 +76,10 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 return TRUE;
             case IDC_CFG_CHK_ASV:
             case IDC_CFG_CHK_ALD:
-            case IDC_CFG_CHK_ELIC:
-            case IDC_CFG_CHK_DLWC:
+            case IDC_CFG_CHK_LIC:
+            case IDC_CFG_CHK_LWC:
+            case IDC_CFG_CHK_SITB:
+            case IDC_CFG_CHK_SISB:
                 if (!_inInit && ntfy == BN_CLICKED) {
                     _opChanged = true;
                 }
@@ -86,13 +90,22 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                     _dirChanged = true;
                 }
                 return TRUE;
+            case IDC_CFG_BTN_BRW:
+                if (!_inInit && ntfy == BN_CLICKED) {
+                    TCHAR pthBuf[MAX_PATH + 1];
+                    if (getFolderName(hDlg, pthBuf)) {
+                        _dirChanged = true;
+                        dlg::setText(hDlg, IDC_CFG_EDT_DIR, pthBuf);
+                    }
+                }
+                return TRUE;
         } // end switch
     }
     else if (uMessage == WM_SIZE) {
         onResize(hDlg, LOWORD(lParam), HIWORD(lParam));
     }
     else if (uMessage == WM_GETMINMAXINFO) {
-        onGetSize(hDlg, (LPMINMAXINFO)lParam);
+        onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
     }
     else if (uMessage == WM_INITDIALOG) {
         if (onInit(hDlg)) {
@@ -106,30 +119,51 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 
 namespace {
 
-/* Populate the dialog box controls with current values from gCfg. */
+/* Determines minimum dialog size. Populates controls with current values from
+   gCfg. Resizes, centers and displays the dialog window.
+   XXX Adding 6 and 24 is magic. */
 bool onInit(HWND hDlg)
 {
     _inInit = true;
     _opChanged = false;
     _dirChanged = false;
+    if (_minWidth == 0) {
+        RECT rect = {0, 0, IDD_CFG_W, IDD_CFG_H};
+        MapDialogRect(hDlg, &rect);
+        _minWidth = rect.right - rect.left + 6;
+        _minHeight = rect.bottom - rect.top + 24;
+    }
     // init control values
     dlg::setCheck(hDlg, IDC_CFG_CHK_ASV, gCfg.getAutoSave());
     dlg::setCheck(hDlg, IDC_CFG_CHK_ALD, gCfg.getAutoLoad());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_ELIC, gCfg.getEnableLIC());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_DLWC, gCfg.getDisableLWC());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_LIC, gCfg.getLoadIntoCurrent());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_LWC, gCfg.getLoadWithoutClosing());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, gCfg.getShowInTitlebar());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, gCfg.getShowInStatusbar());
     dlg::setText(hDlg, IDC_CFG_EDT_DIR, gCfg.getSesDir());
     dlg::setText(hDlg, IDC_CFG_EDT_EXT, gCfg.getSesExt());
-    // focus the first edit control, center and show the window
+    // focus the first edit control
     dlg::focus(hDlg, IDC_CFG_EDT_DIR);
-    dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, TRUE);
+    // resize, center and show the window
+    INT w, h;
+    gCfg.readCfgDlgSize(&w, &h);
+    if (w <= 0 || h <= 0) {
+        w = 0;
+        h = 0;
+    }
+    else {
+        w += 6;
+        h += 24;
+    }
+    dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
     ShowWindow(hDlg, SW_SHOW);
-    GetWindowRect(hDlg, &_iniRect);
+
     _inInit = false;
     return true;
 }
 
-/* Get values, if changed, from dialog box controls. Update the global
-   Config object and save them to the ini file. */
+/* Gets values, if changed, from dialog box controls. Updates the global
+   config object and save them to the ini file. */
 INT onOk(HWND hDlg)
 {
     INT stat = 0;
@@ -140,8 +174,10 @@ INT onOk(HWND hDlg)
         change = true;
         gCfg.setAutoSave(dlg::getCheck(hDlg, IDC_CFG_CHK_ASV));
         gCfg.setAutoLoad(dlg::getCheck(hDlg, IDC_CFG_CHK_ALD));
-        gCfg.setEnableLIC(dlg::getCheck(hDlg, IDC_CFG_CHK_ELIC));
-        gCfg.setDisableLWC(dlg::getCheck(hDlg, IDC_CFG_CHK_DLWC));
+        gCfg.setLoadIntoCurrent(dlg::getCheck(hDlg, IDC_CFG_CHK_LIC));
+        gCfg.setLoadWithoutClosing(dlg::getCheck(hDlg, IDC_CFG_CHK_LWC));
+        gCfg.setShowInTitlebar(dlg::getCheck(hDlg, IDC_CFG_CHK_SITB));
+        gCfg.setShowInStatusbar(dlg::getCheck(hDlg, IDC_CFG_CHK_SISB));
     }
     if (_dirChanged) {
         change = true;
@@ -167,7 +203,7 @@ INT onOk(HWND hDlg)
     return stat;
 }
 
-void onResize(HWND hDlg, INT w, INT h)
+void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
     HWND hCtrl = GetDlgItem(hDlg, IDC_CFG_EDT_DIR);
     if (hCtrl) {
@@ -181,19 +217,61 @@ void onResize(HWND hDlg, INT w, INT h)
         p.x = r.left;
         p.y = r.top;
         if (ScreenToClient(hDlg, &p)) {
-            MoveWindow(hCtrl, p.x, p.y, w - p.x - r0.left, r.bottom - r.top, TRUE);
+            MoveWindow(hCtrl, p.x, p.y, dlgW - p.x - r0.left, r.bottom - r.top, TRUE);
             ShowWindow(hCtrl, SW_SHOW);
+        }
+        // Save new dialog size
+        gCfg.saveCfgDlgSize(dlgW, dlgH);
+
+        if (gCfg.debug) {
+            TCHAR msgBuf[101];
+            TCHAR numBuf[21];
+            StringCchCopy(msgBuf, 100, _T("DlgSettings: w="));
+            _itot_s(dlgW, numBuf, 20, 10);
+            StringCchCat(msgBuf, 100, numBuf);
+            StringCchCat(msgBuf, 100, _T(", h="));
+            _itot_s(dlgH, numBuf, 20, 10);
+            StringCchCat(msgBuf, 100, numBuf);
+            SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)msgBuf);
         }
     }
 }
 
-/* Do not allow vertical resize. */
-void onGetSize(HWND hDlg, LPMINMAXINFO p)
+/* Sets the minimum size the user can resize to. */
+void onGetMinSize(HWND hDlg, LPMINMAXINFO p)
 {
-    if (_iniRect.left > 0) {
-        p->ptMinTrackSize.x = _iniRect.right - _iniRect.left;
-        p->ptMinTrackSize.y = p->ptMaxTrackSize.y = _iniRect.bottom - _iniRect.top;
+    p->ptMinTrackSize.x = _minWidth;
+    p->ptMinTrackSize.y = _minHeight;
+}
+
+/* Copied and slightly modifed from:
+   npp.6.2.3.src\PowerEditor\src\MISC\Common\Common.cpp */
+bool getFolderName(HWND parent, TCHAR *buf)
+{
+    bool ok = false;
+    LPMALLOC pShellMalloc = 0;
+
+    if (::SHGetMalloc(&pShellMalloc) == NO_ERROR) {
+        BROWSEINFO info;
+        memset(&info, 0, sizeof(info));
+        info.hwndOwner = parent;
+        info.pidlRoot = NULL;
+        TCHAR szDisplayName[MAX_PATH];
+        info.pszDisplayName = szDisplayName;
+        info.lpszTitle = TEXT("Select a sessions folder");
+        info.ulFlags = 0;
+        // Execute the browsing dialog.
+        LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
+        // pidl will be null if they cancel the browse dialog, else not null if they select a folder.
+        if (pidl) {
+            if (::SHGetPathFromIDList(pidl, buf)) {
+                ok = true;
+            }
+            pShellMalloc->Free(pidl);
+        }
+        pShellMalloc->Release();
     }
+    return ok;
 }
 
 } // end namespace

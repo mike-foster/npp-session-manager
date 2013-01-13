@@ -1,6 +1,6 @@
 /*
     Menu.h
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -25,6 +25,9 @@
 
 namespace NppPlugin {
 
+const int MNU_MAX_ITEMS = 7; // see _mnuItems
+const int MNU_MAX_NAME_LEN = 63; // see nbChar in npp\PluginInterface.h
+
 //------------------------------------------------------------------------------
 // The api namespace contains functions called only from DllMain.
 
@@ -38,6 +41,8 @@ FuncItem* mnu_getItems(INT *pNum);
 } // end namespace api
 
 //------------------------------------------------------------------------------
+
+TCHAR* mnu_getMainMenuLabel();
 
 } // end namespace NppPlugin
 

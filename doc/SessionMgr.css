@@ -22,7 +22,7 @@ b {
 }
 tt {
   font-size: medium;
-  font-family: fixedsys,monospace;
+  font-family: 'courier new',monospace;
 }
 a {
   color:#333;
@@ -56,6 +56,17 @@ h3 {
 h4 {
   font-size: small;
 }
+pre {
+  font-family: 'courier new',monospace;
+  color: #666;
+  background: transparent;
+  border: 1px dotted #a7a09a;
+  margin: .3em .12em .6em 0;
+  padding: .6em;
+  overflow: auto;
+  font-size: small;
+  max-height: 32em;
+}
 
 .smaller {
   font-size: smaller;
@@ -75,7 +86,7 @@ h4 {
   padding: 5px 10px 5px 20px;
 }
 #layout-header p {
-  font-style: italic;
+  /* font-style: italic; */
   font-weight: bold;
   font-size: smaller;
 }
