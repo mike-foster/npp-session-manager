@@ -132,5 +132,15 @@ HWND sys_getNppHwnd()
     return _hNpp;
 }
 
+HWND sys_getSc1Hwnd()
+{
+    return _hSci1;
+}
+
+HWND sys_getSc2Hwnd()
+{
+    return _hSci2;
+}
+
 } // end namespace NppPlugin
 

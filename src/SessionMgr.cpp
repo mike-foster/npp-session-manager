@@ -52,7 +52,8 @@ INT _sesCurIdx; // the _sessions index of the current session
 INT _sesPrvIdx; // the _sessions index of the previous session
 bool _appReady;
 bool _sesLoading;
-time_t _sesTimer;
+time_t _shutdownTimer; // for determining if files are closing due to a shutdown
+time_t _titlebarTimer; // for updating the titlebar text
 
 void onNppReady();
 void removeBracketedPrefix(TCHAR *s);
@@ -70,6 +71,8 @@ void app_onLoad()
     _sesLoading = false;
     _sesCurIdx = SES_DEFAULT;
     _sesPrvIdx = SES_NONE;
+    _shutdownTimer = 0;
+    _titlebarTimer = 0;
 }
 
 void app_onUnload()
@@ -91,6 +94,7 @@ const TCHAR* app_getName()
 /* Handles Notepad++ notifications. */
 void app_onNotify(SCNotification *pscn)
 {
+    // Handle Notepad++ notifications
     if (pscn->nmhdr.hwndFrom == sys_getNppHwnd()) {
         if (gCfg.debug) {
             switch (pscn->nmhdr.code) {
@@ -100,11 +104,16 @@ void app_onNotify(SCNotification *pscn)
                 case NPPN_FILEOPENED: msgBox(_T("NPPN_FILEOPENED"), M_DBG); break;
                 case NPPN_FILECLOSED: msgBox(_T("NPPN_FILECLOSED"), M_DBG); break;
                 case NPPN_LANGCHANGED:     msgBox(_T("NPPN_LANGCHANGED"), M_DBG); break;
-                case NPPN_DOCORDERCHANGED: msgBox(_T("NPPN_DOCORDERCHANGED"), M_DBG); break; // I'm not sure what this does
+                case NPPN_DOCORDERCHANGED: msgBox(_T("NPPN_DOCORDERCHANGED"), M_DBG); break; // This doesn't occur?
                 case NPPN_BUFFERACTIVATED: msgBox(_T("NPPN_BUFFERACTIVATED"), M_DBG); break; // Occurs twice if file in other view
             }
         }
         switch (pscn->nmhdr.code) {
+
+            //case NPPN_DOCORDERCHANGED:
+            //    msgBox(_T("NPPN_DOCORDERCHANGED"), M_DBG);
+            //    break;
+
             case NPPN_READY:
                 onNppReady();
                 break;
@@ -113,7 +122,7 @@ void app_onNotify(SCNotification *pscn)
                 break;
             case NPPN_FILESAVED:
                 app_showSesInNppBars();
-                // allow fall-thru
+                // intentional fall-thru
             case NPPN_FILEOPENED:
             case NPPN_LANGCHANGED:
             //case NPPN_DOCORDERCHANGED:
@@ -126,7 +135,7 @@ void app_onNotify(SCNotification *pscn)
             case NPPN_FILECLOSED:
                 if (_appReady && !_sesLoading) {
                     if (gCfg.getAutoSave()) {
-                        _sesTimer = time(NULL);
+                        _shutdownTimer = time(NULL);
                     }
                 }
                 break;
@@ -135,15 +144,31 @@ void app_onNotify(SCNotification *pscn)
                 break;
         }
     }
-    if (_sesTimer > 0) {
+    // Handle Scintilla notifications
+    else if (pscn->nmhdr.hwndFrom == sys_getSc1Hwnd() || pscn->nmhdr.hwndFrom == sys_getSc2Hwnd()) {
+        if (gCfg.getShowInTitlebar() && pscn->nmhdr.code == SCN_SAVEPOINTLEFT) {
+            _titlebarTimer = time(NULL);
+        }
+    }
+
+    // Update timers
+
+    if (_shutdownTimer > 0) {
         if (_appReady && !_sesLoading) {
-            if (time(NULL) - _sesTimer > gCfg.getSaveDelay()) {
-                _sesTimer = 0;
+            if (time(NULL) - _shutdownTimer > gCfg.getSaveDelay()) {
+                _shutdownTimer = 0;
                 app_saveSession(_sesCurIdx);
             }
         }
         else {
-            _sesTimer = 0;
+            _shutdownTimer = 0;
+        }
+    }
+
+    if (_titlebarTimer > 0) {
+        if (time(NULL) - _titlebarTimer > 1) {
+            _titlebarTimer = 0;
+            app_showSesInNppBars();
         }
     }
 }

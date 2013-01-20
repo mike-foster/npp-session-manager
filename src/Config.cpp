@@ -156,10 +156,7 @@ bool Config::save()
                         if (WritePrivateProfileString(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
                             if (WritePrivateProfileString(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
                                 if (WritePrivateProfileString(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
-                                    _itot_s(_saveDelay, buf, TMP_BUF_LEN, 10);
-                                    if (WritePrivateProfileString(INI_SESSION, INI_SES_SVD, buf, iniFile)) {
-                                        return true;
-                                    }
+                                    return true;
                                 }
                             }
                         }

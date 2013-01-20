@@ -10,12 +10,16 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 0.7</h1>
+  <h1>Session Manager 0.7.1</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
 <div id="layout-hmenu">
   <a href="http://mfoster.com/npp/download.html">Downloads</a>
+  &nbsp;|&nbsp;
+  <a href="http://notepad-plus-plus.org/">Notepad++</a>
+  &nbsp;|&nbsp;
+  <a href="https://sourceforge.net/apps/mediawiki/notepad-plus/index.php?title=Plugin_Central">Plugin Central</a>
 </div>
 
 <div id='layout-main-col'>
@@ -107,7 +111,7 @@
     <li><b>Load into current</b>: If this is enabled the <tt>Load into the current session</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
     <li><b>Load without closing</b>: If this is enabled the <tt>Load without closing open files</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
     <li><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default value is <tt>0</tt>.</li>
-    <li><b>Show in status bar</b>: If this is enabled the previous and current session names will be displayed in the Notepad++ status bar. The default value is <tt>0</tt>.</li>
+    <li><b>Show in status bar</b>: If this is enabled the current and previous session names will be displayed in the Notepad++ status bar. The default value is <tt>0</tt>.</li>
     <li><b>Session files folder</b>: This specifies the location of the session files Session Manager will display in the Sessions dialog. Click the <tt>...</tt> button to browse for a folder. Set to an empty string to get the default value: <tt>plugins\config\SessionMgr\sessions</tt>.</li>
     <li><b>Session file extension</b>: This specifies the file name extension of the session files Session Manager will display in the Sessions dialog. Think of it as a filter. Set to an empty string to get the default value: <tt>.npp-session</tt>.</li>
   </ul>
@@ -174,15 +178,6 @@ To this:
   </ul>
 </div>
 
-<!--
-<h2>Known Issues</h2>
-<div>
-  <ul>
-    <li></li>
-  </ul>
-</div>
--->
-
 <h2 id="Feedback">Your feedback is very welcome!</h2>
 <div>
   <p>There is an ongoing <a href='https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017'>discussion at sourceforge</a>, join us!</p>
@@ -191,6 +186,12 @@ To this:
 
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
+  <h3>0.7.1, 20Jan2013</h3>
+  <ul>
+    <li>Issue reported by light2some: When a file is first changed the titlebar text does not get the session prefix. Fix: Update the titlebar text one second after the SCN_SAVEPOINTLEFT Scintilla event (NPP doesn't prepend the "*" until <i>after</i> the event).</li>
+    <li>Upgraded header files from NPP v6.2.3: menuCmdID.h, Notepad_plus_msgs.h, PluginInterface.h and Scintilla.h.</li>
+    <li>[Minor NPP bug?] It's not a problem but I noticed that, in Notepad_plus_msgs.h, NPPN_DOCORDERCHANGED and NPPN_READONLYCHANGED have the same value (NPPN_FIRST + 16). Also, I cannot detect either of these events in my plugin code, even tho NPPM_INTERNAL_DOCORDERCHANGED seems to be handled correctly in the NPP source code.</li>
+  </ul>
   <h3>0.7, 13Jan2013</h3>
   <ul>
     <li>This is a candidate for version 1.0.</li>
@@ -260,6 +261,8 @@ To this:
 </div> <!-- end layout-main-col -->
 
 <div id="layout-footer">
+  <a href="http://mfoster.com/npp/download.html">Downloads</a>
+  &nbsp;|&nbsp;
   <a href="http://notepad-plus-plus.org/">Notepad++</a>
   &nbsp;|&nbsp;
   <a href="https://sourceforge.net/apps/mediawiki/notepad-plus/index.php?title=Plugin_Central">Plugin Central</a>

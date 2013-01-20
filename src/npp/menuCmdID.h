@@ -1,19 +1,30 @@
-//this file is part of notepad++
-//Copyright (C)2003 Don HO <donho@altern.org>
+// This file is part of Notepad++ project
+// Copyright (C)2003 Don HO <don.h@free.fr>
 //
-//This program is free software; you can redistribute it and/or
-//modify it under the terms of the GNU General Public License
-//as published by the Free Software Foundation; either
-//version 2 of the License, or (at your option) any later version.
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either
+// version 2 of the License, or (at your option) any later version.
 //
-//This program is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//GNU General Public License for more details.
+// Note that the GPL places important restrictions on "derived works", yet
+// it does not provide a detailed definition of that term.  To avoid      
+// misunderstandings, we consider an application to constitute a          
+// "derivative work" for the purpose of this license if it does any of the
+// following:                                                             
+// 1. Integrates source code from Notepad++.
+// 2. Integrates/includes/aggregates Notepad++ into a proprietary executable
+//    installer, such as those produced by InstallShield.
+// 3. Links to a library or executes a program that does any of the above.
 //
-//You should have received a copy of the GNU General Public License
-//along with this program; if not, write to the Free Software
-//Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
 
 #ifndef MENUCMDID_H
 #define MENUCMDID_H
@@ -62,6 +73,8 @@
     #define    IDM_EDIT_LINE_DOWN                   (IDM_EDIT + 15)
     #define    IDM_EDIT_UPPERCASE                   (IDM_EDIT + 16)
     #define    IDM_EDIT_LOWERCASE                   (IDM_EDIT + 17)
+	#define    IDM_EDIT_REMOVEEMPTYLINES            (IDM_EDIT + 55)
+	#define    IDM_EDIT_REMOVEEMPTYLINESWITHBLANK   (IDM_EDIT + 56)
 
 // Menu macro
     #define    IDM_MACRO_STARTRECORDINGMACRO        (IDM_EDIT + 18)
@@ -77,7 +90,9 @@
     #define    IDM_EDIT_EOL2WS                      (IDM_EDIT + 44)
     #define    IDM_EDIT_TRIMALL                     (IDM_EDIT + 45)
     #define    IDM_EDIT_TAB2SW                      (IDM_EDIT + 46)
-    #define    IDM_EDIT_SW2TAB                      (IDM_EDIT + 47)
+    #define    IDM_EDIT_SW2TAB_LEADING              (IDM_EDIT + 53)
+    #define    IDM_EDIT_SW2TAB_ALL                  (IDM_EDIT + 54)
+	#define    IDM_EDIT_STREAM_UNCOMMENT            (IDM_EDIT + 47)
 
 // Menu macro
     #define    IDM_MACRO_SAVECURRENTMACRO           (IDM_EDIT + 25)
@@ -182,7 +197,7 @@
     #define    IDM_VIEW_DRAWTABBAR_INACIVETAB     (IDM_VIEW + 8) 
     #define    IDM_VIEW_POSTIT                    (IDM_VIEW + 9)
     #define    IDM_VIEW_TOGGLE_FOLDALL            (IDM_VIEW + 10)
-    #define    IDM_VIEW_USER_DLG                  (IDM_VIEW + 11)
+    //#define    IDM_VIEW_USER_DLG                  (IDM_VIEW + 11)
     #define    IDM_VIEW_LINENUMBER                (IDM_VIEW + 12)
     #define    IDM_VIEW_SYMBOLMARGIN              (IDM_VIEW + 13)
     #define    IDM_VIEW_FOLDERMAGIN               (IDM_VIEW + 14)
@@ -245,10 +260,13 @@
 	#define    IDM_VIEW_FILESWITCHER_PANEL        (IDM_VIEW + 70)
 	#define    IDM_VIEW_SWITCHTO_OTHER_VIEW       (IDM_VIEW + 72)
 
-	//#define    IDM_VIEW_LAUNCH_PROJECT_PANEL      (IDM_VIEW + 80)
+	#define    IDM_VIEW_DOC_MAP                   (IDM_VIEW + 80)
+
 	#define    IDM_VIEW_PROJECT_PANEL_1           (IDM_VIEW + 81)
 	#define    IDM_VIEW_PROJECT_PANEL_2           (IDM_VIEW + 82)
 	#define    IDM_VIEW_PROJECT_PANEL_3           (IDM_VIEW + 83)
+
+	#define    IDM_VIEW_FUNC_LIST                 (IDM_VIEW + 84)
 
     #define    IDM_VIEW_GOTO_ANOTHER_VIEW        10001
     #define    IDM_VIEW_CLONE_TO_ANOTHER_VIEW    10002
@@ -387,6 +405,8 @@
 
     #define    IDM_LANG_USER               (IDM_LANG + 80)     //46080
     #define    IDM_LANG_USER_LIMIT         (IDM_LANG + 110)    //46110
+    #define    IDM_LANG_USER_DLG           (IDM_LANG + 150)
+
     
     
 #define    IDM_ABOUT    (IDM  + 7000)

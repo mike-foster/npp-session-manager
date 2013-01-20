@@ -52,6 +52,8 @@ TCHAR* sys_getHelpFile();
 TCHAR* sys_getDefSesFile();
 HINSTANCE sys_getDllHwnd();
 HWND sys_getNppHwnd();
+HWND sys_getSc1Hwnd();
+HWND sys_getSc2Hwnd();
 
 } // end namespace NppPlugin
 
