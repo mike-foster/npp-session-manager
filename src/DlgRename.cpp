@@ -1,6 +1,6 @@
 /*
     DlgRename.cpp
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -82,7 +82,7 @@ namespace {
 
 bool onInit(HWND hDlg)
 {
-    dlg::setText(hDlg, IDC_REN_EDT_NAME, app_getSesName(dlgSes_getLbSelectedData()));
+    dlg::setText(hDlg, IDC_REN_EDT_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
     dlg::focus(hDlg, IDC_REN_EDT_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -35);
     ShowWindow(hDlg, SW_SHOW);
@@ -92,8 +92,8 @@ bool onInit(HWND hDlg)
 bool onOk(HWND hDlg)
 {
     bool status = false;
-    TCHAR srcPathname[MAX_PATH_1];
-    TCHAR dstPathname[MAX_PATH_1];
+    TCHAR srcPathname[MAX_PATH_P1];
+    TCHAR dstPathname[MAX_PATH_P1];
     TCHAR newName[SES_MAX_LEN];
 
     // Set the destination file pathname.
@@ -109,7 +109,7 @@ bool onOk(HWND hDlg)
 
     // Set the source file that will be renamed.
     INT sesSelIdx = dlgSes_getLbSelectedData();
-    app_getSesFile(sesSelIdx, srcPathname);
+    app_getSessionFile(sesSelIdx, srcPathname);
 
     // Rename the file.
     _lbNewName[0] = 0;

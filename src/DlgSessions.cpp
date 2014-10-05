@@ -1,6 +1,6 @@
 /*
     DlgSessions.cpp
-    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -27,9 +27,6 @@
 #include "DlgDelete.h"
 #include "Util.h"
 #include "res\resource.h"
-
-// DEBUG
-#include <strsafe.h>
 
 //------------------------------------------------------------------------------
 
@@ -169,8 +166,8 @@ bool onInit(HWND hDlg)
         _minWidth = rect.right - rect.left + 6;
         _minHeight = rect.bottom - rect.top + 24;
     }
-    dlg::setText(hDlg, IDC_SES_TXT_CUR, app_getSesName(SES_CURRENT));
-    dlg::setText(hDlg, IDC_SES_TXT_PRV, app_getSesName(SES_PREVIOUS));
+    dlg::setText(hDlg, IDC_SES_TXT_CUR, app_getSessionName(SES_CURRENT));
+    dlg::setText(hDlg, IDC_SES_TXT_PRV, app_getSessionName(SES_PREVIOUS));
     dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.getLoadIntoCurrent());
     dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.getLoadWithoutClosing());
 
@@ -219,8 +216,8 @@ bool onNew(HWND hDlg)
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
     if (DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_NEW_DLG), hDlg, dlgNew_msgProc)) {
-        app_readSesDir();
-        status = fillListBox(hDlg, app_getSesIndex(dlgNew_getLbNewName()));
+        app_readSessionDirectory();
+        status = fillListBox(hDlg, app_getSessionIndex(dlgNew_getLbNewName()));
     }
     return status;
 }
@@ -230,8 +227,8 @@ bool onRename(HWND hDlg)
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
     if (DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_REN_DLG), hDlg, dlgRen_msgProc)) {
-        app_readSesDir();
-        status = fillListBox(hDlg, app_getSesIndex(dlgRen_getLbNewName()));
+        app_readSessionDirectory();
+        status = fillListBox(hDlg, app_getSessionIndex(dlgRen_getLbNewName()));
     }
     return status;
 }
@@ -241,7 +238,7 @@ bool onDelete(HWND hDlg)
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
     if (DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_DEL_DLG), hDlg, dlgDel_msgProc)) {
-        app_readSesDir();
+        app_readSessionDirectory();
         status = fillListBox(hDlg);
     }
     return status;
@@ -255,12 +252,12 @@ bool fillListBox(HWND hDlg, INT sesCurIdx)
     hLst = GetDlgItem(hDlg, IDC_SES_LST_SES);
     if (hLst) {
         SendMessage(hLst, LB_RESETCONTENT, 0, 0);
-        sesCount = app_getSesCount();
+        sesCount = app_getSessionCount();
         if (sesCurIdx == SES_CURRENT) {
-            sesCurIdx = app_getSesIndex();
+            sesCurIdx = app_getSessionIndex();
         }
         for (sesIdx = 0; sesIdx < sesCount; ++sesIdx) {
-            i = (INT)SendMessage(hLst, LB_ADDSTRING, 0, (LPARAM)app_getSesName(sesIdx));
+            i = (INT)SendMessage(hLst, LB_ADDSTRING, 0, (LPARAM)app_getSessionName(sesIdx));
             SendMessage(hLst, LB_SETITEMDATA, i, (LPARAM)sesIdx);
         }
         i = dlg::getLbIdxByData(hDlg, IDC_SES_LST_SES, sesCurIdx);
@@ -296,17 +293,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     // Save new dialog size
     gCfg.saveSesDlgSize(dlgW, dlgH);
 
-    if (gCfg.debug) {
-        TCHAR msgBuf[101];
-        TCHAR numBuf[21];
-        StringCchCopy(msgBuf, 100, _T("DlgSessions: w="));
-        _itot_s(dlgW, numBuf, 20, 10);
-        StringCchCat(msgBuf, 100, numBuf);
-        StringCchCat(msgBuf, 100, _T(", h="));
-        _itot_s(dlgH, numBuf, 20, 10);
-        StringCchCat(msgBuf, 100, numBuf);
-        SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)msgBuf);
-    }
+    LOGE(31, "Sessions: w=%d, h=%d", dlgW, dlgH);
 }
 
 /* Sets the minimum size the user can resize to. */

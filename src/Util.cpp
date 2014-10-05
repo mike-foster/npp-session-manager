@@ -1,6 +1,6 @@
 /*
     Util.cpp
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -20,6 +20,7 @@
 
 #include "System.h"
 #include "SessionMgr.h"
+#include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
 
@@ -63,11 +64,21 @@ void errBox(TCHAR *lpszFunction, DWORD errorCode)
     LocalFree(lpDisplayBuf);
 }
 
-INT dbgBox(const TCHAR *msg, INT i1, INT i2, INT i3)
+void dbgLog(const char* format, ...)
 {
-    TCHAR buf[MAX_PATH_1];
-    StringCchPrintf(buf, MAX_PATH, _T("%s\ni1=%d\ni2=%d\ni3=%d\n"), msg, i1, i2, i3);
-    return msgBox(buf, M_DBG);
+    if (gCfg.debug && gCfg.logFile[0]) {
+        FILE *fp;
+        fopen_s(&fp, gCfg.logFile, "a+");
+        if (fp) {
+            va_list argptr;
+            va_start(argptr, format);
+            vfprintf(fp, format, argptr);
+            va_end(argptr);
+            fputc('\n', fp);
+            fflush(fp);
+            fclose(fp);
+        }
+    }
 }
 
 void createIfNotPresent(TCHAR *filename, const char *contents)
@@ -81,7 +92,7 @@ void createIfNotPresent(TCHAR *filename, const char *contents)
         len = strlen(contents);
         suc = WriteFile(hFile, contents, len, &bytes, NULL);
         if (!suc || bytes != len) {
-            TCHAR msg[MAX_PATH_1];
+            TCHAR msg[MAX_PATH_P1];
             StringCchCopy(msg, MAX_PATH, _T("Failed creating file: "));
             StringCchCat(msg, MAX_PATH, filename);
             msgBox(msg, M_ERR);
@@ -113,7 +124,7 @@ TCHAR* remExt(TCHAR *p)
 TCHAR* remPath(TCHAR *p)
 {
     size_t len;
-    TCHAR s[MAX_PATH_1];
+    TCHAR s[MAX_PATH_P1];
     if (StringCchLength(p, MAX_PATH, &len) == S_OK) {
         while (len-- > 0) {
             if (*(p + len) == _T('\\') || *(p + len) == _T('/')) {

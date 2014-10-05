@@ -1,6 +1,6 @@
 /*
     DlgSettings.cpp
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -24,7 +24,6 @@
 #include "DlgSettings.h"
 #include "Util.h"
 #include "res\resource.h"
-#include <strsafe.h>
 #include <commdlg.h>
 #include <shlobj.h>
 
@@ -92,7 +91,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 return TRUE;
             case IDC_CFG_BTN_BRW:
                 if (!_inInit && ntfy == BN_CLICKED) {
-                    TCHAR pthBuf[MAX_PATH + 1];
+                    TCHAR pthBuf[MAX_PATH_P1];
                     if (getFolderName(hDlg, pthBuf)) {
                         _dirChanged = true;
                         dlg::setText(hDlg, IDC_CFG_EDT_DIR, pthBuf);
@@ -168,7 +167,7 @@ INT onOk(HWND hDlg)
 {
     INT stat = 0;
     bool change = false;
-    TCHAR buf[MAX_PATH_1];
+    TCHAR buf[MAX_PATH_P1];
 
     if (_opChanged) {
         change = true;
@@ -192,7 +191,7 @@ INT onOk(HWND hDlg)
     if (change) {
         if (gCfg.save()) {
             if (_dirChanged) {
-                app_readSesDir();
+                app_readSessionDirectory();
             }
         }
     }
@@ -223,17 +222,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
         // Save new dialog size
         gCfg.saveCfgDlgSize(dlgW, dlgH);
 
-        if (gCfg.debug) {
-            TCHAR msgBuf[101];
-            TCHAR numBuf[21];
-            StringCchCopy(msgBuf, 100, _T("DlgSettings: w="));
-            _itot_s(dlgW, numBuf, 20, 10);
-            StringCchCat(msgBuf, 100, numBuf);
-            StringCchCat(msgBuf, 100, _T(", h="));
-            _itot_s(dlgH, numBuf, 20, 10);
-            StringCchCat(msgBuf, 100, numBuf);
-            SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)msgBuf);
-        }
+        LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
     }
 }
 

@@ -1,6 +1,6 @@
 /*
     System.h
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -21,7 +21,9 @@
 #ifndef NPP_PLUGIN_SYSTEM_H
 #define NPP_PLUGIN_SYSTEM_H
 
-#define MAX_PATH_1 (MAX_PATH + 1)
+#define MAX_PATH_P1 (2 * MAX_PATH + 1)
+#define MAX_PATH_T2 (2 * MAX_PATH * 2)
+#define MAX_PATH_T2_P1 (MAX_PATH_T2 + 1)
 #define SES_DEFAULT_NAME _T("default")
 #define SES_DEFAULT_CONTENTS "<NotepadPlus>\r\n<Session activeView=\"0\">\r\n<mainView activeIndex=\"0\">\r\n</mainView>\r\n</Session>\r\n</NotepadPlus>\r\n"
 
@@ -50,6 +52,7 @@ TCHAR* sys_getCfgDir();
 TCHAR* sys_getIniFile();
 TCHAR* sys_getHelpFile();
 TCHAR* sys_getDefSesFile();
+char* sys_getPropsFile();
 HINSTANCE sys_getDllHwnd();
 HWND sys_getNppHwnd();
 HWND sys_getSc1Hwnd();

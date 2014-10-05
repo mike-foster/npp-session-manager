@@ -1,6 +1,6 @@
 /*
     version.h
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -22,9 +22,10 @@
 #define NPP_PLUGIN_VERSION_H
 
 
-#define RES_VERSION_B  0,7,1,20130120
-#define RES_VERSION_S  "0.7.1.20130120 Unicode"
+#define RES_VERSION_B  0,8,0,0
+#define RES_VERSION_S  "0.8.0.0 Unicode"
 #define PLUGIN_VERSION _T(RES_VERSION_S)
+#define RES_COPYRIGHT  "Copyright 2011-2014 Michael Foster. Distributed under the terms of the GNU GPL."
 
 
 #endif // NPP_PLUGIN_VERSION_H

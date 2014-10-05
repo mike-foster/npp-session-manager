@@ -1,6 +1,6 @@
 /*
     DlgDelete.cpp
-    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -82,10 +82,10 @@ bool onInit(HWND hDlg)
 
 bool onOk(HWND hDlg)
 {
-    TCHAR sesPth[MAX_PATH_1];
+    TCHAR sesPth[MAX_PATH_P1];
     INT sesSelIdx = dlgSes_getLbSelectedData();
-    if (app_validSesIndex(sesSelIdx)) {
-        app_getSesFile(sesSelIdx, sesPth);
+    if (app_isValidSessionIndex(sesSelIdx)) {
+        app_getSessionFile(sesSelIdx, sesPth);
         if (DeleteFile(sesPth)) {
             return true;
         }

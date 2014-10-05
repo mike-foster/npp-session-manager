@@ -1,6 +1,6 @@
 /*
     Config.h
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -38,9 +38,10 @@ class Config
     bool _loadWithoutClosing;
     bool _showInTitlebar;
     bool _showInStatusbar;
+    bool _globalBookmarks;
     UINT _saveDelay;
-    TCHAR _directory[MAX_PATH_1];
-    TCHAR _extension[MAX_PATH_1];
+    TCHAR _directory[MAX_PATH_P1];
+    TCHAR _extension[MAX_PATH_P1];
     TCHAR _menuMainLabel[MNU_MAX_NAME_LEN + 1];
     TCHAR _menuSubLabels[MNU_MAX_ITEMS + 1][MNU_MAX_NAME_LEN + 1];
 
@@ -50,7 +51,8 @@ class Config
   public:
 
     // public properties
-    bool debug;
+    INT debug;
+    char logFile[MAX_PATH_T2_P1];
 
     // public methods
     void load();
@@ -61,6 +63,8 @@ class Config
     bool getAutoSave() { return _autoSave; }
     void setAutoLoad(bool v) { _autoLoad = v; }
     bool getAutoLoad() { return _autoLoad; }
+    void setGlobalBookmarks(bool v) { _globalBookmarks = v; }
+    bool getGlobalBookmarks() { return _globalBookmarks; }
     void setLoadIntoCurrent(bool v) { _loadIntoCurrent = v; }
     bool getLoadIntoCurrent() { return _loadIntoCurrent; }
     void setLoadWithoutClosing(bool v) { _loadWithoutClosing = v; }

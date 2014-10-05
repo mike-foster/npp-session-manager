@@ -1,6 +1,6 @@
 /*
     Menu.cpp
-    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -106,7 +106,7 @@ namespace {
 
 extern "C" void cbSessions()
 {
-    app_readSesDir();
+    app_readSessionDirectory();
     DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_SES_DLG), sys_getNppHwnd(), dlgSes_msgProc);
 }
 
@@ -136,17 +136,17 @@ extern "C" void cbHelp()
 extern "C" void cbAbout()
 {
     const size_t s = 7 * MAX_PATH;
-    TCHAR m[s + 1], b[MAX_PATH_1];
+    TCHAR m[s + 1], b[MAX_PATH_P1];
     StringCchCopy(m, s, PLUGIN_ABOUT);
     StringCchCat(m, s, _T("\n\nHelp file:\n"));
     StringCchCat(m, s, sys_getHelpFile());
     StringCchCat(m, s, _T("\n\nSettings file:\n"));
     StringCchCat(m, s, sys_getIniFile());
     StringCchCat(m, s, _T("\n\nCurrent session file:\n"));
-    app_getSesFile(SES_CURRENT, b);
+    app_getSessionFile(SES_CURRENT, b);
     StringCchCat(m, s, b);
     StringCchCat(m, s, _T("\n\nPrevious session file:\n"));
-    app_getSesFile(SES_PREVIOUS, b);
+    app_getSessionFile(SES_PREVIOUS, b);
     StringCchCat(m, s, b);
     msgBox(m);
 }

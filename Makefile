@@ -12,6 +12,7 @@ O=obj
 S=src
 R=src\res
 N=src\npp
+X=src\xml
 
 # http://msdn.microsoft.com/en-us/library/fwkeyyhe.aspx
 CXX=cl
@@ -46,7 +47,7 @@ clean:
 
 $(PRJ): $O\$(PRJ).obj $O\Config.obj $O\DlgDelete.obj $O\DlgNew.obj \
         $O\DlgRename.obj $O\DlgSessions.obj $O\DlgSettings.obj $O\DllMain.obj \
-        $O\Menu.obj $O\System.obj $O\Util.obj $O\$(PRJ).res
+        $O\Menu.obj $O\System.obj $O\Util.obj $O\tinyxml2.obj $O\$(PRJ).res
     $(LD) $(LDFLAGS) $(LIBS) $?
 
 #-------------------------------------------------------------------------------
@@ -83,6 +84,9 @@ $O\System.obj: $S\$(@B).cpp $S\$(@B).h $(NPPDEPS)
     $(CXX) $(CXXFLAGS) %s
 
 $O\Util.obj: $S\$(@B).cpp $S\$(@B).h
+    $(CXX) $(CXXFLAGS) %s
+
+$O\tinyxml2.obj: $X\$(@B).cpp $X\$(@B).h
     $(CXX) $(CXXFLAGS) %s
 
 #-------------------------------------------------------------------------------

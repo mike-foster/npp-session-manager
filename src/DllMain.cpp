@@ -1,6 +1,6 @@
 /*
     DllMain.h
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 

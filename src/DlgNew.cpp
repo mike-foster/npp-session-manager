@@ -1,6 +1,6 @@
 /*
     DlgNew.cpp
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -71,7 +71,7 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                     buf[0] = 0;
                     dlg::getText(hDlg, IDC_NEW_EDT_NAME, buf);
                     if (buf[0] == 0) {
-                        dlg::setText(hDlg, IDC_NEW_EDT_NAME, app_getSesName(dlgSes_getLbSelectedData()));
+                        dlg::setText(hDlg, IDC_NEW_EDT_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
                     }
                     dlg::focus(hDlg, IDC_NEW_EDT_NAME);
                     return TRUE;
@@ -111,7 +111,7 @@ bool onOk(HWND hDlg)
 {
     bool succ;
     TCHAR newName[SES_MAX_LEN];
-    TCHAR dstPathname[MAX_PATH_1];
+    TCHAR dstPathname[MAX_PATH_P1];
 
     // Set the destination file pathname.
     newName[0] = 0;
@@ -157,11 +157,11 @@ bool newFromOpen(TCHAR *dstPathname)
 bool newByCopy(TCHAR *dstPathname)
 {
     bool status = false;
-    TCHAR srcPathname[MAX_PATH_1];
+    TCHAR srcPathname[MAX_PATH_P1];
 
     // Set the source file pathname.
     INT sesSelIdx = dlgSes_getLbSelectedData();
-    app_getSesFile(sesSelIdx, srcPathname);
+    app_getSessionFile(sesSelIdx, srcPathname);
     // Copy the file.
     _lbNewName[0] = 0;
     if (CopyFile(srcPathname, dstPathname, TRUE)) {

@@ -1,6 +1,6 @@
 /*
     Config.cpp
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -40,6 +40,8 @@ namespace {
 #define INI_SES_ASV_DV 1
 #define INI_SES_ALD _T("autoLoad")
 #define INI_SES_ALD_DV 0
+#define INI_SES_GBM _T("globalBookmarks")
+#define INI_SES_GBM_DV 1
 #define INI_SES_LIC _T("loadIntoCurrent")
 #define INI_SES_LIC_DV 0
 #define INI_SES_LWC _T("loadWithoutClosing")
@@ -81,11 +83,12 @@ namespace {
 #define INI_DEBUG _T("debug")
 #define INI_DBG_DBG _T("debug")
 #define INI_DBG_DBG_DV 0
+#define INI_DBG_LOG_FILE _T("logFile")
 
 #define TMP_BUF_LEN 30
 #define DEFAULT_SES_DIR _T("sessions\\")
 #define DEFAULT_SES_EXT _T(".npp-session")
-#define DEFAULT_INI_CONTENTS "[session]\r\nautoSave=1\r\nautoLoad=0\r\nloadIntoCurrent=0\r\nloadWithoutClosing=0\r\nshowInTitlebar=0\r\nshowInStatusbar=0\r\nsaveDelay=3\r\ndirectory=\r\nextension=\r\ncurrent=\r\nprevious=\r\n\r\n[menu]\r\nitem1=\r\nitem2=\r\nitem3=\r\nitem4=\r\nitem5=\r\nitem6=\r\n\r\n[dialog]\r\nsessionsW=0\r\nsessionsH=0\r\nsettingsW=0\r\nsettingsH=0\r\n\r\n[debug]\r\ndebug=0\r\n"
+#define DEFAULT_INI_CONTENTS "[session]\r\nautoSave=1\r\nautoLoad=0\r\nglobalBookmarks=1\r\nloadIntoCurrent=0\r\nloadWithoutClosing=0\r\nshowInTitlebar=0\r\nshowInStatusbar=0\r\nsaveDelay=3\r\ndirectory=\r\nextension=\r\ncurrent=\r\nprevious=\r\n\r\n[menu]\r\nitem1=\r\nitem2=\r\nitem3=\r\nitem4=\r\nitem5=\r\nitem6=\r\n\r\n[dialog]\r\nsessionsW=0\r\nsessionsH=0\r\nsettingsW=0\r\nsettingsH=0\r\n\r\n[debug]\r\ndebug=0\r\nlogFile=\r\n"
 
 } // end namespace
 
@@ -126,14 +129,23 @@ void Config::load()
     // boolean properties
     _autoSave = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_ASV, INI_SES_ASV_DV, iniFile));
     _autoLoad = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_ALD, INI_SES_ALD_DV, iniFile));
+    _globalBookmarks = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_GBM, INI_SES_GBM_DV, iniFile));
     _loadIntoCurrent = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_LIC, INI_SES_LIC_DV, iniFile));
     _loadWithoutClosing = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_LWC, INI_SES_LWC_DV, iniFile));
     _showInStatusbar = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_SISB, INI_SES_SISB_DV, iniFile));
     _showInTitlebar = uintToBool(GetPrivateProfileInt(INI_SESSION, INI_SES_SITB, INI_SES_SITB_DV, iniFile));
-    debug = uintToBool(GetPrivateProfileInt(INI_DEBUG, INI_DBG_DBG, INI_DBG_DBG_DV, iniFile));
 
     // integer properties
     _saveDelay = GetPrivateProfileInt(INI_SESSION, INI_SES_SVD, INI_SES_SVD_DV, iniFile);
+    debug = GetPrivateProfileInt(INI_DEBUG, INI_DBG_DBG, INI_DBG_DBG_DV, iniFile);
+
+    logFile[0] = 0;
+    if (debug) {
+        size_t num;
+        TCHAR buf[MAX_PATH_T2_P1];
+        GetPrivateProfileString(INI_DEBUG, INI_DBG_LOG_FILE, EMPTY_STR, buf, MAX_PATH_T2, iniFile);
+        wcstombs_s(&num, logFile, MAX_PATH_T2, buf, _TRUNCATE);
+    }
 }
 
 /* Writes current gCfg values to the ini file. */
@@ -146,17 +158,20 @@ bool Config::save()
     if (WritePrivateProfileString(INI_SESSION, INI_SES_ASV, buf, iniFile)) {
         _itot_s((INT)_autoLoad, buf, TMP_BUF_LEN, 10);
         if (WritePrivateProfileString(INI_SESSION, INI_SES_ALD, buf, iniFile)) {
-            _itot_s((INT)_loadIntoCurrent, buf, TMP_BUF_LEN, 10);
-            if (WritePrivateProfileString(INI_SESSION, INI_SES_LIC, buf, iniFile)) {
-                _itot_s((INT)_loadWithoutClosing, buf, TMP_BUF_LEN, 10);
-                if (WritePrivateProfileString(INI_SESSION, INI_SES_LWC, buf, iniFile)) {
-                    _itot_s((INT)_showInStatusbar, buf, TMP_BUF_LEN, 10);
-                    if (WritePrivateProfileString(INI_SESSION, INI_SES_SISB, buf, iniFile)) {
-                        _itot_s((INT)_showInTitlebar, buf, TMP_BUF_LEN, 10);
-                        if (WritePrivateProfileString(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
-                            if (WritePrivateProfileString(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
-                                if (WritePrivateProfileString(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
-                                    return true;
+            _itot_s((INT)_globalBookmarks, buf, TMP_BUF_LEN, 10);
+            if (WritePrivateProfileString(INI_SESSION, INI_SES_GBM, buf, iniFile)) {
+                _itot_s((INT)_loadIntoCurrent, buf, TMP_BUF_LEN, 10);
+                if (WritePrivateProfileString(INI_SESSION, INI_SES_LIC, buf, iniFile)) {
+                    _itot_s((INT)_loadWithoutClosing, buf, TMP_BUF_LEN, 10);
+                    if (WritePrivateProfileString(INI_SESSION, INI_SES_LWC, buf, iniFile)) {
+                        _itot_s((INT)_showInStatusbar, buf, TMP_BUF_LEN, 10);
+                        if (WritePrivateProfileString(INI_SESSION, INI_SES_SISB, buf, iniFile)) {
+                            _itot_s((INT)_showInTitlebar, buf, TMP_BUF_LEN, 10);
+                            if (WritePrivateProfileString(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
+                                if (WritePrivateProfileString(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
+                                    if (WritePrivateProfileString(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
+                                        return true;
+                                    }
                                 }
                             }
                         }
@@ -165,7 +180,7 @@ bool Config::save()
             }
         }
     }
-    errBox(_T("Config::save"), GetLastError());
+    SHOW_ERROR;
     return false;
 }
 
@@ -182,7 +197,7 @@ BOOL Config::saveCurrent(TCHAR *s)
 {
     BOOL status = WritePrivateProfileString(INI_SESSION, INI_SES_CUR, s, sys_getIniFile());
     if (status == 0) {
-        errBox(_T("Config::saveCurrent"), GetLastError());
+        SHOW_ERROR;
     }
     return status;
 }
@@ -198,7 +213,7 @@ BOOL Config::savePrevious(TCHAR *s)
 {
     BOOL status = WritePrivateProfileString(INI_SESSION, INI_SES_PRV, s, sys_getIniFile());
     if (status == 0) {
-        errBox(_T("Config::savePrevious"), GetLastError());
+        SHOW_ERROR;
     }
     return status;
 }
@@ -215,7 +230,7 @@ void Config::readSesDlgSize(INT *w, INT *h)
 void Config::saveSesDlgSize(INT w, INT h)
 {
     if (saveDlgSize(true, w, h) == FALSE) {
-        errBox(_T("Config::saveSesDlgSize"), GetLastError());
+        SHOW_ERROR;
     }
 }
 
@@ -231,7 +246,7 @@ void Config::readCfgDlgSize(INT *w, INT *h)
 void Config::saveCfgDlgSize(INT w, INT h)
 {
     if (saveDlgSize(false, w, h) == FALSE) {
-        errBox(_T("Config::saveCfgDlgSize"), GetLastError());
+        SHOW_ERROR;
     }
 }
 
@@ -263,7 +278,7 @@ void Config::setShowInStatusbar(bool v)
 {
     _showInStatusbar = v;
     if (v) {
-        app_showSesInNppBars();
+        app_showSessionInNppBars();
     }
 }
 
@@ -271,13 +286,13 @@ void Config::setShowInTitlebar(bool v)
 {
     _showInTitlebar = v;
     if (v) {
-        app_showSesInNppBars();
+        app_showSessionInNppBars();
     }
 }
 
 bool Config::setSesDir(TCHAR *p)
 {
-    TCHAR buf[MAX_PATH_1];
+    TCHAR buf[MAX_PATH_P1];
     if (!p || !*p) {
         StringCchCopy(buf, MAX_PATH, sys_getCfgDir());
         StringCchCat(buf, MAX_PATH, DEFAULT_SES_DIR);
@@ -287,7 +302,7 @@ bool Config::setSesDir(TCHAR *p)
         pth::addSlash(buf);
         if (!pth::dirExists(buf)) {
             if (SHCreateDirectoryEx(NULL, buf, NULL) != ERROR_SUCCESS ) {
-                errBox(_T("Config::setSesDir"), GetLastError());
+                SHOW_ERROR;
                 return false; // ses dir not changed
             }
         }

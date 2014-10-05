@@ -1,6 +1,6 @@
 /*
     SessionMgr.h
-    Copyright 2011,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -51,16 +51,16 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 //------------------------------------------------------------------------------
 
-void app_readSesDir();
+void app_readSessionDirectory();
 void app_loadSession(INT si);
 void app_loadSession(INT si, bool lic, bool lwc);
 void app_saveSession(INT si = SES_CURRENT);
-bool app_validSesIndex(INT si);
-INT app_getSesCount();
-INT app_getSesIndex(TCHAR *name = NULL);
-const TCHAR* app_getSesName(INT si = SES_CURRENT);
-void app_getSesFile(INT si, TCHAR *buf);
-void app_showSesInNppBars();
+bool app_isValidSessionIndex(INT si);
+INT app_getSessionCount();
+INT app_getSessionIndex(TCHAR *name = NULL);
+const TCHAR* app_getSessionName(INT si = SES_CURRENT);
+void app_getSessionFile(INT si, TCHAR *buf);
+void app_showSessionInNppBars();
 
 } // end namespace NppPlugin
 

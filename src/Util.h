@@ -1,6 +1,6 @@
 /*
     Util.h
-    Copyright 2011,2012,2013 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -25,6 +25,22 @@
 
 namespace NppPlugin {
 
+/* Debug log levels:
+0     = no logging
+>=1   = LOG and LOGF
+1-9   = LOGE
+10    = LOGG (verbose)
+11-19 = LOGE
+20    = LOGG (more verbose than 10)
+21-29 = LOGE
+30    = LOGG (more verbose than 20)
+31-39 = LOGE
+*/
+#define LOG(fmt, ...) dbgLog(__FUNCTION__ ": " fmt, __VA_ARGS__)
+#define LOGF(fmt, ...) dbgLog(__FUNCTION__ "(" fmt ")", __VA_ARGS__)
+#define LOGG(lvl, fmt, ...) if (gCfg.debug >= lvl) { LOG(fmt, __VA_ARGS__); }
+#define LOGE(lvl, fmt, ...) if (gCfg.debug == lvl) { LOG(fmt, __VA_ARGS__); }
+#define SHOW_ERROR errBox(_T(__FUNCTION__), GetLastError())
 #define EMPTY_STR _T("")
 #define SPACE_STR _T(" ")
 // msgBox title/options
@@ -35,7 +51,7 @@ namespace NppPlugin {
 
 INT msgBox(const TCHAR *m, TCHAR *title = NULL, UINT options = MB_OK);
 void errBox(TCHAR *lpszFunction, DWORD errorCode);
-INT dbgBox(const TCHAR *msg, INT i1, INT i2, INT i3);
+void dbgLog(const char* format, ...);
 void createIfNotPresent(TCHAR *filename, const char *contents);
 inline const TCHAR* boolToStr(const bool b) { return b ? _T("true") : _T("false"); }
 inline const bool uintToBool(UINT n) { return n == 0 ? false : true; }

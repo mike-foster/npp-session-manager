@@ -1,6 +1,6 @@
 /*
     System.cpp
-    Copyright 2011 Michael Foster (http://mfoster.com/npp/)
+    Copyright 2011,2014 Michael Foster (http://mfoster.com/npp/)
 
     This file is part of SessionMgr, A Plugin for Notepad++.
 
@@ -32,18 +32,21 @@ namespace NppPlugin {
 
 namespace {
 
-#define INI_FILE_NAME  _T("settings.ini")
+#define INI_FILE_NAME _T("settings.ini")
 #define HELP_FILE_NAME PLUGIN_DLL_NAME _T(".html")
+#define PROPS_FILE_NAME _T("file-properties.xml")
+#define PROPS_DEFAULT_CONTENT "<NotepadPlus><FileProperties></FileProperties></NotepadPlus>\r\n"
 
 HWND _hNpp;
 HWND _hSci1;
 HWND _hSci2;
 HINSTANCE _hDll;
 UINT _nppVersion;
-TCHAR _cfgDir[MAX_PATH_1]; // includes trailing slash
-TCHAR _iniFile[MAX_PATH_1];
-TCHAR _helpFile[MAX_PATH_1];
-TCHAR _defSesFile[MAX_PATH_1];
+TCHAR _cfgDir[MAX_PATH_P1]; // includes trailing slash
+TCHAR _iniFile[MAX_PATH_P1];
+TCHAR _helpFile[MAX_PATH_P1];
+TCHAR _defSesFile[MAX_PATH_P1];
+char _propsFile[MAX_PATH_T2_P1];
 
 } // end namespace
 
@@ -68,6 +71,8 @@ void sys_onUnload()
 
 void sys_init(NppData nppd)
 {
+    _propsFile[0] = 0;
+
     // Save NPP window handles
     _hNpp = nppd._nppHandle;
     _hSci1 = nppd._scintillaMainHandle;
@@ -84,6 +89,7 @@ void sys_init(NppData nppd)
     StringCchCat(_cfgDir, MAX_PATH, PLUGIN_DLL_NAME);
     StringCchCat(_cfgDir, MAX_PATH, _T("\\"));
     CreateDirectory(_cfgDir, NULL);
+
     // Get ini file pathname.
     StringCchCopy(_iniFile, MAX_PATH, _cfgDir);
     StringCchCat(_iniFile, MAX_PATH, INI_FILE_NAME);
@@ -91,6 +97,10 @@ void sys_init(NppData nppd)
     gCfg.load();
     // Create sessions directory if it doesn't exist.
     CreateDirectory(gCfg.getSesDir(), NULL);
+
+    /* XXX This was just an experiment. NPP doesn't support a command-line
+    option dedicated to plugins, but it would be useful if it did.
+    dbgLog(__FUNCTION__ ": cmdLine = '%S'", GetCommandLine()); */
 }
 
 } // end namespace api
@@ -120,6 +130,20 @@ TCHAR* sys_getDefSesFile()
     StringCchCat(_defSesFile, MAX_PATH, gCfg.getSesExt());
     createIfNotPresent(_defSesFile, SES_DEFAULT_CONTENTS);
     return _defSesFile;
+}
+
+char* sys_getPropsFile()
+{
+    if (!_propsFile[0]) {
+        size_t num;
+        TCHAR buf[MAX_PATH_T2_P1];
+        StringCchCopy(buf, MAX_PATH_T2, _cfgDir);
+        StringCchCat(buf, MAX_PATH_T2, PROPS_FILE_NAME);
+        wcstombs_s(&num, _propsFile, MAX_PATH_T2, buf, _TRUNCATE);
+        createIfNotPresent(buf, PROPS_DEFAULT_CONTENT);
+    }
+
+    return _propsFile;
 }
 
 HINSTANCE sys_getDllHwnd()
