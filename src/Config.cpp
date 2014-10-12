@@ -46,6 +46,8 @@ namespace {
 #define INI_SES_LIC_DV 0
 #define INI_SES_LWC _T("loadWithoutClosing")
 #define INI_SES_LWC_DV 0
+#define INI_SES_SORT _T("sortOrder")
+#define INI_SES_SORT_DV 0
 #define INI_SES_SISB _T("showInStatusbar")
 #define INI_SES_SISB_DV 0
 #define INI_SES_SITB _T("showInTitlebar")
@@ -88,7 +90,7 @@ namespace {
 #define TMP_BUF_LEN 30
 #define DEFAULT_SES_DIR _T("sessions\\")
 #define DEFAULT_SES_EXT _T(".npp-session")
-#define DEFAULT_INI_CONTENTS "[session]\r\nautoSave=1\r\nautoLoad=0\r\nglobalBookmarks=1\r\nloadIntoCurrent=0\r\nloadWithoutClosing=0\r\nshowInTitlebar=0\r\nshowInStatusbar=0\r\nsaveDelay=3\r\ndirectory=\r\nextension=\r\ncurrent=\r\nprevious=\r\n\r\n[menu]\r\nitem1=\r\nitem2=\r\nitem3=\r\nitem4=\r\nitem5=\r\nitem6=\r\n\r\n[dialog]\r\nsessionsW=0\r\nsessionsH=0\r\nsettingsW=0\r\nsettingsH=0\r\n\r\n[debug]\r\ndebug=0\r\nlogFile=\r\n"
+#define DEFAULT_INI_CONTENTS "[session]\r\nautoSave=1\r\nautoLoad=0\r\nglobalBookmarks=1\r\nloadIntoCurrent=0\r\nloadWithoutClosing=0\r\nsortOrder=1\r\nshowInTitlebar=0\r\nshowInStatusbar=0\r\nsaveDelay=3\r\ndirectory=\r\nextension=\r\ncurrent=\r\nprevious=\r\n\r\n[menu]\r\nitem1=\r\nitem2=\r\nitem3=\r\nitem4=\r\nitem5=\r\nitem6=\r\n\r\n[dialog]\r\nsessionsW=0\r\nsessionsH=0\r\nsettingsW=0\r\nsettingsH=0\r\n\r\n[debug]\r\ndebug=0\r\nlogFile=\r\n"
 
 } // end namespace
 
@@ -137,6 +139,7 @@ void Config::load()
 
     // integer properties
     _saveDelay = GetPrivateProfileInt(INI_SESSION, INI_SES_SVD, INI_SES_SVD_DV, iniFile);
+    _sortOrder = GetPrivateProfileInt(INI_SESSION, INI_SES_SORT, INI_SES_SORT_DV, iniFile);
     debug = GetPrivateProfileInt(INI_DEBUG, INI_DBG_DBG, INI_DBG_DBG_DV, iniFile);
 
     logFile[0] = 0;
@@ -164,13 +167,16 @@ bool Config::save()
                 if (WritePrivateProfileString(INI_SESSION, INI_SES_LIC, buf, iniFile)) {
                     _itot_s((INT)_loadWithoutClosing, buf, TMP_BUF_LEN, 10);
                     if (WritePrivateProfileString(INI_SESSION, INI_SES_LWC, buf, iniFile)) {
-                        _itot_s((INT)_showInStatusbar, buf, TMP_BUF_LEN, 10);
-                        if (WritePrivateProfileString(INI_SESSION, INI_SES_SISB, buf, iniFile)) {
-                            _itot_s((INT)_showInTitlebar, buf, TMP_BUF_LEN, 10);
-                            if (WritePrivateProfileString(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
-                                if (WritePrivateProfileString(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
-                                    if (WritePrivateProfileString(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
-                                        return true;
+                        _itot_s((INT)_sortOrder, buf, TMP_BUF_LEN, 10);
+                        if (WritePrivateProfileString(INI_SESSION, INI_SES_SORT, buf, iniFile)) {
+                            _itot_s((INT)_showInStatusbar, buf, TMP_BUF_LEN, 10);
+                            if (WritePrivateProfileString(INI_SESSION, INI_SES_SISB, buf, iniFile)) {
+                                _itot_s((INT)_showInTitlebar, buf, TMP_BUF_LEN, 10);
+                                if (WritePrivateProfileString(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
+                                    if (WritePrivateProfileString(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
+                                        if (WritePrivateProfileString(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
+                                            return true;
+                                        }
                                     }
                                 }
                             }

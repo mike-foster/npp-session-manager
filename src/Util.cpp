@@ -23,6 +23,8 @@
 #include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
+// XXX experimental for tooltips
+//#include <commctrl.h>
 
 //------------------------------------------------------------------------------
 
@@ -297,27 +299,105 @@ bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, INT width, 
     return MoveWindow(hWnd, x, y, width, height, bRepaint) ? true : false;
 }
 
-/* Sets the control's position and size relative to the right and bottom edges
-   of the dialog. */
-void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT xRight, INT yBottom, INT wRight, INT hBottom)
+/* Sets the control's position and/or size relative to the right and bottom
+   edges of the dialog.
+   toChange: X=1, Y=2, W=4, H=8
+   duoRight: offset from dialog right edge in dialog units
+   duoBottom: offset from dialog bottom edge in dialog units
+   last: if true, the control will be redrawn, sometimes needed for the last row of controls on a dialog
+*/
+void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool last)
 {
     HWND hCtrl = GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {
-        RECT r;
+        RECT ro = {0, 0, duoRight, duoBottom};
+        MapDialogRect(hDlg, &ro);
+        RECT rc;
         POINT p;
-        GetWindowRect(hCtrl, &r);
-        p.x = r.left;
-        p.y = r.top;
-        if (ScreenToClient(hDlg, &p)) {
-            INT w = wRight < 0 ? r.right - r.left : dlgW - p.x - wRight;
-            INT h = hBottom < 0 ? r.bottom - r.top : dlgH - p.y - hBottom;
-            INT x = xRight < 0 ? p.x : dlgW - w - xRight;
-            INT y = yBottom < 0 ? p.y : dlgH - h - yBottom;
-            MoveWindow(hCtrl, x, y, w, h, true);
-            ShowWindow(hCtrl, SW_SHOW);
+        GetWindowRect(hCtrl, &rc);
+
+        p.x = rc.left;
+        p.y = rc.top;
+        ScreenToClient(hDlg, &p);
+        rc.left = p.x;
+        rc.top = p.y;
+
+        p.x = rc.right;
+        p.y = rc.bottom;
+        ScreenToClient(hDlg, &p);
+        rc.right = p.x;
+        rc.bottom = p.y;
+
+        INT x = rc.left;
+        INT y = rc.top;
+        INT w = rc.right - rc.left;
+        INT h = rc.bottom - rc.top;
+
+        // change x with offset from client right
+        if (toChange & 1) {
+            if (duoRight) {
+                x = dlgW - ro.right;
+            }
+        }
+        // or change width with offset from client right
+        else if (toChange & 4) {
+            if (duoRight) {
+                w = dlgW - ro.right - x;
+            }
+        }
+        // change y with offset from client bottom
+        if (toChange & 2) {
+            if (duoBottom) {
+                y = dlgH - ro.bottom;
+            }
+        }
+        // or change height with offset from client bottom
+        else if (toChange & 8) {
+            if (duoBottom) {
+                h = dlgH - ro.bottom - y;
+            }
+        }
+
+        MoveWindow(hCtrl, x, y, w, h, true);
+        if (last) {
+            RedrawWindow(hCtrl, NULL, NULL, RDW_ERASE | RDW_INVALIDATE); // XXX DEBUG
         }
     }
 }
+
+// Description:
+//   Creates a tooltip for an item in a dialog box.
+// Parameters:
+//   idCtrl - identifier of an dialog box item.
+//   hDlg   - window handle of the dialog box.
+//   text   - string to use as the tooltip text.
+// Returns:
+//   The handle to the tooltip.
+// Copied from: http://msdn.microsoft.com/en-us/library/hh298368(v=vs.85).aspx
+/*
+HWND createTooltip(int idCtrl, HWND hDlg, PTSTR text)
+{
+    if (!idCtrl || !hDlg || !text) {
+        return (HWND)NULL;
+    }
+    HWND hCtrl = GetDlgItem(hDlg, idCtrl);
+    HWND hTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, WS_POPUP,
+        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        hDlg, NULL, sys_getDllHwnd(), NULL);
+    if (!hCtrl || !hTip) {
+        return (HWND)NULL;
+    }
+    TOOLINFO ti = { 0 };
+    ti.cbSize = sizeof(ti);
+    ti.hwnd = hDlg;
+    ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+    ti.uId = (UINT_PTR)hCtrl;
+    ti.lpszText = text;
+    SendMessage(hTip, TTM_ADDTOOL, 0, (LPARAM)&ti);
+
+    return hTip;
+}
+*/
 
 } // end namespace dlg
 

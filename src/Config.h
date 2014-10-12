@@ -27,6 +27,9 @@
 
 namespace NppPlugin {
 
+#define SORT_ORDER_ALPHA 1
+#define SORT_ORDER_DATE  2
+
 class Config
 {
   private:
@@ -39,6 +42,7 @@ class Config
     bool _showInTitlebar;
     bool _showInStatusbar;
     bool _globalBookmarks;
+    INT _sortOrder;
     UINT _saveDelay;
     TCHAR _directory[MAX_PATH_P1];
     TCHAR _extension[MAX_PATH_P1];
@@ -69,6 +73,10 @@ class Config
     bool getLoadIntoCurrent() { return _loadIntoCurrent; }
     void setLoadWithoutClosing(bool v) { _loadWithoutClosing = v; }
     bool getLoadWithoutClosing() { return _loadWithoutClosing; }
+    void setSortOrder(int v) { _sortOrder = v; }
+    int getSortOrder() { return _sortOrder; }
+    bool isSortAlpha() { return _sortOrder == SORT_ORDER_ALPHA; }
+    bool isSortDate() { return _sortOrder == SORT_ORDER_DATE; }
     void setShowInStatusbar(bool v);
     bool getShowInStatusbar() { return _showInStatusbar; }
     void setShowInTitlebar(bool v);

@@ -138,6 +138,11 @@ extern "C" void cbAbout()
     const size_t s = 7 * MAX_PATH;
     TCHAR m[s + 1], b[MAX_PATH_P1];
     StringCchCopy(m, s, PLUGIN_ABOUT);
+
+    StringCchCat(m, s, _T("\n\nConfiguration directory:\n"));
+    StringCchCat(m, s, sys_getCfgDir());
+    StringCchCat(m, s, _T("\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Jens Lorenz, for the plugin template\n- Members of the Notepad++ forums"));
+    /*
     StringCchCat(m, s, _T("\n\nHelp file:\n"));
     StringCchCat(m, s, sys_getHelpFile());
     StringCchCat(m, s, _T("\n\nSettings file:\n"));
@@ -148,6 +153,7 @@ extern "C" void cbAbout()
     StringCchCat(m, s, _T("\n\nPrevious session file:\n"));
     app_getSessionFile(SES_PREVIOUS, b);
     StringCchCat(m, s, b);
+    */
     msgBox(m);
 }
 

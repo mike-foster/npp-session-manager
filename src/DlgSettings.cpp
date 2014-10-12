@@ -79,12 +79,13 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             case IDC_CFG_CHK_LWC:
             case IDC_CFG_CHK_SITB:
             case IDC_CFG_CHK_SISB:
+            case IDC_CFG_CHK_GBKM:
                 if (!_inInit && ntfy == BN_CLICKED) {
                     _opChanged = true;
                 }
                 return TRUE;
-            case IDC_CFG_EDT_DIR:
-            case IDC_CFG_EDT_EXT:
+            case IDC_CFG_ETX_DIR:
+            case IDC_CFG_ETX_EXT:
                 if (!_inInit && ntfy == EN_CHANGE) {
                     _dirChanged = true;
                 }
@@ -94,7 +95,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                     TCHAR pthBuf[MAX_PATH_P1];
                     if (getFolderName(hDlg, pthBuf)) {
                         _dirChanged = true;
-                        dlg::setText(hDlg, IDC_CFG_EDT_DIR, pthBuf);
+                        dlg::setText(hDlg, IDC_CFG_ETX_DIR, pthBuf);
                     }
                 }
                 return TRUE;
@@ -119,18 +120,18 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 namespace {
 
 /* Determines minimum dialog size. Populates controls with current values from
-   gCfg. Resizes, centers and displays the dialog window.
-   XXX Adding 6 and 24 is magic. */
+   gCfg. Resizes, centers and displays the dialog window. */
 bool onInit(HWND hDlg)
 {
+    RECT r;
+
     _inInit = true;
     _opChanged = false;
     _dirChanged = false;
     if (_minWidth == 0) {
-        RECT rect = {0, 0, IDD_CFG_W, IDD_CFG_H};
-        MapDialogRect(hDlg, &rect);
-        _minWidth = rect.right - rect.left + 6;
-        _minHeight = rect.bottom - rect.top + 24;
+        GetWindowRect(hDlg, &r);
+        _minWidth = r.right - r.left;
+        _minHeight = r.bottom - r.top;
     }
     // init control values
     dlg::setCheck(hDlg, IDC_CFG_CHK_ASV, gCfg.getAutoSave());
@@ -139,10 +140,11 @@ bool onInit(HWND hDlg)
     dlg::setCheck(hDlg, IDC_CFG_CHK_LWC, gCfg.getLoadWithoutClosing());
     dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, gCfg.getShowInTitlebar());
     dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, gCfg.getShowInStatusbar());
-    dlg::setText(hDlg, IDC_CFG_EDT_DIR, gCfg.getSesDir());
-    dlg::setText(hDlg, IDC_CFG_EDT_EXT, gCfg.getSesExt());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_GBKM, gCfg.getGlobalBookmarks());
+    dlg::setText(hDlg, IDC_CFG_ETX_DIR, gCfg.getSesDir());
+    dlg::setText(hDlg, IDC_CFG_ETX_EXT, gCfg.getSesExt());
     // focus the first edit control
-    dlg::focus(hDlg, IDC_CFG_EDT_DIR);
+    dlg::focus(hDlg, IDC_CFG_ETX_DIR);
     // resize, center and show the window
     INT w, h;
     gCfg.readCfgDlgSize(&w, &h);
@@ -150,11 +152,9 @@ bool onInit(HWND hDlg)
         w = 0;
         h = 0;
     }
-    else {
-        w += 6;
-        h += 24;
-    }
     dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
+    GetClientRect(hDlg, &r);
+    onResize(hDlg, r.right, r.bottom);
     ShowWindow(hDlg, SW_SHOW);
 
     _inInit = false;
@@ -177,14 +177,15 @@ INT onOk(HWND hDlg)
         gCfg.setLoadWithoutClosing(dlg::getCheck(hDlg, IDC_CFG_CHK_LWC));
         gCfg.setShowInTitlebar(dlg::getCheck(hDlg, IDC_CFG_CHK_SITB));
         gCfg.setShowInStatusbar(dlg::getCheck(hDlg, IDC_CFG_CHK_SISB));
+        gCfg.setGlobalBookmarks(dlg::getCheck(hDlg, IDC_CFG_CHK_GBKM));
     }
     if (_dirChanged) {
         change = true;
-        dlg::getText(hDlg, IDC_CFG_EDT_DIR, buf);
+        dlg::getText(hDlg, IDC_CFG_ETX_DIR, buf);
         if (!gCfg.setSesDir(buf)) {
             stat = 2; // error creating ses dir
         }
-        dlg::getText(hDlg, IDC_CFG_EDT_EXT, buf);
+        dlg::getText(hDlg, IDC_CFG_ETX_EXT, buf);
         gCfg.setSesExt(buf);
     }
 
@@ -202,28 +203,21 @@ INT onOk(HWND hDlg)
     return stat;
 }
 
+/* Resizes and repositions dialog controls. */
 void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
-    HWND hCtrl = GetDlgItem(hDlg, IDC_CFG_EDT_DIR);
-    if (hCtrl) {
-        // Convert dialog units to pixels
-        RECT r0 = {IDC_ALL_MARGIN, IDC_ALL_MARGIN, IDC_ALL_MARGIN + 10, IDC_ALL_MARGIN + 10};
-        MapDialogRect(hDlg, &r0);
-        // Resize the Directory edit
-        RECT r;
-        POINT p;
-        GetWindowRect(hCtrl, &r);
-        p.x = r.left;
-        p.y = r.top;
-        if (ScreenToClient(hDlg, &p)) {
-            MoveWindow(hCtrl, p.x, p.y, dlgW - p.x - r0.left, r.bottom - r.top, TRUE);
-            ShowWindow(hCtrl, SW_SHOW);
-        }
-        // Save new dialog size
-        gCfg.saveCfgDlgSize(dlgW, dlgH);
+    //LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
 
-        LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
-    }
+    // Resize the Directory and Extension edit boxes
+    dlg::adjToEdge(hDlg, IDC_CFG_ETX_DIR, dlgW, dlgH, 4, IDC_CFG_ETX_WRO, 0);
+    dlg::adjToEdge(hDlg, IDC_CFG_ETX_EXT, dlgW, dlgH, 4, IDC_CFG_ETX_WRO, 0);
+    // Move the OK and Cancel buttons
+    dlg::adjToEdge(hDlg, IDOK, dlgW, dlgH, 1|2, IDC_CFG_BTN_OK_XRO, IDC_CFG_BTN_YBO);
+    dlg::adjToEdge(hDlg, IDCANCEL, dlgW, dlgH, 1|2, IDC_CFG_BTN_CAN_XRO, IDC_CFG_BTN_YBO, true);
+    // Save new dialog size
+    RECT r;
+    GetWindowRect(hDlg, &r);
+    gCfg.saveCfgDlgSize(r.right - r.left, r.bottom - r.top);
 }
 
 /* Sets the minimum size the user can resize to. */

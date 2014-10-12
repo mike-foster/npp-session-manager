@@ -82,8 +82,8 @@ namespace {
 
 bool onInit(HWND hDlg)
 {
-    dlg::setText(hDlg, IDC_REN_EDT_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
-    dlg::focus(hDlg, IDC_REN_EDT_NAME);
+    dlg::setText(hDlg, IDC_REN_ETX_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
+    dlg::focus(hDlg, IDC_REN_ETX_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -35);
     ShowWindow(hDlg, SW_SHOW);
     return true;
@@ -98,7 +98,7 @@ bool onOk(HWND hDlg)
 
     // Set the destination file pathname.
     newName[0] = 0;
-    dlg::getText(hDlg, IDC_REN_EDT_NAME, newName);
+    dlg::getText(hDlg, IDC_REN_ETX_NAME, newName);
     if (newName[0] == 0) {
         msgBox(_T("Missing file name."), M_WARN);
         return false;

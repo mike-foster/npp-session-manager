@@ -5,7 +5,8 @@ A Plugin for Notepad++
 Project home: http://mfoster.com/npp/
 Project source: https://github.com/mike-foster/npp-session-manager
 User documentation: http://mfoster.com/npp/SessionMgr.html
-Build instructions: "Makefile"
-License: "license.txt"
-Discussion, feedback, bug reports, etc:
-https://sourceforge.net/projects/notepad-plus/forums/forum/482781/topic/4638017
+Build instructions: See "Makefile"
+License: See "license.txt"
+Discussion, feedback, bug reports:
+https://sourceforge.net/p/notepad-plus/discussion/482781/thread/3b372eec/
+

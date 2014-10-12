@@ -69,11 +69,11 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 if (HIWORD(wParam) == BN_CLICKED) {
                     TCHAR buf[SES_MAX_LEN];
                     buf[0] = 0;
-                    dlg::getText(hDlg, IDC_NEW_EDT_NAME, buf);
+                    dlg::getText(hDlg, IDC_NEW_ETX_NAME, buf);
                     if (buf[0] == 0) {
-                        dlg::setText(hDlg, IDC_NEW_EDT_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
+                        dlg::setText(hDlg, IDC_NEW_ETX_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
                     }
-                    dlg::focus(hDlg, IDC_NEW_EDT_NAME);
+                    dlg::focus(hDlg, IDC_NEW_ETX_NAME);
                     return TRUE;
                 }
                 break;
@@ -101,7 +101,7 @@ namespace {
 bool onInit(HWND hDlg)
 {
     dlg::setCheck(hDlg, IDC_NEW_RAD_EMPTY, true);
-    dlg::focus(hDlg, IDC_NEW_EDT_NAME);
+    dlg::focus(hDlg, IDC_NEW_ETX_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -40);
     ShowWindow(hDlg, SW_SHOW);
     return true;
@@ -115,7 +115,7 @@ bool onOk(HWND hDlg)
 
     // Set the destination file pathname.
     newName[0] = 0;
-    dlg::getText(hDlg, IDC_NEW_EDT_NAME, newName);
+    dlg::getText(hDlg, IDC_NEW_ETX_NAME, newName);
     if (newName[0] == 0) {
         msgBox(_T("Missing file name."), M_WARN);
         return false;

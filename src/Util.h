@@ -81,7 +81,8 @@ bool focus(HWND hDlg, UINT idDlgCtrl);
 INT getLbSelData(HWND hDlg, UINT idDlgCtrl);
 INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data);
 bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset = 0, INT yOffset = 0, INT width = 0, INT height = 0, bool bRepaint = FALSE);
-void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT xRight, INT yBottom, INT wRight, INT hBottom);
+void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool last = false);
+//HWND createTooltip(int toolID, HWND hDlg, PTSTR pszText);
 
 } // end namespace dlg
 

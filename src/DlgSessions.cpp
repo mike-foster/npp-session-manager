@@ -38,6 +38,7 @@ namespace {
 
 INT _lbSelectedData;
 INT _minWidth = 0, _minHeight = 0;
+bool _inInit, _sortChanged;
 
 bool onInit(HWND hDlg);
 bool onOk(HWND hDlg);
@@ -45,9 +46,10 @@ bool onNew(HWND hDlg);
 bool onRename(HWND hDlg);
 bool onDelete(HWND hDlg);
 bool onDefault(HWND hDlg);
+void saveOptions(HWND hDlg);
 bool onPrevious(HWND hDlg);
 bool fillListBox(HWND hDlg, INT sesCurIdx = SES_CURRENT);
-void onResize(HWND hDlg, INT dlgW, INT dlgH);
+void onResize(HWND hDlg, INT dlgW = 0, INT dlgH = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 
 } // end namespace
@@ -123,11 +125,26 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                     }
                 }
                 return TRUE;
+            case IDC_SES_RAD_ALPHA:
+            case IDC_SES_RAD_DATE:
+                if (!_inInit && ntfy == BN_CLICKED) {
+                    _sortChanged = true;
+                    saveOptions(hDlg);
+                    app_readSessionDirectory();
+                    fillListBox(hDlg);
+                }
+                return TRUE;
         }
     }
-    else if (uMessage == WM_SIZE) {
-        onResize(hDlg, LOWORD(lParam), HIWORD(lParam));
+    else if (uMessage == WM_WINDOWPOSCHANGED) {
+        LPWINDOWPOS wp = (LPWINDOWPOS)lParam;
+        if (!(wp->flags & SWP_NOSIZE)) {
+            onResize(hDlg);
+        }
     }
+    //else if (uMessage == WM_SIZE) {
+    //    onResize(hDlg, LOWORD(lParam), HIWORD(lParam));
+    //}
     else if (uMessage == WM_GETMINMAXINFO) {
         onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
     }
@@ -154,22 +171,26 @@ INT dlgSes_getLbSelectedData()
 namespace {
 
 /* Determines minimum dialog size. Populates controls. Resizes, centers and
-   displays the dialog window.
-   XXX Adding 6 and 24 is magic. */
+   displays the dialog window. */
 bool onInit(HWND hDlg)
 {
+    RECT r;
     bool ret = false;
 
+    _inInit = true;
+    _sortChanged = false;
     if (_minWidth == 0) {
-        RECT rect = {0, 0, IDD_SES_W, IDD_SES_H};
-        MapDialogRect(hDlg, &rect);
-        _minWidth = rect.right - rect.left + 6;
-        _minHeight = rect.bottom - rect.top + 24;
+        GetWindowRect(hDlg, &r);
+        _minWidth = r.right - r.left;
+        _minHeight = r.bottom - r.top;
     }
-    dlg::setText(hDlg, IDC_SES_TXT_CUR, app_getSessionName(SES_CURRENT));
-    dlg::setText(hDlg, IDC_SES_TXT_PRV, app_getSessionName(SES_PREVIOUS));
+    dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SES_CURRENT));
+    dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SES_PREVIOUS));
     dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.getLoadIntoCurrent());
     dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.getLoadWithoutClosing());
+    bool alpha = gCfg.isSortAlpha();
+    dlg::setCheck(hDlg, IDC_SES_RAD_ALPHA, alpha);
+    dlg::setCheck(hDlg, IDC_SES_RAD_DATE, !alpha);
 
     if (fillListBox(hDlg)) {
         INT w, h;
@@ -178,15 +199,19 @@ bool onInit(HWND hDlg)
             w = 0;
             h = 0;
         }
-        else {
-            w += 6;
-            h += 24;
-        }
         dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
+        onResize(hDlg);
         ShowWindow(hDlg, SW_SHOW);
         ret = true;
     }
 
+    // XXX are tooltips really needed?
+    //dlg::createTooltip(IDC_SES_CHK_LIC, hDlg, _T("Loads a session into the current session"));
+    //dlg::createTooltip(IDC_SES_CHK_LWC, hDlg, _T("Does not close the open files before loading a session"));
+    //dlg::createTooltip(IDC_SES_RAD_ALPHA, hDlg, _T("Sorts the sessions list alphabetically"));
+    //dlg::createTooltip(IDC_SES_RAD_DATE, hDlg, _T("Sorts the sessions list by most recently used"));
+
+    _inInit = false;
     return ret;
 }
 
@@ -202,6 +227,15 @@ bool onDefault(HWND hDlg)
     EndDialog(hDlg, 0);
     app_loadSession(SES_DEFAULT, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
+}
+
+void saveOptions(HWND hDlg)
+{
+    if (_sortChanged) {
+        gCfg.setSortOrder(dlg::getCheck(hDlg, IDC_SES_RAD_ALPHA) ? SORT_ORDER_ALPHA : SORT_ORDER_DATE);
+        gCfg.save();
+        _sortChanged = false;
+    }
 }
 
 bool onPrevious(HWND hDlg)
@@ -249,6 +283,8 @@ bool fillListBox(HWND hDlg, INT sesCurIdx)
     HWND hLst;
     INT i, sesIdx, sesCount;
 
+    LOGF("%i", sesCurIdx);
+
     hLst = GetDlgItem(hDlg, IDC_SES_LST_SES);
     if (hLst) {
         SendMessage(hLst, LB_RESETCONTENT, 0, 0);
@@ -269,31 +305,46 @@ bool fillListBox(HWND hDlg, INT sesCurIdx)
     return false;
 }
 
+/* Resizes and repositions dialog controls. */
 void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
-    // Convert dialog units to pixels
-    RECT r0 = {IDC_ALL_MARGIN, IDC_ALL_MARGIN, IDD_SES_W - IDC_ALL_MARGIN - IDC_SES_LST_SES_W, IDD_SES_H - IDC_SES_LST_SES_Y - IDC_SES_LST_SES_H};
-    RECT r1 = {r0.left, IDD_SES_H - IDC_SES_CHK_LIC_Y - IDC_SES_CHK_H, r0.right, r0.bottom};
-    MapDialogRect(hDlg, &r0);
-    MapDialogRect(hDlg, &r1);
-    // Resize the session list
-    dlg::adjToEdge(hDlg, IDC_SES_LST_SES, dlgW, dlgH, -1, -1, r0.right, r0.bottom);
-    // Resize the Current and Previous text
-    dlg::adjToEdge(hDlg, IDC_SES_TXT_CUR, dlgW, dlgH, -1, -1, r0.left, -1);
-    dlg::adjToEdge(hDlg, IDC_SES_TXT_PRV, dlgW, dlgH, -1, -1, r0.left, -1);
-    // Move the buttons
-    INT btns[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_DEF, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_CANCEL};
-    int len = sizeof btns / sizeof INT;
-    for (int i = 0; i < len; ++i) {
-        dlg::adjToEdge(hDlg, btns[i], dlgW, dlgH, r0.left, -1, -1, -1);
-    }
-    // Move the checkboxes
-    dlg::adjToEdge(hDlg, IDC_SES_CHK_LIC, dlgW, dlgH, -1, r1.top, -1, -1);
-    dlg::adjToEdge(hDlg, IDC_SES_CHK_LWC, dlgW, dlgH, -1, r0.top, -1, -1);
-    // Save new dialog size
-    gCfg.saveSesDlgSize(dlgW, dlgH);
+    RECT r;
+    int i, len;
 
-    LOGE(31, "Sessions: w=%d, h=%d", dlgW, dlgH);
+    //LOGE(31, "Sessions: w=%d, h=%d", dlgW, dlgH);
+
+    if (dlgW == 0) {
+        GetClientRect(hDlg, &r);
+        dlgW = r.right;
+        dlgH = r.bottom;
+    }
+    // Resize the Current and Previous control text
+    dlg::adjToEdge(hDlg, IDC_SES_CTX_CUR, dlgW, dlgH, 4, IDC_SES_CTX_WRO, 0);
+    dlg::adjToEdge(hDlg, IDC_SES_CTX_PRV, dlgW, dlgH, 4, IDC_SES_CTX_WRO, 0);
+    // Resize the session list
+    dlg::adjToEdge(hDlg, IDC_SES_LST_SES, dlgW, dlgH, 4|8, IDC_SES_LST_WRO, IDC_SES_LST_HBO);
+    // Move the buttons
+    INT btnCol[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_DEF, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_CANCEL};
+    len = sizeof btnCol / sizeof INT;
+    for (i = 0; i < len; ++i) {
+        dlg::adjToEdge(hDlg, btnCol[i], dlgW, dlgH, 1, IDC_SES_BTN_XRO, 0);
+    }
+    // Move options row 1
+    INT sortRow[] = {IDC_SES_CHK_LIC, IDC_SES_RAD_ALPHA};
+    len = sizeof sortRow / sizeof INT;
+    for (i = 0; i < len; ++i) {
+        dlg::adjToEdge(hDlg, sortRow[i], dlgW, dlgH, 2, 0, IDC_SES_OPT_R1_YBO);
+    }
+    // Move options row 2
+    INT loadRow[] = {IDC_SES_CHK_LWC, IDC_SES_RAD_DATE};
+    len = sizeof loadRow / sizeof INT;
+    for (i = 0; i < len; ++i) {
+        dlg::adjToEdge(hDlg, loadRow[i], dlgW, dlgH, 2, 0, IDC_SES_OPT_R2_YBO, true);
+    }
+
+    // Save new dialog size
+    GetWindowRect(hDlg, &r);
+    gCfg.saveSesDlgSize(r.right - r.left, r.bottom - r.top);
 }
 
 /* Sets the minimum size the user can resize to. */

@@ -67,6 +67,11 @@ pre {
   font-size: small;
   max-height: 32em;
 }
+ul#contents li {
+  font-size: smaller;
+  margin-top: 1px;
+  margin-bottom: 1px;
+}
 
 .smaller {
   font-size: smaller;

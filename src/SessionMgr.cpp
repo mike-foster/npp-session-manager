@@ -23,6 +23,7 @@
 #include "Config.h"
 #include "Menu.h"
 #include "Util.h"
+#include <algorithm>
 #include <strsafe.h>
 #include <time.h>
 #include <vector>
@@ -59,9 +60,12 @@ class Session
 {
     public:
     TCHAR name[SES_MAX_LEN];
-    Session(TCHAR *sn)
+    FILETIME modifiedTime;
+    Session(TCHAR *sn, FILETIME mod)
     {
         StringCchCopy(name, SES_MAX_LEN - 1, sn);
+        modifiedTime.dwLowDateTime = mod.dwLowDateTime;
+        modifiedTime.dwHighDateTime = mod.dwHighDateTime;
     }
 };
 
@@ -69,18 +73,23 @@ vector<Session> _sessions;
 INT _sesCurIdx; // the _sessions index of the current session
 INT _sesPrvIdx; // the _sessions index of the previous session
 INT _bidFileOpened; // bufferId from most recent NPPN_FILEOPENED
+INT _bidBufferActivated; // XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
+bool _sesIsDirty; // XXX experimental. if true, current session needs to be saved. this should only be set true in cases where saving the session is deferred
 bool _appReady;
 bool _sesLoading;
 time_t _shutdownTimer; // for determining if files are closing due to a shutdown
 time_t _titlebarTimer; // for updating the titlebar text
 
-void onNppReady();
+void onNppReady(); 
 void removeBracketedPrefix(TCHAR *s);
 void app_updateGlobalFromSession(TCHAR *sesFile);
 void app_updateSessionFromGlobal(TCHAR *sesFile);
 void app_updateDocumentFromGlobal(INT bufferId);
 
 } // end namespace
+
+bool sortByAlpha(const Session s1, const Session s2);
+bool sortByDate(const Session s1, const Session s2);
 
 //------------------------------------------------------------------------------
 // The api namespace contains functions called only from DllMain.
@@ -94,6 +103,8 @@ void app_onLoad()
     _sesCurIdx = SES_DEFAULT;
     _sesPrvIdx = SES_NONE;
     _bidFileOpened = 0;
+    _bidBufferActivated = 0;
+    _sesIsDirty = false;
     _shutdownTimer = 0;
     _titlebarTimer = 0;
 }
@@ -128,17 +139,17 @@ void app_onNotify(SCNotification *pscn)
             switch (notificationCode) {
                 case NPPN_READY:           LOG("NPPN_READY"); break;
                 case NPPN_SHUTDOWN:        LOG("NPPN_SHUTDOWN"); break; // We need NPPN_BEFORESHUTDOWN
-                case NPPN_FILEBEFORESAVE:  LOG("NPPN_FILEBEFORESAVE %i", bufferId); break;
-                case NPPN_FILESAVED:       LOG("NPPN_FILESAVED %i", bufferId); break;
-                case NPPN_FILEBEFORELOAD:  LOG("NPPN_FILEBEFORELOAD"); break;
-                case NPPN_FILELOADFAILED:  LOG("NPPN_FILELOADFAILED"); break;
-                case NPPN_FILEBEFOREOPEN:  LOG("NPPN_FILEBEFOREOPEN %i", bufferId); break;
-                case NPPN_FILEOPENED:      LOG("NPPN_FILEOPENED %i", bufferId); break;
-                case NPPN_FILEBEFORECLOSE: LOG("NPPN_FILEBEFORECLOSE %i", bufferId); break;
-                case NPPN_FILECLOSED:      LOG("NPPN_FILECLOSED %i", bufferId); break;
-                case NPPN_LANGCHANGED:     LOG("NPPN_LANGCHANGED %i", bufferId); break;
-                case NPPN_DOCORDERCHANGED: LOG("NPPN_DOCORDERCHANGED %i", bufferId); break; // Does not occur?
-                case NPPN_BUFFERACTIVATED: LOG("NPPN_BUFFERACTIVATED %i", bufferId); break;
+                case NPPN_FILEBEFORESAVE:  LOG("NPPN_FILEBEFORESAVE \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILESAVED:       LOG("NPPN_FILESAVED      \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILEBEFORELOAD:  LOG("NPPN_FILEBEFORELOAD \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILELOADFAILED:  LOG("NPPN_FILELOADFAILED \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILEBEFOREOPEN:  LOG("NPPN_FILEBEFOREOPEN \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILEOPENED:      LOG("NPPN_FILEOPENED     \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILEBEFORECLOSE: LOG("NPPN_FILEBEFORECLOSE\t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_FILECLOSED:      LOG("NPPN_FILECLOSED     \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_LANGCHANGED:     LOG("NPPN_LANGCHANGED    \t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_DOCORDERCHANGED: LOG("NPPN_DOCORDERCHANGED\t%8i\t%i", bufferId, _bidBufferActivated); break; // Does not occur?
+                case NPPN_BUFFERACTIVATED: LOG("NPPN_BUFFERACTIVATED\t%8i\t%i", bufferId, _bidBufferActivated); break;
             }
         }
         switch (notificationCode) {
@@ -149,27 +160,33 @@ void app_onNotify(SCNotification *pscn)
                 _appReady = false;
                 break;
             case NPPN_FILEOPENED:
+                _sesIsDirty = true;
                 _bidFileOpened = bufferId;
                 break;
             case NPPN_FILESAVED:
                 app_showSessionInNppBars();
-            // intentional fall-thru
+                // intentional fall-thru
             case NPPN_LANGCHANGED:
             //case NPPN_DOCORDERCHANGED:
                 if (_appReady && !_sesLoading && gCfg.getAutoSave()) {
                     app_saveSession(_sesCurIdx);
                 }
                 break;
+            //case NPPN_FILEBEFORECLOSE: // XXX experimental
+            //    LOGG(10, "Shutdown %s be in progress", (bufferId != _bidBufferActivated) ? "MAY" : "may NOT");
+            //    break;
             case NPPN_FILECLOSED:
+                _sesIsDirty = true;
                 if (_appReady && !_sesLoading && gCfg.getAutoSave()) {
                     _shutdownTimer = time(NULL);
                     LOGG(10, "Save session in %i seconds if no shutdown", gCfg.getSaveDelay());
                 }
                 break;
             case NPPN_BUFFERACTIVATED:
+                _bidBufferActivated = bufferId;
                 if (_appReady && !_sesLoading) {
                     app_showSessionInNppBars();
-                    if (_bidFileOpened == bufferId) {
+                    if (_bidFileOpened == bufferId) { // buffer activated immediately after NPPN_FILEOPENED
                         if (gCfg.getGlobalBookmarks()) {
                             app_updateDocumentFromGlobal(_bidFileOpened);
                         }
@@ -187,20 +204,14 @@ void app_onNotify(SCNotification *pscn)
     else if (pscn->nmhdr.hwndFrom == sys_getSc1Hwnd() || pscn->nmhdr.hwndFrom == sys_getSc2Hwnd()) {
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
-                case SCN_SAVEPOINTREACHED:    LOG("SCN_SAVEPOINTREACHED %i", bufferId); break;
-                case SCN_SAVEPOINTLEFT:       LOG("SCN_SAVEPOINTLEFT %i", bufferId); break;
-                case SCN_MARGINCLICK:         LOG("SCN_MARGINCLICK %i", pscn->margin); break;
-                case SCN_HOTSPOTCLICK:        LOG("SCN_HOTSPOTCLICK %i", pscn->position); break;
-                case SCN_HOTSPOTDOUBLECLICK:  LOG("SCN_HOTSPOTDOUBLECLICK %i", pscn->position); break;
-                case SCN_HOTSPOTRELEASECLICK: LOG("SCN_HOTSPOTRELEASECLICK %i", pscn->position); break;
-                case SCN_CALLTIPCLICK:        LOG("SCN_CALLTIPCLICK %i", pscn->position); break;
-                case SCN_INDICATORCLICK:      LOG("SCN_INDICATORCLICK %i", pscn->position); break;
-                case SCN_INDICATORRELEASE:    LOG("SCN_INDICATORRELEASE %i", pscn->position); break;
-                case SCN_FOLDINGSTATECHANGED: LOG("SCN_FOLDINGSTATECHANGED %i", bufferId); break;
+                case SCN_SAVEPOINTREACHED: LOG("SCN_SAVEPOINTREACHED\t        \t%i", _bidBufferActivated); break;
+                case SCN_SAVEPOINTLEFT:    LOG("SCN_SAVEPOINTLEFT   \t        \t%i", _bidBufferActivated); break;
+                case SCN_MARGINCLICK:      LOG("SCN_MARGINCLICK     \t        \t%i", _bidBufferActivated); break;
             }
         }
         switch (notificationCode) {
             case SCN_SAVEPOINTLEFT:
+                _sesIsDirty = true;
                 if (gCfg.getShowInTitlebar()) {
                     _titlebarTimer = time(NULL);
                 }
@@ -286,12 +297,19 @@ void app_readSessionDirectory()
     do {
         StringCchCopy(sesName, SES_MAX_LEN - 1, ffd.cFileName);
         pth::remExt(sesName);
-        Session ses(sesName);
+        Session ses(sesName, ffd.ftLastWriteTime);
         _sessions.push_back(ses);
     }
     while (FindNextFile(hFind, &ffd) != 0);
     dwError = GetLastError();
     FindClose(hFind);
+    // Sort before restoring indexes
+    if (gCfg.isSortAlpha()) {
+        std::sort(_sessions.begin(), _sessions.end(), sortByAlpha);
+    }
+    else {
+        std::sort(_sessions.begin(), _sessions.end(), sortByDate);
+    }
     // If a session was current/previous try to make it current/previous again.
     if (sesCur[0] != 0) {
         _sesCurIdx = app_getSessionIndex(sesCur);
@@ -303,6 +321,26 @@ void app_readSessionDirectory()
         errBox(_T(__FUNCTION__), dwError);
     }
     _appReady = true;
+}
+
+/* Sorts the sessions vector ascending alphabetically. */
+bool sortByAlpha(const Session s1, const Session s2)
+{
+    return lstrcmp(s1.name, s2.name) <= 0;
+}
+
+/* Sorts the sessions vector descending by the file's last modified time. For
+   sessions that have the same last modified time it sorts ascending alphabetically. */
+bool sortByDate(const Session s1, const Session s2)
+{
+    INT result = CompareFileTime(&s1.modifiedTime, &s2.modifiedTime);
+    if (result < 0) {
+        return false;
+    }
+    if (result > 0) {
+        return true;
+    }
+    return sortByAlpha(s1, s2);
 }
 
 /* Loads the session at index si. Makes it the current index unless lic is
@@ -371,6 +409,7 @@ void app_saveSession(INT si)
     if (!_appReady || _sesLoading) {
         return;
     }
+    LOGG(10, "Session %s dirty", _sesIsDirty ? "IS" : "is NOT"); // XXX experimental
     if (si == SES_CURRENT) {
         si = _sesCurIdx;
     }
@@ -385,6 +424,7 @@ void app_saveSession(INT si)
     if (gCfg.getGlobalBookmarks()) {
         app_updateGlobalFromSession(sesFile);
     }
+    _sesIsDirty = false;
 }
 
 /* Returns true if session index si is valid, else false. */
@@ -457,18 +497,22 @@ void app_getSessionFile(INT si, TCHAR *buf)
    that setting is enabled. */
 void app_showSessionInNppBars()
 {
-    const int maxLen1 = MAX_PATH;
-    const int maxLen2 = MAX_PATH_T2;
-    TCHAR buf1[MAX_PATH_P1];
-    TCHAR buf2[MAX_PATH_T2_P1];
-
     if (!_appReady) {
         return;
     }
 
-    LOGF("");
+    const int maxLen1 = MAX_PATH;
+    const int maxLen2 = MAX_PATH_T2;
+    TCHAR buf1[MAX_PATH_P1];
+    TCHAR buf2[MAX_PATH_T2_P1];
+    bool sbar = gCfg.getShowInStatusbar();
+    bool tbar = gCfg.getShowInTitlebar();
 
-    if (gCfg.getShowInStatusbar()) {
+    if (sbar || tbar) {
+        LOGF("");
+    }
+
+    if (sbar) {
         StringCchCopy(buf1, maxLen1, _T("session : "));
         StringCchCat(buf1, maxLen1, app_getSessionName(SES_CURRENT));
         StringCchCat(buf1, maxLen1, _T("    previous : "));
@@ -476,7 +520,7 @@ void app_showSessionInNppBars()
         SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buf1);
     }
 
-    if (gCfg.getShowInTitlebar()) {
+    if (tbar) {
         GetWindowText(sys_getNppHwnd(), buf1, maxLen1);
         removeBracketedPrefix(buf1);
         StringCchCopy(buf2, maxLen2, _T("["));
