@@ -5,7 +5,7 @@
 
 set npp_plugin_dir=c:\bin\npp\plugins
 set sessionmgr_old_ver=0.7.1
-set sessionmgr_new_ver=0.8
+set sessionmgr_new_ver=0.8.2
 
 set do_c=0
 set do_b=0

@@ -115,7 +115,7 @@
 // Child dialogs of the Sessions dialog
 #define IDD_CDLG_W              164
 #define IDC_CDLG_TXT_W          150
-#define IDC_CDLG_RAD_W          115
+#define IDC_CDLG_RAD_W          120
 
 /* The Settings dialog */
 

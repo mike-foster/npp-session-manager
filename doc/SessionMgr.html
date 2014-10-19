@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 0.8.1</h1>
+  <h1>Session Manager 0.8.2</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -98,8 +98,8 @@
   <p></p>
   <ul>
     <li><b>As an empty session</b>: Create a new, empty session. Note that an empty session contains no files, however Notepad++ always has at least one editor tab open. In this case it is a new buffer which has not yet been saved to a file. After opening other files you can simply close the new buffer if you do not need it.</li>
-    <li><b>From the currently open files</b>: Create a new session containing the currently open files.</li>
-    <li><b>By copying the selected session</b>: Create a new session by copying the selected session.</li>
+    <li><b>As a copy of the current session</b>: Create a new session by copying the current session.</li>
+    <li><b>As a copy of the selected session</b>: Create a new session by copying the selected session.</li>
   </ul>
   <p><b>Rename</b>: Renames the selected session.</p>
   <p><b>Delete</b>: Deletes the selected session. This does not delete the session's files &ndash; only the session file itself, and it will be removed from the list. You will be asked for confirmation before the deletion.</p>
@@ -134,11 +134,11 @@
       <p>If <tt>Auto save</tt> is disabled sessions will only be saved when you select <tt>Save current</tt> from the plugin menu or click the <tt>Save</tt> button on the Sessions dialog. The default value for <tt>Auto save</tt> is <tt>1</tt> (enabled).</p>
     </li>
     <li><b>Auto load</b>: If this is enabled the most recently opened session will be loaded when Notepad++ starts up. If you enable <tt>Auto load</tt> you should disable the Notepad++ <i class="smaller">Remember current session for next launch</i> feature. The default value for <tt>Auto load</tt> is <tt>0</tt> (disabled).</li>
-    <li><b>Load into current</b>: If this is enabled the <tt>Load into current</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
-    <li><b>Load without closing</b>: If this is enabled the <tt>Load without closing</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt>.</li>
-    <li><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default value is <tt>0</tt>.</li>
-    <li><b>Show in status bar</b>: If this is enabled the current and previous session names will be displayed in the Notepad++ status bar. The default value is <tt>0</tt>.</li>
-    <li><b>Global bookmarks</b>: This enables or disables the global bookmarks feature (see the <a href="#GlobalProperties">Global Properties</a> section). The default value for <tt>Global bookmarks</tt> is <tt>1</tt> (enabled).</li>
+    <li><b>Load into current</b>: If this is enabled the <tt>Load into current</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt> (disabled).</li>
+    <li><b>Load without closing</b>: If this is enabled the <tt>Load without closing</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt> (disabled).</li>
+    <li><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default value is <tt>0</tt> (disabled).</li>
+    <li><b>Show in status bar</b>: If this is enabled the current and previous session names will be displayed in the Notepad++ status bar. The default value is <tt>0</tt> (disabled).</li>
+    <li><b>Global bookmarks</b>: This enables or disables the global bookmarks feature (see the <a href="#GlobalProperties">Global Properties</a> section). Note that if <tt>Auto save</tt> is disabled your global bookmarks will only get updated when you manually save the current session. The default value for <tt>Global bookmarks</tt> is <tt>1</tt> (enabled).</li>
     <li><b>Session files folder</b>: This specifies the location of the session files Session Manager will display in the Sessions dialog. Click the <tt>...</tt> button to browse for a folder. Set to an empty string to get the default value: <tt>plugins\config\SessionMgr\sessions</tt>.</li>
     <li><b>Session file extension</b>: This specifies the file name extension of the session files Session Manager will display in the Sessions dialog. Think of it as a filter. Set to an empty string to get the default value: <tt>.npp-session</tt>.</li>
   </ul>
@@ -186,16 +186,15 @@ sub6=&amp;About...</pre>
 <div>
   <p>Session Manager does not immediately save the current session when a file is closed. It must determine if a shutdown is in progress in which case <i>all</i> files will be closed. We don't want to save the session if files are being closed due to a shutdown. When Notepad++ is about to shutdown it closes all files <i>before</i> it sends the shutdown notification to plugins. To work around this, when a file is closed Session Manager waits for <tt>saveDelay</tt> seconds (see the <a href="#settings-ini">settings.ini</a> section). If the shutdown notification has not been received at the end of that time then the current session is saved.</p>
   <p>This is not an ideal solution but it is very rare for a session to be saved incorrectly. When you initiate a shutdown Notepad++ first checks all open files. If a file is modified Notepad++ will offer to let you save the file, not save the file, or cancel the shutdown. If you choose to save the file then the plugin will receive NPPN_FILEBEFORESAVE, SCN_SAVEPOINTREACHED and then NPPN_FILESAVED, as usual. Notepad++ then continues checking open files and prompting you if any are modified. Only after all files have been checked does Notepad++ begin closing files.</p>
-  <p>So far, there is only one scenario I have found where Session Manager will save the session incorrectly...</p>
-  <ul>
-    <li>If you close one or more files and then quit Notepad++ before <tt>saveDelay</tt> seconds have elapsed then those closed files will still be part of that session. Session Manager did not have time to save the session after the files were closed because you quit Notepad++ before <tt>saveDelay</tt> seconds had elapsed.</li>
-  </ul>
+  <p>So far, there is only one scenario I have found where Session Manager will save the session incorrectly. If you close one or more files and then quit Notepad++ before <tt>saveDelay</tt> seconds have elapsed then those closed files will still be part of that session.</p>
+<!--
   <p>There might be other ways to detect if a shutdown is in progress but Session Manager does not yet make use of them...</p>
   <ul>
     <li>When the user closes a file the plugin sees NPPN_FILEBEFORECLOSE, NPPN_BUFFERACTIVATED and then NPPN_FILECLOSED. During a shutdown, for each opened file except for the last in each view, the plugin sees NPPN_FILEBEFORECLOSE and then NPPN_FILECLOSED, with no NPPN_BUFFERACTIVATED in between. However, for the last file in each view it does see NPPN_BUFFERACTIVATED in between. Evidently, Scintilla must always have an active buffer, so when no files are open Scintilla activates a buffer for a "New" file.</li>
     <li>Another possibility is to note that when the buffer for NPPN_FILEBEFORECLOSE is different from the active buffer then a shutdown <i>may</i> be in progress.</li>
   </ul>
-  <p>Ideally, Notepad++ would issue NPPN_BEFORESHUTDOWN, then close all files, then issue NPPN_SHUTDOWN. In the case where the user cancels the shutdown it would issue NPPN_CANCELSHUTDOWN instead of NPPN_SHUTDOWN. NPPN_BEFORESHUTDOWN and NPPN_CANCELSHUTDOWN are not implemented in Notepad++ as of version 6.6.9.</p>
+-->
+  <p>Ideally, Notepad++ would issue NPPN_BEFORESHUTDOWN, then close all files, then issue NPPN_SHUTDOWN. In the case where the user cancels the shutdown it would issue NPPN_CANCELSHUTDOWN.</p>
 </div>
 
 <h2 id="Tips">Tips</h2>
@@ -204,8 +203,10 @@ sub6=&amp;About...</pre>
   <ul>
     <li><b>Shortcuts</b>: Get in the habit of using the keyboard shortcuts, instead of the mouse, to open Session Manager dialogs.</li>
     <li><b>Favorites</b>: Make a session containing the favorite file(s). Any time you need those files just click "Load into the current session" then load that session.</li>
-    <li><b>Categories</b>: The Sessions list is sorted alphabetically so name your sessions with categorized prefixes or suffixes. This will group related sessions together in the list. For example, I prefix my "favorites" sessions with an underscore because I want those to appear at the top of the list. I have many web-related projects and I prefix those session names with "www_". An example of using a suffix is: "my-project_trunk", "my-project_rev-123", etc. That keeps them grouped together in the list.</li>
+    <li><b>Categories</b>: Name your sessions with categorized prefixes or suffixes. This will group related sessions together in the list when it is sorted alphabetically. For example, I prefix my "favorites" sessions with an underscore because I want those to appear at the top of the list. I have many web-related projects and I prefix those session names with "www_". An example of using a suffix is: "my-project_trunk", "my-project_rev-123", etc. That keeps them grouped together in the list.</li>
+<!--
     <li><b>Large Projects</b>: Sometimes I'll have a large project and end up creating many different sessions for it. Usually it's the type of project that may last for a relatively long time, but after the project is finished I don't want all those sessions cluttering the Sessions list &ndash; but I also may not want to delete all of them. Here's how Session Manager can help in this situation: use different session folders, and/or file name extensions. Using a different session file name extension works quite well. It keeps all session files in one folder and then the extension acts as a filter for what sessions are displayed in the Sessions list. Also, a different default session is created for each different extension. Changing the extension back to the default is easy &ndash; just leave the extension field blank, in the Settings dialog, and the default will be used.</li>
+-->
     <li><b>Usage Scenarios</b>: Here are two basic usage scenarios.
       <ul>
         <li>Enable the <tt>Auto load</tt> setting so some session is always current. Loaded sessions become current and change to always reflect the latest changes to that session. This scenario does not use the default session.</li>
@@ -243,6 +244,14 @@ To this:
 
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
+  <h3>0.8.2, 19Oct2014</h3>
+  <ul>
+    <li>Fixed a bug reported by <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/thread/3b372eec/#d4d7">Pavel</a> (thanks!): When about to load a new session, do not save the current session if <tt>Auto save</tt> is disabled.</li>
+    <li>In the "Create New Session" dialog, renamed "From the currently open files" to "As a copy of the current session" and renamed "By copying the selected session" to "As a copy of the selected session".</li>
+    <li>Renamed some Config class methods.</li>
+    <li>Tweaked some button positions.</li>
+    <li>Made improvements to the help page.</li>
+  </ul>
   <h3>0.8.1, 12Oct2014</h3>
   <ul>
     <li>Added an option to sort the sessions list by the session files' last-modified times in addition to alphabetically.</li>
@@ -268,7 +277,7 @@ To this:
   </ul>
   <h3>0.7, 13Jan2013</h3>
   <ul>
-    <li>This is a candidate for version 1.0.</li>
+    <!-- <li>This is a candidate for version 1.0.</li> -->
     <li>The Sessions dialog and the Settings dialog now remember their sizes after being resized.</li>
     <li>The <i>previous</i> session is now remembered and can be loaded via a new menu option, "Load previous", and a new button on the Sessions dialog, "Previous".</li>
     <li>The name of the current session is now prepended to the text in the Notepad++ title bar. This is enabled by a new option on the Settings dialog, "Show in title bar".</li>

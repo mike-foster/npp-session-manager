@@ -141,19 +141,7 @@ extern "C" void cbAbout()
 
     StringCchCat(m, s, _T("\n\nConfiguration directory:\n"));
     StringCchCat(m, s, sys_getCfgDir());
-    StringCchCat(m, s, _T("\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Jens Lorenz, for the plugin template\n- Members of the Notepad++ forums"));
-    /*
-    StringCchCat(m, s, _T("\n\nHelp file:\n"));
-    StringCchCat(m, s, sys_getHelpFile());
-    StringCchCat(m, s, _T("\n\nSettings file:\n"));
-    StringCchCat(m, s, sys_getIniFile());
-    StringCchCat(m, s, _T("\n\nCurrent session file:\n"));
-    app_getSessionFile(SES_CURRENT, b);
-    StringCchCat(m, s, b);
-    StringCchCat(m, s, _T("\n\nPrevious session file:\n"));
-    app_getSessionFile(SES_PREVIOUS, b);
-    StringCchCat(m, s, b);
-    */
+    StringCchCat(m, s, _T("\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Jens Lorenz, for the plugin template\n- Thell Fowler, for the plugin template\n- Members of the Notepad++ forums"));
     msgBox(m);
 }
 

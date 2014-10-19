@@ -22,8 +22,8 @@
 #define NPP_PLUGIN_VERSION_H
 
 
-#define RES_VERSION_B  0,8,1,0
-#define RES_VERSION_S  "0.8.1.0"
+#define RES_VERSION_B  0,8,2,0
+#define RES_VERSION_S  "0.8.2.0"
 #define PLUGIN_VERSION _T(RES_VERSION_S)
 #define RES_COPYRIGHT  "Copyright 2011-2014 Michael Foster. Distributed under the terms of the GNU GPL."
 

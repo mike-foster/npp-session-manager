@@ -138,18 +138,18 @@ void app_onNotify(SCNotification *pscn)
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
                 case NPPN_READY:           LOG("NPPN_READY"); break;
-                case NPPN_SHUTDOWN:        LOG("NPPN_SHUTDOWN"); break; // We need NPPN_BEFORESHUTDOWN
-                case NPPN_FILEBEFORESAVE:  LOG("NPPN_FILEBEFORESAVE \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILESAVED:       LOG("NPPN_FILESAVED      \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILEBEFORELOAD:  LOG("NPPN_FILEBEFORELOAD \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILELOADFAILED:  LOG("NPPN_FILELOADFAILED \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILEBEFOREOPEN:  LOG("NPPN_FILEBEFOREOPEN \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILEOPENED:      LOG("NPPN_FILEOPENED     \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILEBEFORECLOSE: LOG("NPPN_FILEBEFORECLOSE\t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_FILECLOSED:      LOG("NPPN_FILECLOSED     \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_LANGCHANGED:     LOG("NPPN_LANGCHANGED    \t%8i\t%i", bufferId, _bidBufferActivated); break;
-                case NPPN_DOCORDERCHANGED: LOG("NPPN_DOCORDERCHANGED\t%8i\t%i", bufferId, _bidBufferActivated); break; // Does not occur?
-                case NPPN_BUFFERACTIVATED: LOG("NPPN_BUFFERACTIVATED\t%8i\t%i", bufferId, _bidBufferActivated); break;
+                case NPPN_SHUTDOWN:        LOG("NPPN_SHUTDOWN"); break;
+                case NPPN_FILEBEFORESAVE:  LOGNN("NPPN_FILEBEFORESAVE"); break;
+                case NPPN_FILESAVED:       LOGNN("NPPN_FILESAVED"); break;
+                case NPPN_FILEBEFORELOAD:  LOGNN("NPPN_FILEBEFORELOAD"); break;
+                case NPPN_FILELOADFAILED:  LOGNN("NPPN_FILELOADFAILED"); break;
+                case NPPN_FILEBEFOREOPEN:  LOGNN("NPPN_FILEBEFOREOPEN"); break;
+                case NPPN_FILEOPENED:      LOGNN("NPPN_FILEOPENED"); break;
+                case NPPN_FILEBEFORECLOSE: LOGNN("NPPN_FILEBEFORECLOSE"); break;
+                case NPPN_FILECLOSED:      LOGNN("NPPN_FILECLOSED"); break;
+                case NPPN_LANGCHANGED:     LOGNN("NPPN_LANGCHANGED"); break;
+                case NPPN_DOCORDERCHANGED: LOGNN("NPPN_DOCORDERCHANGED"); break; // Does not occur?
+                case NPPN_BUFFERACTIVATED: LOGNN("NPPN_BUFFERACTIVATED"); break;
             }
         }
         switch (notificationCode) {
@@ -168,7 +168,7 @@ void app_onNotify(SCNotification *pscn)
                 // intentional fall-thru
             case NPPN_LANGCHANGED:
             //case NPPN_DOCORDERCHANGED:
-                if (_appReady && !_sesLoading && gCfg.getAutoSave()) {
+                if (_appReady && !_sesLoading && gCfg.autoSaveEnabled()) {
                     app_saveSession(_sesCurIdx);
                 }
                 break;
@@ -177,7 +177,7 @@ void app_onNotify(SCNotification *pscn)
             //    break;
             case NPPN_FILECLOSED:
                 _sesIsDirty = true;
-                if (_appReady && !_sesLoading && gCfg.getAutoSave()) {
+                if (_appReady && !_sesLoading && gCfg.autoSaveEnabled()) {
                     _shutdownTimer = time(NULL);
                     LOGG(10, "Save session in %i seconds if no shutdown", gCfg.getSaveDelay());
                 }
@@ -187,10 +187,10 @@ void app_onNotify(SCNotification *pscn)
                 if (_appReady && !_sesLoading) {
                     app_showSessionInNppBars();
                     if (_bidFileOpened == bufferId) { // buffer activated immediately after NPPN_FILEOPENED
-                        if (gCfg.getGlobalBookmarks()) {
+                        if (gCfg.globalBookmarksEnabled()) {
                             app_updateDocumentFromGlobal(_bidFileOpened);
                         }
-                        if (gCfg.getAutoSave()) {
+                        if (gCfg.autoSaveEnabled()) {
                             app_saveSession(_sesCurIdx);
                         }
                     }
@@ -204,20 +204,20 @@ void app_onNotify(SCNotification *pscn)
     else if (pscn->nmhdr.hwndFrom == sys_getSc1Hwnd() || pscn->nmhdr.hwndFrom == sys_getSc2Hwnd()) {
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
-                case SCN_SAVEPOINTREACHED: LOG("SCN_SAVEPOINTREACHED\t        \t%i", _bidBufferActivated); break;
-                case SCN_SAVEPOINTLEFT:    LOG("SCN_SAVEPOINTLEFT   \t        \t%i", _bidBufferActivated); break;
-                case SCN_MARGINCLICK:      LOG("SCN_MARGINCLICK     \t        \t%i", _bidBufferActivated); break;
+                case SCN_SAVEPOINTREACHED: LOGSN("SCN_SAVEPOINTREACHED"); break;
+                case SCN_SAVEPOINTLEFT:    LOGSN("SCN_SAVEPOINTLEFT"); break;
+                case SCN_MARGINCLICK:      LOGSN("SCN_MARGINCLICK"); break;
             }
         }
         switch (notificationCode) {
             case SCN_SAVEPOINTLEFT:
                 _sesIsDirty = true;
-                if (gCfg.getShowInTitlebar()) {
+                if (gCfg.showInTitlebarEnabled()) {
                     _titlebarTimer = time(NULL);
                 }
                 break;
             case SCN_MARGINCLICK:
-                if (_appReady && !_sesLoading && gCfg.getAutoSave() && pscn->margin == NPP_BOOKMARK_MARGIN_ID) {
+                if (_appReady && !_sesLoading && gCfg.autoSaveEnabled() && pscn->margin == NPP_BOOKMARK_MARGIN_ID) {
                     app_saveSession(_sesCurIdx);
                 }
                 break;
@@ -304,7 +304,7 @@ void app_readSessionDirectory()
     dwError = GetLastError();
     FindClose(hFind);
     // Sort before restoring indexes
-    if (gCfg.isSortAlpha()) {
+    if (gCfg.sortAlphaEnabled()) {
         std::sort(_sessions.begin(), _sessions.end(), sortByAlpha);
     }
     else {
@@ -347,7 +347,7 @@ bool sortByDate(const Session s1, const Session s2)
    true. Closes the previous session before loading si, unless lwc is true. */
 void app_loadSession(INT si)
 {
-    app_loadSession(si, gCfg.getLoadIntoCurrent(), gCfg.getLoadWithoutClosing());
+    app_loadSession(si, gCfg.loadIntoCurrentEnabled(), gCfg.loadWithoutClosingEnabled());
 }
 void app_loadSession(INT si, bool lic, bool lwc)
 {
@@ -367,7 +367,9 @@ void app_loadSession(INT si, bool lic, bool lwc)
     }
 
     if (!lic && _sesCurIdx > SES_NONE) {
-        app_saveSession(_sesCurIdx); // Save the current session before closing it
+        if (gCfg.autoSaveEnabled()) {
+            app_saveSession(_sesCurIdx); // Save the current session before closing it
+        }
         _sesPrvIdx = _sesCurIdx;
         gCfg.savePrevious(_sessions[_sesPrvIdx].name); // Write new previous session name to ini file
     }
@@ -375,7 +377,7 @@ void app_loadSession(INT si, bool lic, bool lwc)
     _sesLoading = true;
 
     app_getSessionFile(si, sesFile);
-    if (gCfg.getGlobalBookmarks()) {
+    if (gCfg.globalBookmarksEnabled()) {
         app_updateSessionFromGlobal(sesFile);
     }
 
@@ -421,7 +423,7 @@ void app_saveSession(INT si)
 
     SendMessage(sys_getNppHwnd(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
     _sesCurIdx = si > SES_NONE ? si : SES_DEFAULT;
-    if (gCfg.getGlobalBookmarks()) {
+    if (gCfg.globalBookmarksEnabled()) {
         app_updateGlobalFromSession(sesFile);
     }
     _sesIsDirty = false;
@@ -505,8 +507,8 @@ void app_showSessionInNppBars()
     const int maxLen2 = MAX_PATH_T2;
     TCHAR buf1[MAX_PATH_P1];
     TCHAR buf2[MAX_PATH_T2_P1];
-    bool sbar = gCfg.getShowInStatusbar();
-    bool tbar = gCfg.getShowInTitlebar();
+    bool sbar = gCfg.showInStatusbarEnabled();
+    bool tbar = gCfg.showInTitlebarEnabled();
 
     if (sbar || tbar) {
         LOGF("");
@@ -540,7 +542,7 @@ void onNppReady()
     TCHAR name[MAX_PATH_P1];
     name[0] = 0;
     _appReady = true;
-    if (gCfg.getAutoLoad()) {
+    if (gCfg.autoLoadEnabled()) {
         gCfg.readPrevious(name);
         _sesPrvIdx = app_getSessionIndex(name);
         gCfg.readCurrent(name);
@@ -768,7 +770,7 @@ void app_updateSessionFromGlobal(TCHAR *sesFile)
                 }
             }
             //else {
-            //    XXX not found
+            //    TODO: not found
             //    This indicates global needs to be updated from this session,
             //    but we can't call app_updateGlobalFromSession here.
             //}
@@ -789,8 +791,7 @@ void app_updateSessionFromGlobal(TCHAR *sesFile)
 
 /* Updates document properties from global file properties.
    When an existing document is added to a session, its bookmarks and
-   firstVisibleLine are updated from the global properties, then the session
-   is saved. */
+   firstVisibleLine are updated from the global properties. */
 void app_updateDocumentFromGlobal(INT bufferId)
 {
     size_t num;

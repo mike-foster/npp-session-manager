@@ -64,23 +64,23 @@ class Config
     void getMenuLabel(int idx, TCHAR *buf);
 
     void setAutoSave(bool v) { _autoSave = v; }
-    bool getAutoSave() { return _autoSave; }
+    bool autoSaveEnabled() { return _autoSave; }
     void setAutoLoad(bool v) { _autoLoad = v; }
-    bool getAutoLoad() { return _autoLoad; }
+    bool autoLoadEnabled() { return _autoLoad; }
     void setGlobalBookmarks(bool v) { _globalBookmarks = v; }
-    bool getGlobalBookmarks() { return _globalBookmarks; }
+    bool globalBookmarksEnabled() { return _globalBookmarks; }
     void setLoadIntoCurrent(bool v) { _loadIntoCurrent = v; }
-    bool getLoadIntoCurrent() { return _loadIntoCurrent; }
+    bool loadIntoCurrentEnabled() { return _loadIntoCurrent; }
     void setLoadWithoutClosing(bool v) { _loadWithoutClosing = v; }
-    bool getLoadWithoutClosing() { return _loadWithoutClosing; }
+    bool loadWithoutClosingEnabled() { return _loadWithoutClosing; }
     void setSortOrder(int v) { _sortOrder = v; }
     int getSortOrder() { return _sortOrder; }
-    bool isSortAlpha() { return _sortOrder == SORT_ORDER_ALPHA; }
-    bool isSortDate() { return _sortOrder == SORT_ORDER_DATE; }
+    bool sortAlphaEnabled() { return _sortOrder == SORT_ORDER_ALPHA; }
+    bool sortDateEnabled() { return _sortOrder == SORT_ORDER_DATE; }
     void setShowInStatusbar(bool v);
-    bool getShowInStatusbar() { return _showInStatusbar; }
+    bool showInStatusbarEnabled() { return _showInStatusbar; }
     void setShowInTitlebar(bool v);
-    bool getShowInTitlebar() { return _showInTitlebar; }
+    bool showInTitlebarEnabled() { return _showInTitlebar; }
     void setSaveDelay(TCHAR *p);
     int getSaveDelay() { return _saveDelay; }
     void getSaveDelay(TCHAR *buf, INT len);

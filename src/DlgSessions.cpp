@@ -142,9 +142,6 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             onResize(hDlg);
         }
     }
-    //else if (uMessage == WM_SIZE) {
-    //    onResize(hDlg, LOWORD(lParam), HIWORD(lParam));
-    //}
     else if (uMessage == WM_GETMINMAXINFO) {
         onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
     }
@@ -186,9 +183,9 @@ bool onInit(HWND hDlg)
     }
     dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SES_CURRENT));
     dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SES_PREVIOUS));
-    dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.getLoadIntoCurrent());
-    dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.getLoadWithoutClosing());
-    bool alpha = gCfg.isSortAlpha();
+    dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.loadIntoCurrentEnabled());
+    dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.loadWithoutClosingEnabled());
+    bool alpha = gCfg.sortAlphaEnabled();
     dlg::setCheck(hDlg, IDC_SES_RAD_ALPHA, alpha);
     dlg::setCheck(hDlg, IDC_SES_RAD_DATE, !alpha);
 

@@ -43,7 +43,7 @@ bool _inInit, _opChanged, _dirChanged;
 
 INT onOk(HWND hDlg);
 bool onInit(HWND hDlg);
-void onResize(HWND hDlg, INT w, INT h);
+void onResize(HWND hDlg, INT w = 0, INT h = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 bool getFolderName(HWND parent, TCHAR *buf);
 
@@ -101,8 +101,11 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 return TRUE;
         } // end switch
     }
-    else if (uMessage == WM_SIZE) {
-        onResize(hDlg, LOWORD(lParam), HIWORD(lParam));
+    else if (uMessage == WM_WINDOWPOSCHANGED) {
+        LPWINDOWPOS wp = (LPWINDOWPOS)lParam;
+        if (!(wp->flags & SWP_NOSIZE)) {
+            onResize(hDlg);
+        }
     }
     else if (uMessage == WM_GETMINMAXINFO) {
         onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
@@ -134,13 +137,13 @@ bool onInit(HWND hDlg)
         _minHeight = r.bottom - r.top;
     }
     // init control values
-    dlg::setCheck(hDlg, IDC_CFG_CHK_ASV, gCfg.getAutoSave());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_ALD, gCfg.getAutoLoad());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_LIC, gCfg.getLoadIntoCurrent());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_LWC, gCfg.getLoadWithoutClosing());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, gCfg.getShowInTitlebar());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, gCfg.getShowInStatusbar());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_GBKM, gCfg.getGlobalBookmarks());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_ASV, gCfg.autoSaveEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_ALD, gCfg.autoLoadEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_LIC, gCfg.loadIntoCurrentEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_LWC, gCfg.loadWithoutClosingEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, gCfg.showInTitlebarEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, gCfg.showInStatusbarEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_GBKM, gCfg.globalBookmarksEnabled());
     dlg::setText(hDlg, IDC_CFG_ETX_DIR, gCfg.getSesDir());
     dlg::setText(hDlg, IDC_CFG_ETX_EXT, gCfg.getSesExt());
     // focus the first edit control
@@ -153,8 +156,7 @@ bool onInit(HWND hDlg)
         h = 0;
     }
     dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
-    GetClientRect(hDlg, &r);
-    onResize(hDlg, r.right, r.bottom);
+    onResize(hDlg);
     ShowWindow(hDlg, SW_SHOW);
 
     _inInit = false;
@@ -206,8 +208,15 @@ INT onOk(HWND hDlg)
 /* Resizes and repositions dialog controls. */
 void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
+    RECT r;
+
     //LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
 
+    if (dlgW == 0) {
+        GetClientRect(hDlg, &r);
+        dlgW = r.right;
+        dlgH = r.bottom;
+    }
     // Resize the Directory and Extension edit boxes
     dlg::adjToEdge(hDlg, IDC_CFG_ETX_DIR, dlgW, dlgH, 4, IDC_CFG_ETX_WRO, 0);
     dlg::adjToEdge(hDlg, IDC_CFG_ETX_EXT, dlgW, dlgH, 4, IDC_CFG_ETX_WRO, 0);
@@ -215,7 +224,6 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     dlg::adjToEdge(hDlg, IDOK, dlgW, dlgH, 1|2, IDC_CFG_BTN_OK_XRO, IDC_CFG_BTN_YBO);
     dlg::adjToEdge(hDlg, IDCANCEL, dlgW, dlgH, 1|2, IDC_CFG_BTN_CAN_XRO, IDC_CFG_BTN_YBO, true);
     // Save new dialog size
-    RECT r;
     GetWindowRect(hDlg, &r);
     gCfg.saveCfgDlgSize(r.right - r.left, r.bottom - r.top);
 }

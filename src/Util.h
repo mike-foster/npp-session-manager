@@ -26,20 +26,22 @@
 namespace NppPlugin {
 
 /* Debug log levels:
-0     = no logging
->=1   = LOG and LOGF
-1-9   = LOGE
-10    = LOGG (verbose)
-11-19 = LOGE
-20    = LOGG (more verbose than 10)
-21-29 = LOGE
-30    = LOGG (more verbose than 20)
-31-39 = LOGE
+  0     = no logging
+  >=1   = LOG and LOGF
+  1-9   = LOGE
+  10    = LOGG (verbose)
+  11-19 = LOGE
+  20    = LOGG (more verbose than 10)
+  21-29 = LOGE
+  30    = LOGG (more verbose than 20)
+  31-39 = LOGE
 */
 #define LOG(fmt, ...) dbgLog(__FUNCTION__ ": " fmt, __VA_ARGS__)
 #define LOGF(fmt, ...) dbgLog(__FUNCTION__ "(" fmt ")", __VA_ARGS__)
 #define LOGG(lvl, fmt, ...) if (gCfg.debug >= lvl) { LOG(fmt, __VA_ARGS__); }
 #define LOGE(lvl, fmt, ...) if (gCfg.debug == lvl) { LOG(fmt, __VA_ARGS__); }
+#define LOGNN(noti) LOG("%20s\t%8i\t%i", noti, bufferId, _bidBufferActivated)
+#define LOGSN(noti) LOG("%20s\t%8s\t%i", noti, "", _bidBufferActivated)
 #define SHOW_ERROR errBox(_T(__FUNCTION__), GetLastError())
 #define EMPTY_STR _T("")
 #define SPACE_STR _T(" ")
