@@ -61,7 +61,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
         switch (ctrl) {
             case IDOK:
                 okStat = onOk(hDlg);
-                EndDialog(hDlg, 1);
+                ::EndDialog(hDlg, 1);
                 if (okStat == 1) {
                     msgBox(MSG_NO_CHANGES, M_INFO);
                 }
@@ -71,7 +71,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 return TRUE;
                 break;
             case IDCANCEL:
-                EndDialog(hDlg, 0);
+                ::EndDialog(hDlg, 0);
                 return TRUE;
             case IDC_CFG_CHK_ASV:
             case IDC_CFG_CHK_ALD:
@@ -132,7 +132,7 @@ bool onInit(HWND hDlg)
     _opChanged = false;
     _dirChanged = false;
     if (_minWidth == 0) {
-        GetWindowRect(hDlg, &r);
+        ::GetWindowRect(hDlg, &r);
         _minWidth = r.right - r.left;
         _minHeight = r.bottom - r.top;
     }
@@ -155,9 +155,9 @@ bool onInit(HWND hDlg)
         w = 0;
         h = 0;
     }
-    dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
+    dlg::centerWnd(hDlg, sys_getNppHandle(), 0, 0, w, h, true);
     onResize(hDlg);
-    ShowWindow(hDlg, SW_SHOW);
+    ::ShowWindow(hDlg, SW_SHOW);
 
     _inInit = false;
     return true;
@@ -213,7 +213,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     //LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
 
     if (dlgW == 0) {
-        GetClientRect(hDlg, &r);
+        ::GetClientRect(hDlg, &r);
         dlgW = r.right;
         dlgH = r.bottom;
     }
@@ -224,7 +224,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     dlg::adjToEdge(hDlg, IDOK, dlgW, dlgH, 1|2, IDC_CFG_BTN_OK_XRO, IDC_CFG_BTN_YBO);
     dlg::adjToEdge(hDlg, IDCANCEL, dlgW, dlgH, 1|2, IDC_CFG_BTN_CAN_XRO, IDC_CFG_BTN_YBO, true);
     // Save new dialog size
-    GetWindowRect(hDlg, &r);
+    ::GetWindowRect(hDlg, &r);
     gCfg.saveCfgDlgSize(r.right - r.left, r.bottom - r.top);
 }
 
@@ -244,12 +244,12 @@ bool getFolderName(HWND parent, TCHAR *buf)
 
     if (::SHGetMalloc(&pShellMalloc) == NO_ERROR) {
         BROWSEINFO info;
-        memset(&info, 0, sizeof(info));
+        ::memset(&info, 0, sizeof(info));
         info.hwndOwner = parent;
         info.pidlRoot = NULL;
         TCHAR szDisplayName[MAX_PATH];
         info.pszDisplayName = szDisplayName;
-        info.lpszTitle = TEXT("Select a sessions folder");
+        info.lpszTitle = _T("Select a sessions folder");
         info.ulFlags = 0;
         // Execute the browsing dialog.
         LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);

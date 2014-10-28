@@ -1,25 +1,23 @@
 @echo off
 
-:: Usage: x [c] [b] [d]
-:: where c = clean, b = build, d = deploy
-
 set npp_plugin_dir=c:\bin\npp\plugins
 set sessionmgr_old_ver=0.7.1
-set sessionmgr_new_ver=0.8.2
+set sessionmgr_new_ver=0.8.3
 
 set do_c=0
 set do_b=0
 set do_d=0
-for %%a in (%*) do (
-    if "%%a"=="c" set do_c=1
-    if "%%a"=="b" set do_b=1
-    if "%%a"=="d" set do_d=1
-)
+set args="x%*"
+if not %args:c=%==%args% set do_c=1
+if not %args:b=%==%args% set do_b=1
+if not %args:d=%==%args% set do_d=1
 
 if %do_c% equ 1 goto clean
 if %do_b% equ 1 goto build
 if %do_d% equ 1 goto deploy
-echo Nothing to do
+
+echo Usage: x [c|b|d][ ]...
+echo where c = clean, b = build, d = deploy
 goto silent_exit
 
 :clean

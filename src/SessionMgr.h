@@ -29,14 +29,16 @@ namespace NppPlugin {
 
 #define PLUGIN_DLL_NAME  _T("SessionMgr")
 #define PLUGIN_FULL_NAME _T("Session Manager")
-#define SES_MAX_LEN      100
-#define SES_NONE         -1
-#define SES_CURRENT      -2
-#define SES_PREVIOUS     -3
-#define SES_DEFAULT      -4
+#define SES_NAME_NONE    _T("none")
+#define SES_NAME_DEFAULT _T("default")
+#define SES_NAME_MAX_LEN 100
+/// Used as virtual session indexes
+#define SI_NONE          -1
+#define SI_CURRENT       -2
+#define SI_PREVIOUS      -3
+#define SI_DEFAULT       -4
 
 //------------------------------------------------------------------------------
-// The api namespace contains functions called only from DllMain.
 
 namespace api {
 
@@ -54,11 +56,15 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam);
 void app_readSessionDirectory();
 void app_loadSession(INT si);
 void app_loadSession(INT si, bool lic, bool lwc);
-void app_saveSession(INT si = SES_CURRENT);
+void app_saveSession(INT si = SI_CURRENT);
 bool app_isValidSessionIndex(INT si);
 INT app_getSessionCount();
 INT app_getSessionIndex(TCHAR *name = NULL);
-const TCHAR* app_getSessionName(INT si = SES_CURRENT);
+INT app_getCurrentIndex();
+INT app_getPreviousIndex();
+void app_resetPreviousIndex();
+bool app_renameSession(INT si, TCHAR *newName);
+const TCHAR* app_getSessionName(INT si = SI_CURRENT);
 void app_getSessionFile(INT si, TCHAR *buf);
 void app_showSessionInNppBars();
 

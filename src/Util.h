@@ -42,7 +42,7 @@ namespace NppPlugin {
 #define LOGE(lvl, fmt, ...) if (gCfg.debug == lvl) { LOG(fmt, __VA_ARGS__); }
 #define LOGNN(noti) LOG("%20s\t%8i\t%i", noti, bufferId, _bidBufferActivated)
 #define LOGSN(noti) LOG("%20s\t%8s\t%i", noti, "", _bidBufferActivated)
-#define SHOW_ERROR errBox(_T(__FUNCTION__), GetLastError())
+#define SHOW_ERROR errBox(_T(__FUNCTION__))
 #define EMPTY_STR _T("")
 #define SPACE_STR _T(" ")
 // msgBox title/options
@@ -52,7 +52,7 @@ namespace NppPlugin {
 #define M_INFO PLUGIN_FULL_NAME, (MB_OK | MB_ICONINFORMATION)
 
 INT msgBox(const TCHAR *m, TCHAR *title = NULL, UINT options = MB_OK);
-void errBox(TCHAR *lpszFunction, DWORD errorCode);
+void errBox(TCHAR *lpszFunction, DWORD errorCode = 0);
 void dbgLog(const char* format, ...);
 void createIfNotPresent(TCHAR *filename, const char *contents);
 inline const TCHAR* boolToStr(const bool b) { return b ? _T("true") : _T("false"); }
@@ -74,17 +74,21 @@ bool dirExists(TCHAR *p);
 
 namespace dlg {
 
-bool setText(HWND hDlg, UINT idDlgCtrl, const TCHAR* pszText);
-bool getText(HWND hDlg, UINT idDlgCtrl, TCHAR *buf);
-bool edtModified(HWND hDlg, UINT idDlgCtrl);
-bool setCheck(HWND hDlg, UINT idDlgCtrl, bool bChecked);
-bool getCheck(HWND hDlg, UINT idDlgCtrl);
-bool focus(HWND hDlg, UINT idDlgCtrl);
-INT getLbSelData(HWND hDlg, UINT idDlgCtrl);
-INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data);
+bool setText(HWND hDlg, UINT idCtrl, const TCHAR* text);
+bool getText(HWND hDlg, UINT idCtrl, TCHAR *buf);
+bool edtModified(HWND hDlg, UINT idCtrl);
+bool setCheck(HWND hDlg, UINT idCtrl, bool bChecked);
+bool getCheck(HWND hDlg, UINT idCtrl);
+bool focus(HWND hDlg, UINT idCtrl);
+INT getLbSelData(HWND hDlg, UINT idCtrl);
+INT getLbIdxByData(HWND hDlg, UINT idCtrl, INT data);
+void redrawControl(HWND hDlg, HWND hCtrl);
 bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset = 0, INT yOffset = 0, INT width = 0, INT height = 0, bool bRepaint = FALSE);
 void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool last = false);
-//HWND createTooltip(int toolID, HWND hDlg, PTSTR pszText);
+//bool setSbText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text);
+//bool setSbtText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text);
+//HWND createStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts);
+//HWND createTooltip(int toolID, HWND hDlg, PTSTR text);
 
 } // end namespace dlg
 

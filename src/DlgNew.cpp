@@ -35,7 +35,7 @@ namespace NppPlugin {
 
 namespace {
 
-TCHAR _lbNewName[SES_MAX_LEN];
+TCHAR _lbNewName[SES_NAME_MAX_LEN];
 
 bool onInit(HWND hDlg);
 bool onOk(HWND hDlg);
@@ -54,20 +54,20 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 
             case IDOK:
                 if (onOk(hDlg)) {
-                    EndDialog(hDlg, 1);
+                    ::EndDialog(hDlg, 1);
                     return TRUE;
                 }
                 break;
 
             case IDCANCEL:
-                EndDialog(hDlg, 0);
+                ::EndDialog(hDlg, 0);
                 return TRUE;
 
             case IDC_NEW_RAD_EMPTY:
             case IDC_NEW_RAD_OPEN:
             case IDC_NEW_RAD_COPY:
                 if (HIWORD(wParam) == BN_CLICKED) {
-                    TCHAR buf[SES_MAX_LEN];
+                    TCHAR buf[SES_NAME_MAX_LEN];
                     buf[0] = 0;
                     dlg::getText(hDlg, IDC_NEW_ETX_NAME, buf);
                     if (buf[0] == 0) {
@@ -103,14 +103,14 @@ bool onInit(HWND hDlg)
     dlg::setCheck(hDlg, IDC_NEW_RAD_EMPTY, true);
     dlg::focus(hDlg, IDC_NEW_ETX_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -40);
-    ShowWindow(hDlg, SW_SHOW);
+    ::ShowWindow(hDlg, SW_SHOW);
     return true;
 }
 
 bool onOk(HWND hDlg)
 {
     bool succ;
-    TCHAR newName[SES_MAX_LEN];
+    TCHAR newName[SES_NAME_MAX_LEN];
     TCHAR dstPathname[MAX_PATH_P1];
 
     // Set the destination file pathname.
@@ -120,9 +120,9 @@ bool onOk(HWND hDlg)
         msgBox(_T("Missing file name."), M_WARN);
         return false;
     }
-    StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
-    StringCchCat(dstPathname, MAX_PATH, newName);
-    StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCat(dstPathname, MAX_PATH, newName);
+    ::StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
 
     if (dlg::getCheck(hDlg, IDC_NEW_RAD_EMPTY)) {
         succ = newAsEmpty(dstPathname);
@@ -134,7 +134,7 @@ bool onOk(HWND hDlg)
         succ = newByCopy(dstPathname);
     }
     if (succ) {
-        StringCchCopy(_lbNewName, SES_MAX_LEN - 1, newName);
+        ::StringCchCopy(_lbNewName, SES_NAME_MAX_LEN - 1, newName);
     }
     return succ;
 }
@@ -149,7 +149,7 @@ bool newAsEmpty(TCHAR *dstPathname)
 /* Creates a new session containing the currently open files. */
 bool newFromOpen(TCHAR *dstPathname)
 {
-    SendMessage(sys_getNppHwnd(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)dstPathname);
+    ::SendMessage(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)dstPathname);
     return true;
 }
 
@@ -164,11 +164,11 @@ bool newByCopy(TCHAR *dstPathname)
     app_getSessionFile(sesSelIdx, srcPathname);
     // Copy the file.
     _lbNewName[0] = 0;
-    if (CopyFile(srcPathname, dstPathname, TRUE)) {
+    if (::CopyFile(srcPathname, dstPathname, TRUE)) {
         status = true;
     }
     else {
-        errBox(_T("Copy"), GetLastError());
+        errBox(_T("Copy"));
     }
     return status;
 }

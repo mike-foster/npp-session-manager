@@ -49,13 +49,13 @@ INT_PTR CALLBACK dlgDel_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 
             case IDOK:
                 if (onOk(hDlg)) {
-                    EndDialog(hDlg, 1);
+                    ::EndDialog(hDlg, 1);
                     return TRUE;
                 }
                 break;
 
             case IDCANCEL:
-                EndDialog(hDlg, 0);
+                ::EndDialog(hDlg, 0);
                 return TRUE;
         }
     }
@@ -76,7 +76,7 @@ bool onInit(HWND hDlg)
 {
     dlg::focus(hDlg, IDOK);
     dlg::centerWnd(hDlg, NULL, 150, -5);
-    ShowWindow(hDlg, SW_SHOW);
+    ::ShowWindow(hDlg, SW_SHOW);
     return true;
 }
 
@@ -86,11 +86,11 @@ bool onOk(HWND hDlg)
     INT sesSelIdx = dlgSes_getLbSelectedData();
     if (app_isValidSessionIndex(sesSelIdx)) {
         app_getSessionFile(sesSelIdx, sesPth);
-        if (DeleteFile(sesPth)) {
+        if (::DeleteFile(sesPth)) {
             return true;
         }
         else {
-            errBox(_T("Delete"), GetLastError());
+            errBox(_T("Delete"));
         }
     }
     return false;

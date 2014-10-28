@@ -29,7 +29,6 @@ const int MNU_MAX_ITEMS = 7; // see _mnuItems
 const int MNU_MAX_NAME_LEN = 63; // see nbChar in npp\PluginInterface.h
 
 //------------------------------------------------------------------------------
-// The api namespace contains functions called only from DllMain.
 
 namespace api {
 

@@ -43,7 +43,7 @@ h1 {
   font-size: xx-large;
   margin: .5em 0 .2em 0;
 }
-h2, h3, h4 {
+h2, h3 {
   color: #555;
   margin: 1.2em 0 .5em 0;
 }
@@ -51,10 +51,8 @@ h2 {
   font-size: large;
 }
 h3 {
-  font-size: medium;
-}
-h4 {
   font-size: small;
+  text-decoration: underline;
 }
 pre {
   font-family: 'courier new',monospace;
@@ -80,9 +78,9 @@ ul#contents li {
 #layout-container {
   position: relative;
   background-color: #eee;
-  margin: 10px auto; /* to center layout-container in modern browsers */
+  margin: 10px auto;
   width: 950px;
-  text-align: left; /* to keep the above from being inherited */
+  text-align: left;
   overflow: hidden;
 }
 #layout-header {

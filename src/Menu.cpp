@@ -64,7 +64,6 @@ FuncItem _menuItems[] = {
 } // end namespace
 
 //------------------------------------------------------------------------------
-// The api namespace contains functions called only from DllMain.
 
 namespace api {
 
@@ -78,7 +77,7 @@ void mnu_onUnload()
 
 void mnu_init()
 {
-    StringCchCopy(_menuMainLabel, MNU_MAX_NAME_LEN, PLUGIN_MENU_NAME);
+    ::StringCchCopy(_menuMainLabel, MNU_MAX_NAME_LEN, PLUGIN_MENU_NAME);
     gCfg.getMenuLabel(-1, _menuMainLabel);
     for (int i = 0; i < MNU_MAX_ITEMS; ++i) {
         gCfg.getMenuLabel(i, _menuItems[i]._itemName);
@@ -107,29 +106,29 @@ namespace {
 extern "C" void cbSessions()
 {
     app_readSessionDirectory();
-    DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_SES_DLG), sys_getNppHwnd(), dlgSes_msgProc);
+    ::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_SES_DLG), sys_getNppHandle(), dlgSes_msgProc);
 }
 
 extern "C" void cbSettings()
 {
-    DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_CFG_DLG), sys_getNppHwnd(), dlgCfg_msgProc);
+    ::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_CFG_DLG), sys_getNppHandle(), dlgCfg_msgProc);
 }
 
 extern "C" void cbSaveCurrent()
 {
-    app_saveSession(SES_CURRENT);
+    app_saveSession(SI_CURRENT);
 }
 
 extern "C" void cbLoadPrevious()
 {
-    app_loadSession(SES_PREVIOUS);
+    app_loadSession(SI_PREVIOUS);
 }
 
 extern "C" void cbHelp()
 {
-    HINSTANCE h = ShellExecute(NULL, _T("open"), sys_getHelpFile(), NULL, NULL, SW_SHOW);
+    HINSTANCE h = ::ShellExecute(NULL, _T("open"), sys_getHelpFile(), NULL, NULL, SW_SHOW);
     if ((int)h <= 32) {
-        errBox(_T("Shell"), GetLastError());
+        errBox(_T("Shell"));
     }
 }
 
@@ -137,11 +136,11 @@ extern "C" void cbAbout()
 {
     const size_t s = 7 * MAX_PATH;
     TCHAR m[s + 1], b[MAX_PATH_P1];
-    StringCchCopy(m, s, PLUGIN_ABOUT);
 
-    StringCchCat(m, s, _T("\n\nConfiguration directory:\n"));
-    StringCchCat(m, s, sys_getCfgDir());
-    StringCchCat(m, s, _T("\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Jens Lorenz, for the plugin template\n- Thell Fowler, for the plugin template\n- Members of the Notepad++ forums"));
+    ::StringCchCopy(m, s, PLUGIN_ABOUT);
+    ::StringCchCat(m, s, _T("\n\nConfiguration directory:\n"));
+    ::StringCchCat(m, s, sys_getCfgDir());
+    ::StringCchCat(m, s, _T("\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You, for using Session Manager"));
     msgBox(m);
 }
 

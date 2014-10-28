@@ -48,7 +48,7 @@ bool onDelete(HWND hDlg);
 bool onDefault(HWND hDlg);
 void saveOptions(HWND hDlg);
 bool onPrevious(HWND hDlg);
-bool fillListBox(HWND hDlg, INT sesCurIdx = SES_CURRENT);
+bool fillListBox(HWND hDlg, INT sesCurIdx = SI_CURRENT);
 void onResize(HWND hDlg, INT dlgW = 0, INT dlgH = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 
@@ -86,7 +86,7 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 }
                 break;
             case IDC_SES_BTN_SAVE:
-                app_saveSession(SES_CURRENT);
+                app_saveSession(SI_CURRENT);
                 dlg::focus(hDlg, IDC_SES_BTN_LOAD);
                 return TRUE;
                 break;
@@ -116,7 +116,7 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 break;
             case IDCANCEL:
             case IDC_SES_BTN_CANCEL:
-                EndDialog(hDlg, 0);
+                ::EndDialog(hDlg, 0);
                 return TRUE;
             case IDC_SES_CHK_LIC:
                 if (ntfy == BN_CLICKED) {
@@ -156,8 +156,7 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
     return FALSE;
 }
 
-/* Child dialogs use this to get the vector index of the session selected in the
-   list. */
+/* Child dialogs use this to get the vector index of the session selected in the list. */
 INT dlgSes_getLbSelectedData()
 {
     return _lbSelectedData;
@@ -177,12 +176,12 @@ bool onInit(HWND hDlg)
     _inInit = true;
     _sortChanged = false;
     if (_minWidth == 0) {
-        GetWindowRect(hDlg, &r);
+        ::GetWindowRect(hDlg, &r);
         _minWidth = r.right - r.left;
         _minHeight = r.bottom - r.top;
     }
-    dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SES_CURRENT));
-    dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SES_PREVIOUS));
+    dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SI_CURRENT));
+    dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SI_PREVIOUS));
     dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.loadIntoCurrentEnabled());
     dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.loadWithoutClosingEnabled());
     bool alpha = gCfg.sortAlphaEnabled();
@@ -196,17 +195,11 @@ bool onInit(HWND hDlg)
             w = 0;
             h = 0;
         }
-        dlg::centerWnd(hDlg, sys_getNppHwnd(), 0, 0, w, h, true);
+        dlg::centerWnd(hDlg, sys_getNppHandle(), 0, 0, w, h, true);
         onResize(hDlg);
-        ShowWindow(hDlg, SW_SHOW);
+        ::ShowWindow(hDlg, SW_SHOW);
         ret = true;
     }
-
-    // XXX are tooltips really needed?
-    //dlg::createTooltip(IDC_SES_CHK_LIC, hDlg, _T("Loads a session into the current session"));
-    //dlg::createTooltip(IDC_SES_CHK_LWC, hDlg, _T("Does not close the open files before loading a session"));
-    //dlg::createTooltip(IDC_SES_RAD_ALPHA, hDlg, _T("Sorts the sessions list alphabetically"));
-    //dlg::createTooltip(IDC_SES_RAD_DATE, hDlg, _T("Sorts the sessions list by most recently used"));
 
     _inInit = false;
     return ret;
@@ -214,15 +207,15 @@ bool onInit(HWND hDlg)
 
 bool onOk(HWND hDlg)
 {
-    EndDialog(hDlg, 0);
+    ::EndDialog(hDlg, 0);
     app_loadSession(dlg::getLbSelData(hDlg, IDC_SES_LST_SES), dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
 }
 
 bool onDefault(HWND hDlg)
 {
-    EndDialog(hDlg, 0);
-    app_loadSession(SES_DEFAULT, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
+    ::EndDialog(hDlg, 0);
+    app_loadSession(SI_DEFAULT, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
 }
 
@@ -237,8 +230,8 @@ void saveOptions(HWND hDlg)
 
 bool onPrevious(HWND hDlg)
 {
-    EndDialog(hDlg, 0);
-    app_loadSession(SES_PREVIOUS, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
+    ::EndDialog(hDlg, 0);
+    app_loadSession(SI_PREVIOUS, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
 }
 
@@ -246,7 +239,7 @@ bool onNew(HWND hDlg)
 {
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    if (DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_NEW_DLG), hDlg, dlgNew_msgProc)) {
+    if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_NEW_DLG), hDlg, dlgNew_msgProc)) {
         app_readSessionDirectory();
         status = fillListBox(hDlg, app_getSessionIndex(dlgNew_getLbNewName()));
     }
@@ -257,7 +250,11 @@ bool onRename(HWND hDlg)
 {
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    if (DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_REN_DLG), hDlg, dlgRen_msgProc)) {
+    if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_REN_DLG), hDlg, dlgRen_msgProc)) {
+        if (app_renameSession(_lbSelectedData, dlgRen_getLbNewName())) {
+            dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SI_CURRENT));
+            dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SI_PREVIOUS));
+        }
         app_readSessionDirectory();
         status = fillListBox(hDlg, app_getSessionIndex(dlgRen_getLbNewName()));
     }
@@ -268,7 +265,14 @@ bool onDelete(HWND hDlg)
 {
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    if (DialogBox(sys_getDllHwnd(), MAKEINTRESOURCE(IDD_DEL_DLG), hDlg, dlgDel_msgProc)) {
+    if (_lbSelectedData == app_getCurrentIndex()) {
+        msgBox(_T("Cannot delete current session."), M_WARN);
+    }
+    else if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_DEL_DLG), hDlg, dlgDel_msgProc)) {
+        if (_lbSelectedData == app_getPreviousIndex()) {
+            app_resetPreviousIndex();
+            dlg::setText(hDlg, IDC_SES_CTX_PRV, SES_NAME_NONE);
+        }
         app_readSessionDirectory();
         status = fillListBox(hDlg);
     }
@@ -282,27 +286,27 @@ bool fillListBox(HWND hDlg, INT sesCurIdx)
 
     LOGF("%i", sesCurIdx);
 
-    hLst = GetDlgItem(hDlg, IDC_SES_LST_SES);
+    hLst = ::GetDlgItem(hDlg, IDC_SES_LST_SES);
     if (hLst) {
-        SendMessage(hLst, LB_RESETCONTENT, 0, 0);
+        ::SendMessage(hLst, LB_RESETCONTENT, 0, 0);
         sesCount = app_getSessionCount();
-        if (sesCurIdx == SES_CURRENT) {
-            sesCurIdx = app_getSessionIndex();
+        if (sesCurIdx == SI_CURRENT) {
+            sesCurIdx = app_getCurrentIndex();
         }
         for (sesIdx = 0; sesIdx < sesCount; ++sesIdx) {
-            i = (INT)SendMessage(hLst, LB_ADDSTRING, 0, (LPARAM)app_getSessionName(sesIdx));
-            SendMessage(hLst, LB_SETITEMDATA, i, (LPARAM)sesIdx);
+            i = (INT)::SendMessage(hLst, LB_ADDSTRING, 0, (LPARAM)app_getSessionName(sesIdx));
+            ::SendMessage(hLst, LB_SETITEMDATA, i, (LPARAM)sesIdx);
         }
         i = dlg::getLbIdxByData(hDlg, IDC_SES_LST_SES, sesCurIdx);
         if (i >= 0) {
-            SendMessage(hLst, LB_SETCURSEL, i, 0);
+            ::SendMessage(hLst, LB_SETCURSEL, i, 0);
         }
         return true;
     }
     return false;
 }
 
-/* Resizes and repositions dialog controls. */
+/* Resizes and repositions the Sessions dialog controls. */
 void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
     RECT r;
@@ -311,7 +315,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     //LOGE(31, "Sessions: w=%d, h=%d", dlgW, dlgH);
 
     if (dlgW == 0) {
-        GetClientRect(hDlg, &r);
+        ::GetClientRect(hDlg, &r);
         dlgW = r.right;
         dlgH = r.bottom;
     }
@@ -340,7 +344,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     }
 
     // Save new dialog size
-    GetWindowRect(hDlg, &r);
+    ::GetWindowRect(hDlg, &r);
     gCfg.saveSesDlgSize(r.right - r.left, r.bottom - r.top);
 }
 

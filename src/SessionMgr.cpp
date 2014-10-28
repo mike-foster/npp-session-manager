@@ -1,3 +1,4 @@
+/// @file
 /*
     SessionMgr.cpp
     Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
@@ -23,11 +24,11 @@
 #include "Config.h"
 #include "Menu.h"
 #include "Util.h"
+#include "Properties.h"
 #include <algorithm>
 #include <strsafe.h>
 #include <time.h>
 #include <vector>
-#include "xml\tinyxml2.h"
 
 using std::vector;
 
@@ -41,50 +42,33 @@ namespace {
 
 #define NPP_BOOKMARK_MARGIN_ID 1
 
-// XML nodes
-#define XN_NOTEPADPLUS "NotepadPlus" // root node
-#define XN_SESSION "Session"
-#define XN_MAINVIEW "mainView"
-#define XN_SUBVIEW "subView"
-#define XN_FILE "File"
-#define XN_MARK "Mark"
-#define XN_FILEPROPERTIES "FileProperties"
-// XML attributes
-#define XA_FILENAME "filename"
-#define XA_LANG "lang"
-#define XA_ENCODING "encoding"
-#define XA_FIRSTVISIBLELINE "firstVisibleLine"
-#define XA_LINE "line"
-
+/// @class Session
 class Session
 {
     public:
-    TCHAR name[SES_MAX_LEN];
+    TCHAR name[SES_NAME_MAX_LEN];
     FILETIME modifiedTime;
     Session(TCHAR *sn, FILETIME mod)
     {
-        StringCchCopy(name, SES_MAX_LEN - 1, sn);
+        ::StringCchCopy(name, SES_NAME_MAX_LEN - 1, sn);
         modifiedTime.dwLowDateTime = mod.dwLowDateTime;
         modifiedTime.dwHighDateTime = mod.dwHighDateTime;
     }
 };
 
-vector<Session> _sessions;
-INT _sesCurIdx; // the _sessions index of the current session
-INT _sesPrvIdx; // the _sessions index of the previous session
-INT _bidFileOpened; // bufferId from most recent NPPN_FILEOPENED
-INT _bidBufferActivated; // XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
-bool _sesIsDirty; // XXX experimental. if true, current session needs to be saved. this should only be set true in cases where saving the session is deferred
-bool _appReady;
-bool _sesLoading;
-time_t _shutdownTimer; // for determining if files are closing due to a shutdown
-time_t _titlebarTimer; // for updating the titlebar text
+vector<Session> _sessions; ///< stores sessions read from disk
+INT _sesCurIdx;            ///< current _sessions index
+INT _sesPrvIdx;            ///< previous _sessions index
+INT _bidFileOpened;        ///< bufferId from most recent NPPN_FILEOPENED
+INT _bidBufferActivated;   ///< XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
+bool _sesIsDirty;          ///< XXX experimental. if true, current session needs to be saved. this should only be set true in cases where saving the session is deferred
+bool _appReady;            ///< if false, plugin should do nothing
+bool _sesLoading;          ///< if true, a session is loading
+time_t _shutdownTimer;     ///< for determining if files are closing due to a shutdown
+time_t _titlebarTimer;     ///< for updating the titlebar text
 
-void onNppReady(); 
+void onNppReady();
 void removeBracketedPrefix(TCHAR *s);
-void app_updateGlobalFromSession(TCHAR *sesFile);
-void app_updateSessionFromGlobal(TCHAR *sesFile);
-void app_updateDocumentFromGlobal(INT bufferId);
 
 } // end namespace
 
@@ -92,7 +76,7 @@ bool sortByAlpha(const Session s1, const Session s2);
 bool sortByDate(const Session s1, const Session s2);
 
 //------------------------------------------------------------------------------
-// The api namespace contains functions called only from DllMain.
+/// @namespace NppPlugin.api Contains functions called only from DllMain.
 
 namespace api {
 
@@ -100,8 +84,8 @@ void app_onLoad()
 {
     _appReady = false;
     _sesLoading = false;
-    _sesCurIdx = SES_DEFAULT;
-    _sesPrvIdx = SES_NONE;
+    _sesCurIdx = SI_DEFAULT;
+    _sesPrvIdx = SI_NONE;
     _bidFileOpened = 0;
     _bidBufferActivated = 0;
     _sesIsDirty = false;
@@ -111,7 +95,7 @@ void app_onLoad()
 
 void app_onUnload()
 {
-    LOG("---------- STOP %S %s", PLUGIN_FULL_NAME, RES_VERSION_S);
+    LOG("---------- STOP  %S %s", PLUGIN_FULL_NAME, RES_VERSION_S);
     _appReady = false;
     _sessions.clear();
 }
@@ -127,14 +111,14 @@ const TCHAR* app_getName()
     return mnu_getMainMenuLabel();
 }
 
-/* Handles Notepad++ and Scintilla notifications. */
+/** Handles Notepad++ and Scintilla notifications. */
 void app_onNotify(SCNotification *pscn)
 {
     uptr_t bufferId = pscn->nmhdr.idFrom;
     unsigned int notificationCode = pscn->nmhdr.code;
 
     // Notepad++ notifications
-    if (pscn->nmhdr.hwndFrom == sys_getNppHwnd()) {
+    if (pscn->nmhdr.hwndFrom == sys_getNppHandle()) {
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
                 case NPPN_READY:           LOG("NPPN_READY"); break;
@@ -178,7 +162,7 @@ void app_onNotify(SCNotification *pscn)
             case NPPN_FILECLOSED:
                 _sesIsDirty = true;
                 if (_appReady && !_sesLoading && gCfg.autoSaveEnabled()) {
-                    _shutdownTimer = time(NULL);
+                    _shutdownTimer = ::time(NULL);
                     LOGG(10, "Save session in %i seconds if no shutdown", gCfg.getSaveDelay());
                 }
                 break;
@@ -188,7 +172,7 @@ void app_onNotify(SCNotification *pscn)
                     app_showSessionInNppBars();
                     if (_bidFileOpened == bufferId) { // buffer activated immediately after NPPN_FILEOPENED
                         if (gCfg.globalBookmarksEnabled()) {
-                            app_updateDocumentFromGlobal(_bidFileOpened);
+                            prp::updateDocumentFromGlobal(_bidFileOpened);
                         }
                         if (gCfg.autoSaveEnabled()) {
                             app_saveSession(_sesCurIdx);
@@ -201,7 +185,7 @@ void app_onNotify(SCNotification *pscn)
     }
 
     // Scintilla notifications
-    else if (pscn->nmhdr.hwndFrom == sys_getSc1Hwnd() || pscn->nmhdr.hwndFrom == sys_getSc2Hwnd()) {
+    else if (pscn->nmhdr.hwndFrom == sys_getSciHandle(1) || pscn->nmhdr.hwndFrom == sys_getSciHandle(2)) {
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
                 case SCN_SAVEPOINTREACHED: LOGSN("SCN_SAVEPOINTREACHED"); break;
@@ -213,7 +197,7 @@ void app_onNotify(SCNotification *pscn)
             case SCN_SAVEPOINTLEFT:
                 _sesIsDirty = true;
                 if (gCfg.showInTitlebarEnabled()) {
-                    _titlebarTimer = time(NULL);
+                    _titlebarTimer = ::time(NULL);
                 }
                 break;
             case SCN_MARGINCLICK:
@@ -227,7 +211,7 @@ void app_onNotify(SCNotification *pscn)
     // Timers
     if (_shutdownTimer > 0) {
         if (_appReady && !_sesLoading) {
-            if (time(NULL) - _shutdownTimer > gCfg.getSaveDelay()) {
+            if (::time(NULL) - _shutdownTimer > gCfg.getSaveDelay()) {
                 _shutdownTimer = 0;
                 app_saveSession(_sesCurIdx);
             }
@@ -237,7 +221,7 @@ void app_onNotify(SCNotification *pscn)
         }
     }
     if (_titlebarTimer > 0) {
-        if (time(NULL) - _titlebarTimer > 1) {
+        if (::time(NULL) - _titlebarTimer > 1) {
             _titlebarTimer = 0;
             app_showSessionInNppBars();
         }
@@ -246,8 +230,6 @@ void app_onNotify(SCNotification *pscn)
 
 LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
-    // Would it be better to handle the timers here? It doesn't seem to make any difference.
-
     return 1;
 }
 
@@ -255,17 +237,17 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
 
 //------------------------------------------------------------------------------
 
-/* Reads all session names from the session directory. If there is a current
-   and/or previous session it is made current and/or previous again if it is
-   in the new list. */
+/** Reads all session names from the session directory. If there is a current
+    and/or previous session it is made current and/or previous again if it is
+    in the new list. */
 void app_readSessionDirectory()
 {
     DWORD dwError=0;
     WIN32_FIND_DATA ffd;
     TCHAR sesFileSpec[MAX_PATH_P1];
-    TCHAR sesName[SES_MAX_LEN];
-    TCHAR sesCur[SES_MAX_LEN];
-    TCHAR sesPrv[SES_MAX_LEN];
+    TCHAR sesName[SES_NAME_MAX_LEN];
+    TCHAR sesCur[SES_NAME_MAX_LEN];
+    TCHAR sesPrv[SES_NAME_MAX_LEN];
     HANDLE hFind = INVALID_HANDLE_VALUE;
 
     LOGF("");
@@ -275,34 +257,34 @@ void app_readSessionDirectory()
     sesPrv[0] = 0;
     if (!_sessions.empty()) {
         // If a session is current/previous save its name.
-        if (_sesCurIdx > SES_NONE) {
-            StringCchCopy(sesCur, MAX_PATH, _sessions[_sesCurIdx].name);
+        if (_sesCurIdx > SI_NONE) {
+            ::StringCchCopy(sesCur, MAX_PATH, _sessions[_sesCurIdx].name);
         }
-        if (_sesPrvIdx > SES_NONE) {
-            StringCchCopy(sesPrv, MAX_PATH, _sessions[_sesPrvIdx].name);
+        if (_sesPrvIdx > SI_NONE) {
+            ::StringCchCopy(sesPrv, MAX_PATH, _sessions[_sesPrvIdx].name);
         }
         _sessions.clear();
     }
     // Create the file spec.
-    StringCchCopy(sesFileSpec, MAX_PATH, gCfg.getSesDir());
-    StringCchCat(sesFileSpec, MAX_PATH, _T("*"));
-    StringCchCat(sesFileSpec, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopy(sesFileSpec, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCat(sesFileSpec, MAX_PATH, _T("*"));
+    ::StringCchCat(sesFileSpec, MAX_PATH, gCfg.getSesExt());
     // Loop over files in the session directory, save each in the vector.
-    hFind = FindFirstFile(sesFileSpec, &ffd);
+    hFind = ::FindFirstFile(sesFileSpec, &ffd);
     if (INVALID_HANDLE_VALUE == hFind) {
-        _sesCurIdx = SES_DEFAULT;
+        _sesCurIdx = SI_DEFAULT;
         return;
     }
     _appReady = false;
     do {
-        StringCchCopy(sesName, SES_MAX_LEN - 1, ffd.cFileName);
+        ::StringCchCopy(sesName, SES_NAME_MAX_LEN - 1, ffd.cFileName);
         pth::remExt(sesName);
         Session ses(sesName, ffd.ftLastWriteTime);
         _sessions.push_back(ses);
     }
-    while (FindNextFile(hFind, &ffd) != 0);
-    dwError = GetLastError();
-    FindClose(hFind);
+    while (::FindNextFile(hFind, &ffd) != 0);
+    dwError = ::GetLastError();
+    ::FindClose(hFind);
     // Sort before restoring indexes
     if (gCfg.sortAlphaEnabled()) {
         std::sort(_sessions.begin(), _sessions.end(), sortByAlpha);
@@ -323,17 +305,17 @@ void app_readSessionDirectory()
     _appReady = true;
 }
 
-/* Sorts the sessions vector ascending alphabetically. */
+/** Sorts the sessions vector ascending alphabetically. */
 bool sortByAlpha(const Session s1, const Session s2)
 {
-    return lstrcmp(s1.name, s2.name) <= 0;
+    return ::lstrcmp(s1.name, s2.name) <= 0;
 }
 
-/* Sorts the sessions vector descending by the file's last modified time. For
-   sessions that have the same last modified time it sorts ascending alphabetically. */
+/** Sorts the sessions vector descending by the file's last modified time. For
+    sessions that have the same last modified time it sorts ascending alphabetically. */
 bool sortByDate(const Session s1, const Session s2)
 {
-    INT result = CompareFileTime(&s1.modifiedTime, &s2.modifiedTime);
+    INT result = ::CompareFileTime(&s1.modifiedTime, &s2.modifiedTime);
     if (result < 0) {
         return false;
     }
@@ -343,8 +325,8 @@ bool sortByDate(const Session s1, const Session s2)
     return sortByAlpha(s1, s2);
 }
 
-/* Loads the session at index si. Makes it the current index unless lic is
-   true. Closes the previous session before loading si, unless lwc is true. */
+/** Loads the session at index si. Makes it the current index unless lic is
+    true. Closes the previous session before loading si, unless lwc is true. */
 void app_loadSession(INT si)
 {
     app_loadSession(si, gCfg.loadIntoCurrentEnabled(), gCfg.loadWithoutClosingEnabled());
@@ -352,21 +334,21 @@ void app_loadSession(INT si)
 void app_loadSession(INT si, bool lic, bool lwc)
 {
     TCHAR sesFile[MAX_PATH_P1];
-    HWND hNpp = sys_getNppHwnd();
+    HWND hNpp = sys_getNppHandle();
 
     LOGF("%i, %i, %i", si, lic, lwc);
 
     if (!_appReady || _sesLoading) {
         return;
     }
-    if (si == SES_PREVIOUS) {
-        if (_sesPrvIdx <= SES_NONE) {
+    if (si == SI_PREVIOUS) {
+        if (_sesPrvIdx <= SI_NONE) {
             return;
         }
         si = _sesPrvIdx;
     }
 
-    if (!lic && _sesCurIdx > SES_NONE) {
+    if (!lic && _sesCurIdx > SI_NONE) {
         if (gCfg.autoSaveEnabled()) {
             app_saveSession(_sesCurIdx); // Save the current session before closing it
         }
@@ -378,32 +360,32 @@ void app_loadSession(INT si, bool lic, bool lwc)
 
     app_getSessionFile(si, sesFile);
     if (gCfg.globalBookmarksEnabled()) {
-        app_updateSessionFromGlobal(sesFile);
+        prp::updateSessionFromGlobal(sesFile);
     }
 
     // Close all open files
     if (!lwc) {
         LOGG(10, "Closing documents for session %i", _sesCurIdx);
-        SendMessage(hNpp, NPPM_MENUCOMMAND, 0, IDM_FILE_CLOSEALL);
+        ::SendMessage(hNpp, NPPM_MENUCOMMAND, 0, IDM_FILE_CLOSEALL);
     }
     LOGG(10, "Opening documents for session %i", si);
     // Load session
-    SendMessage(hNpp, NPPM_LOADSESSION, 0, (LPARAM)sesFile);
+    ::SendMessage(hNpp, NPPM_LOADSESSION, 0, (LPARAM)sesFile);
     _sesLoading = false;
     if (!lic) {
-        if (si > SES_NONE) {
+        if (si > SI_NONE) {
             _sesCurIdx = si;
             gCfg.saveCurrent(_sessions[si].name); // Write new current session name to ini file
             app_showSessionInNppBars();
         }
         else {
-            _sesCurIdx = SES_DEFAULT;
+            _sesCurIdx = SI_DEFAULT;
             gCfg.saveCurrent(EMPTY_STR);
         }
     }
 }
 
-/* Saves the session at index si. Makes it the current index. */
+/** Saves the session at index si. Makes it the current index. */
 void app_saveSession(INT si)
 {
     LOGF("%i", si);
@@ -412,37 +394,37 @@ void app_saveSession(INT si)
         return;
     }
     LOGG(10, "Session %s dirty", _sesIsDirty ? "IS" : "is NOT"); // XXX experimental
-    if (si == SES_CURRENT) {
+    if (si == SI_CURRENT) {
         si = _sesCurIdx;
     }
-    else if (si == SES_PREVIOUS) {
+    else if (si == SI_PREVIOUS) {
         si = _sesPrvIdx;
     }
     TCHAR sesFile[MAX_PATH_P1];
     app_getSessionFile(si, sesFile);
 
-    SendMessage(sys_getNppHwnd(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
-    _sesCurIdx = si > SES_NONE ? si : SES_DEFAULT;
+    ::SendMessage(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
+    _sesCurIdx = si > SI_NONE ? si : SI_DEFAULT;
     if (gCfg.globalBookmarksEnabled()) {
-        app_updateGlobalFromSession(sesFile);
+        prp::updateGlobalFromSession(sesFile);
     }
     _sesIsDirty = false;
 }
 
-/* Returns true if session index si is valid, else false. */
+/** Returns true if session index si is valid, else false. */
 bool app_isValidSessionIndex(INT si)
 {
     return (si >= 0 && si < (signed)_sessions.size());
 }
 
-/* Returns the number of items in the _sessions vector. */
+/** Returns the number of items in the _sessions vector. */
 INT app_getSessionCount()
 {
     return _sessions.size();
 }
 
-/* Returns the index of name in _sessions, else SES_NONE if not found.
-   If name is NULL returns the current session's index. */
+/** Returns the index of name in _sessions, else SI_NONE if not found.
+    If name is NULL returns the current session's index. */
 INT app_getSessionIndex(TCHAR *name)
 {
     if (name == NULL) {
@@ -451,52 +433,95 @@ INT app_getSessionIndex(TCHAR *name)
     INT i = 0;
     vector<Session>::iterator it;
     for (it = _sessions.begin(); it < _sessions.end(); ++it) {
-        if (lstrcmp(it->name, name) == 0) {
+        if (::lstrcmp(it->name, name) == 0) {
             return i;
         }
         ++i;
     }
-    return SES_NONE;
+    return SI_NONE;
 }
 
-/* Returns a pointer to the session name at index si in _sessions. If si is
-   SES_CURRENT or SES_PREVIOUS returns a pointer to the current or previous
-   session's name. Else returns a pointer to the default session name. */
+/** Returns the current _sessions index. */
+INT app_getCurrentIndex()
+{
+    return _sesCurIdx;
+}
+
+/** Returns the previous _sessions index. */
+INT app_getPreviousIndex()
+{
+    return _sesPrvIdx;
+}
+
+/** Sets the previous _sessions index to SI_NONE and updates the ini file and NPP bars. */
+void app_resetPreviousIndex()
+{
+    _sesPrvIdx = SI_NONE;
+    gCfg.savePrevious(SES_NAME_NONE);
+    app_showSessionInNppBars();
+}
+
+/** Assigns newName to the session at index si. If si is current or previous
+    updates the ini file and NPP bars then returns true. */
+bool app_renameSession(INT si, TCHAR *newName)
+{
+    bool curOrPrv = false;
+    if (app_isValidSessionIndex(si)) {
+        ::StringCchCopy(_sessions[si].name, SES_NAME_MAX_LEN - 1, newName);
+        if (si == _sesCurIdx) {
+            curOrPrv = true;
+            gCfg.saveCurrent(newName);
+        }
+        else if (si == _sesPrvIdx) {
+            curOrPrv = true;
+            gCfg.savePrevious(newName);
+        }
+        if (curOrPrv) {
+            app_showSessionInNppBars();
+        }
+    }
+    return curOrPrv;
+}
+
+/** Returns a pointer to the session name at index si in _sessions. If si is
+    SI_CURRENT or SI_PREVIOUS returns a pointer to the current or previous
+    session's name. Else returns a pointer to the 'none' session name. */
 const TCHAR* app_getSessionName(INT si)
 {
-    if (si == SES_CURRENT) {
+    if (si == SI_CURRENT) {
         si = _sesCurIdx;
     }
-    else if (si == SES_PREVIOUS) {
+    else if (si == SI_PREVIOUS) {
         si = _sesPrvIdx;
     }
-    return app_isValidSessionIndex(si) ? _sessions[si].name : SES_DEFAULT_NAME;
+    // TODO: was SES_NAME_DEFAULT, need to confirm this change doesn't cause a problem
+    return app_isValidSessionIndex(si) ? _sessions[si].name : SES_NAME_NONE;
 }
 
-/* Copies into buf the full pathname of the session at index si. If si is
-   SES_CURRENT or SES_PREVIOUS copies the current or previous session's
-   pathname. Else copies the default session pathname. */
+/** Copies into buf the full pathname of the session at index si. If si is
+    SI_CURRENT or SI_PREVIOUS copies the current or previous session's
+    pathname. Else copies the default session pathname. */
 void app_getSessionFile(INT si, TCHAR *buf)
 {
-    if (si == SES_CURRENT) {
+    if (si == SI_CURRENT) {
         si = _sesCurIdx;
     }
-    else if (si == SES_PREVIOUS) {
+    else if (si == SI_PREVIOUS) {
         si = _sesPrvIdx;
     }
     if (app_isValidSessionIndex(si)) {
-        StringCchCopy(buf, MAX_PATH, gCfg.getSesDir());
-        StringCchCat(buf, MAX_PATH, _sessions[si].name);
-        StringCchCat(buf, MAX_PATH, gCfg.getSesExt());
+        ::StringCchCopy(buf, MAX_PATH, gCfg.getSesDir());
+        ::StringCchCat(buf, MAX_PATH, _sessions[si].name);
+        ::StringCchCat(buf, MAX_PATH, gCfg.getSesExt());
     }
     else {
-        StringCchCopy(buf, MAX_PATH, sys_getDefSesFile());
+        ::StringCchCopy(buf, MAX_PATH, sys_getDefSesFile());
     }
 }
 
-/* Displays the current and previous session names in the status bar if that
-   setting is enabled. Displays the current session name in the title bar if
-   that setting is enabled. */
+/** Displays the current and previous session names in the status bar if that
+    setting is enabled. Displays the current session name in the title bar if
+    that setting is enabled. */
 void app_showSessionInNppBars()
 {
     if (!_appReady) {
@@ -515,21 +540,21 @@ void app_showSessionInNppBars()
     }
 
     if (sbar) {
-        StringCchCopy(buf1, maxLen1, _T("session : "));
-        StringCchCat(buf1, maxLen1, app_getSessionName(SES_CURRENT));
-        StringCchCat(buf1, maxLen1, _T("    previous : "));
-        StringCchCat(buf1, maxLen1, app_getSessionName(SES_PREVIOUS));
-        SendMessage(sys_getNppHwnd(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buf1);
+        ::StringCchCopy(buf1, maxLen1, _T("session : "));
+        ::StringCchCat(buf1, maxLen1, app_getSessionName(SI_CURRENT));
+        ::StringCchCat(buf1, maxLen1, _T("    previous : "));
+        ::StringCchCat(buf1, maxLen1, app_getSessionName(SI_PREVIOUS));
+        ::SendMessage(sys_getNppHandle(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buf1);
     }
 
     if (tbar) {
-        GetWindowText(sys_getNppHwnd(), buf1, maxLen1);
+        ::GetWindowText(sys_getNppHandle(), buf1, maxLen1);
         removeBracketedPrefix(buf1);
-        StringCchCopy(buf2, maxLen2, _T("["));
-        StringCchCat(buf2, maxLen2, app_getSessionName(SES_CURRENT));
-        StringCchCat(buf2, maxLen2, _T("] "));
-        StringCchCat(buf2, maxLen2, buf1);
-        SendMessage(sys_getNppHwnd(), WM_SETTEXT, 0, (LPARAM)buf2);
+        ::StringCchCopy(buf2, maxLen2, _T("["));
+        ::StringCchCat(buf2, maxLen2, app_getSessionName(SI_CURRENT));
+        ::StringCchCat(buf2, maxLen2, _T("] "));
+        ::StringCchCat(buf2, maxLen2, buf1);
+        ::SendMessage(sys_getNppHandle(), WM_SETTEXT, 0, (LPARAM)buf2);
     }
 }
 
@@ -552,14 +577,14 @@ void onNppReady()
     }
 }
 
-/* We need to remove any existing prefixes before adding a new one. */
+/** Removes existing prefixes before adding a new one. */
 void removeBracketedPrefix(TCHAR *s)
 {
     size_t i = 0, len;
     const int maxLen = MAX_PATH_T2;
     TCHAR buf[MAX_PATH_T2_P1];
 
-    if (StringCchLength(s, maxLen, &len) == S_OK) {
+    if (::StringCchLength(s, maxLen, &len) == S_OK) {
         while (i < len && *(s + i) == _T('[')) {
             while (i < len && *(s + i) != _T(']')) {
                 ++i;
@@ -571,298 +596,9 @@ void removeBracketedPrefix(TCHAR *s)
                 ++i;
             }
         }
-        StringCchCopy(buf, maxLen, s + i);
-        StringCchCopy(s, maxLen, buf);
+        ::StringCchCopy(buf, maxLen, s + i);
+        ::StringCchCopy(s, maxLen, buf);
     }
-}
-
-/* TODO: app_updateGlobalFromSession, app_updateSessionFromGlobal and
-   app_updateDocumentFromGlobal need to be refactored, perhaps into a class.
-
-Example session file:
-
-<NotepadPlus>
-    <Session activeView="0">
-        <mainView activeIndex="0">
-            <File firstVisibleLine="444" xOffset="0" scrollWidth="1696" startPos="14583" endPos="14583" selMode="0" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\SessionMgr.cpp">
-                <Mark line="312" />
-                <Mark line="466" />
-            </File>
-        </mainView>
-        <subView activeIndex="0">
-            <File firstVisibleLine="451" xOffset="0" scrollWidth="1168" startPos="12528" endPos="12528" selMode="0" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\xml\tinyxml2.h">
-                <Mark line="483" />
-            </File>
-        </subView>
-    </Session>
-</NotepadPlus>
-
-Example file-properties.xml file:
-
-<NotepadPlus>
-    <FileProperties>
-        <File firstVisibleLine="444" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\SessionMgr.cpp">
-            <Mark line="312" />
-            <Mark line="466" />
-        </File>
-        <File firstVisibleLine="451" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\xml\tinyxml2.h">
-            <Mark line="483" />
-        </File>
-    </FileProperties>
-</NotepadPlus>
-*/
-
-/* Updates global file properties from local (session) file properties.
-   After a session is saved, the global bookmarks, firstVisibleLine, language
-   and encoding are updated from the session properties. */
-void app_updateGlobalFromSession(TCHAR *sesFile)
-{
-    const char *p;
-    tinyxml2::XMLError err;
-
-    LOGF("%S", sesFile);
-
-    // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
-    err = globalDoc.LoadFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
-        return;
-    }
-    tinyxml2::XMLElement *globalPropsEle, *globalFileEle, *globalMarkEle;
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
-    globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
-
-    // Load the session file (file properties local to a session)
-    size_t num;
-    char mbSesFile[MAX_PATH_T2];
-    wcstombs_s(&num, mbSesFile, MAX_PATH_T2, sesFile, _TRUNCATE);
-    tinyxml2::XMLDocument localDoc;
-    err = localDoc.LoadFile(mbSesFile);
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the session file: '%s'.", err, mbSesFile);
-        SHOW_ERROR;
-        return;
-    }
-    tinyxml2::XMLElement *localViewEle, *localFileEle, *localMarkEle;
-    tinyxml2::XMLHandle localDocHnd(&localDoc);
-
-    // Iterate over the local View elements
-    localViewEle = localDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_SESSION).FirstChildElement(XN_MAINVIEW).ToElement();
-    while (localViewEle) {
-        // Iterate over the local File elements
-        localFileEle = localViewEle->FirstChildElement(XN_FILE);
-        while (localFileEle) {
-            // Find the global File element corresponding to the current local File element
-            p = localFileEle->Attribute(XA_FILENAME);
-            LOGG(30, "File = %s", p);
-            globalFileEle = globalPropsEle->FirstChildElement(XN_FILE);
-            while (globalFileEle) {
-                if (globalFileEle->Attribute(XA_FILENAME, p)) {
-                    break; // found it
-                }
-                globalFileEle = globalFileEle->NextSiblingElement(XN_FILE);
-            }
-            if (!globalFileEle) { // not found so create one
-                globalFileEle = globalDoc.NewElement(XN_FILE);
-                globalFileEle->SetAttribute(XA_FILENAME, p);
-            }
-            globalPropsEle->InsertFirstChild(globalFileEle); // an existing element will get moved to the top
-            // Update global File attributes with values from the current local File attributes
-            globalFileEle->SetAttribute(XA_LANG, localFileEle->Attribute(XA_LANG));
-            globalFileEle->SetAttribute(XA_ENCODING, localFileEle->Attribute(XA_ENCODING));
-            globalFileEle->SetAttribute(XA_FIRSTVISIBLELINE, localFileEle->Attribute(XA_FIRSTVISIBLELINE));
-            globalFileEle->DeleteChildren();
-            LOGG(30, "lang = '%s', encoding = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_ENCODING), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
-            // Iterate over the local Mark elements for the current local File element
-            localMarkEle = localFileEle->FirstChildElement(XN_MARK);
-            while (localMarkEle) {
-                globalMarkEle = globalDoc.NewElement(XN_MARK);
-                globalFileEle->InsertEndChild(globalMarkEle);
-                // Update global Mark attributes with values from the current local Mark attributes
-                globalMarkEle->SetAttribute(XA_LINE, localMarkEle->Attribute(XA_LINE));
-                LOGG(30, "Mark = %s", localMarkEle->Attribute(XA_LINE));
-                localMarkEle = localMarkEle->NextSiblingElement(XN_MARK);
-            }
-            localFileEle = localFileEle->NextSiblingElement(XN_FILE);
-        }
-        localViewEle = localViewEle->NextSiblingElement(XN_SUBVIEW);
-    }
-
-    // Save changes to the properties file
-    err = globalDoc.SaveFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i saving the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
-    }
-}
-
-/* Updates local (session) file properties from global file properties.
-   When a session is about to be loaded, the session bookmarks, language and
-   encoding are updated from the global properties, then the session is loaded. */
-void app_updateSessionFromGlobal(TCHAR *sesFile)
-{
-    const char *p;
-    bool save = false;
-    tinyxml2::XMLError err;
-
-    LOGF("%S", sesFile);
-
-    // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
-    err = globalDoc.LoadFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
-        return;
-    }
-    tinyxml2::XMLElement *globalPropsEle, *globalFileEle, *globalMarkEle;
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
-    globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
-
-    // Load the session file (file properties local to a session)
-    size_t num;
-    char mbSesFile[MAX_PATH_T2];
-    wcstombs_s(&num, mbSesFile, MAX_PATH_T2, sesFile, _TRUNCATE);
-    tinyxml2::XMLDocument localDoc;
-    err = localDoc.LoadFile(mbSesFile);
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the session file: '%s'.", err, mbSesFile);
-        SHOW_ERROR;
-        return;
-    }
-    tinyxml2::XMLElement *localViewEle, *localFileEle, *localMarkEle;
-    tinyxml2::XMLHandle localDocHnd(&localDoc);
-
-    // Iterate over the local View elements
-    localViewEle = localDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_SESSION).FirstChildElement(XN_MAINVIEW).ToElement();
-    while (localViewEle) {
-        // Iterate over the local File elements
-        localFileEle = localViewEle->FirstChildElement(XN_FILE);
-        while (localFileEle) {
-            // Find the global File element corresponding to the current local File element
-            p = localFileEle->Attribute(XA_FILENAME);
-            LOGG(30, "File = %s", p);
-            globalFileEle = globalPropsEle->FirstChildElement(XN_FILE);
-            while (globalFileEle) {
-                if (globalFileEle->Attribute(XA_FILENAME, p)) {
-                    break; // found it
-                }
-                globalFileEle = globalFileEle->NextSiblingElement(XN_FILE);
-            }
-            if (globalFileEle) {
-                save = true;
-                // Update current local File attributes with values from the global File attributes
-                localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
-                localFileEle->SetAttribute(XA_ENCODING, globalFileEle->Attribute(XA_ENCODING));
-                localFileEle->DeleteChildren();
-                LOGG(30, "lang = '%s', encoding = '%s'", globalFileEle->Attribute(XA_LANG), globalFileEle->Attribute(XA_ENCODING));
-                // Iterate over the global Mark elements for the current global File element
-                globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
-                while (globalMarkEle) {
-                    localMarkEle = localDoc.NewElement(XN_MARK);
-                    localFileEle->InsertEndChild(localMarkEle);
-                    // Update local Mark attributes with values from the current global Mark attributes
-                    localMarkEle->SetAttribute(XA_LINE, globalMarkEle->Attribute(XA_LINE));
-                    LOGG(30, "Mark = %s", globalMarkEle->Attribute(XA_LINE));
-                    globalMarkEle = globalMarkEle->NextSiblingElement(XN_MARK);
-                }
-            }
-            //else {
-            //    TODO: not found
-            //    This indicates global needs to be updated from this session,
-            //    but we can't call app_updateGlobalFromSession here.
-            //}
-            localFileEle = localFileEle->NextSiblingElement(XN_FILE);
-        }
-        localViewEle = localViewEle->NextSiblingElement(XN_SUBVIEW);
-    }
-
-    // Save changes to the session file
-    if (save) {
-        err = localDoc.SaveFile(mbSesFile);
-        if (err != tinyxml2::XML_SUCCESS) {
-            LOG("Error %i saving the session file: '%s'.", err, mbSesFile);
-            SHOW_ERROR;
-        }
-    }
-}
-
-/* Updates document properties from global file properties.
-   When an existing document is added to a session, its bookmarks and
-   firstVisibleLine are updated from the global properties. */
-void app_updateDocumentFromGlobal(INT bufferId)
-{
-    size_t num;
-    INT line, pos;
-    bool isMainView;
-    TCHAR pathname[MAX_PATH_P1];
-    char mbPathname[MAX_PATH_T2_P1];
-    HWND hNpp = sys_getNppHwnd();
-
-    LOGF("%i", bufferId);
-
-    // Get pathname for bufferId
-    SendMessage(hNpp, NPPM_GETFULLPATHFROMBUFFERID, bufferId, (LPARAM)pathname);
-    wcstombs_s(&num, mbPathname, MAX_PATH_T2, pathname, _TRUNCATE);
-    LOGG(20, "File = %s", mbPathname);
-
-    // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
-    tinyxml2::XMLError err = globalDoc.LoadFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
-        return;
-    }
-    tinyxml2::XMLElement *globalFileEle, *globalMarkEle;
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
-    globalFileEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).FirstChildElement(XN_FILE).ToElement();
-
-    // Find the global File element corresponding to mbPathname
-    while (globalFileEle) {
-        if (globalFileEle->Attribute(XA_FILENAME, mbPathname)) {
-            break; // found it
-        }
-        globalFileEle = globalFileEle->NextSiblingElement(XN_FILE);
-    }
-    if (!globalFileEle) { // not found
-        return;
-    }
-
-    // TODO: If I knew how I would set lang and encoding here
-
-    // Determine containing view and tab for bufferId
-    pos = SendMessage(hNpp, NPPM_GETPOSFROMBUFFERID, bufferId, 0);
-    LOGG(20, "Pos = 0x%X", pos);
-    isMainView = (pos & (1 << 30)) == 0;
-
-    // Iterate over the global Mark elements and set them in the active document
-    globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
-    while (globalMarkEle) {
-        line = globalMarkEle->IntAttribute(XA_LINE);
-        // go to line and set mark
-        if (isMainView) {
-            SendMessage(sys_getSc1Hwnd(), SCI_GOTOLINE, line, 0);
-        }
-        else {
-            SendMessage(sys_getSc2Hwnd(), SCI_GOTOLINE, line, 0);
-        }
-        SendMessage(hNpp, NPPM_MENUCOMMAND, 0, IDM_SEARCH_TOGGLE_BOOKMARK);
-        LOGG(20, "Mark = %i", line);
-        globalMarkEle = globalMarkEle->NextSiblingElement(XN_MARK);
-    }
-
-    // Move cursor to the last known firstVisibleLine
-    line = globalFileEle->IntAttribute(XA_FIRSTVISIBLELINE);
-    if (isMainView) {
-        SendMessage(sys_getSc1Hwnd(), SCI_GOTOLINE, line, 0);
-    }
-    else {
-        SendMessage(sys_getSc2Hwnd(), SCI_GOTOLINE, line, 0);
-    }
-    LOGG(20, "firstVisibleLine = %i", line);
 }
 
 } // end namespace

@@ -43,11 +43,11 @@ clean:
     if exist $O\ del $O\*.obj & del $O\$(PRJ).*
 
 #-------------------------------------------------------------------------------
-# Link object files to make dll
+# Link obj files to make dll
 
-$(PRJ): $O\$(PRJ).obj $O\Config.obj $O\DlgDelete.obj $O\DlgNew.obj \
-        $O\DlgRename.obj $O\DlgSessions.obj $O\DlgSettings.obj $O\DllMain.obj \
-        $O\Menu.obj $O\System.obj $O\Util.obj $O\tinyxml2.obj $O\$(PRJ).res
+$(PRJ): $O\$(PRJ).obj $O\Config.obj $O\DlgDelete.obj $O\DlgNew.obj $O\DlgRename.obj \
+        $O\DlgSessions.obj $O\DlgSettings.obj $O\DllMain.obj $O\Menu.obj \
+        $O\Properties.obj $O\System.obj $O\Util.obj $O\tinyxml2.obj $O\$(PRJ).res
     $(LD) $(LDFLAGS) $(LIBS) $?
 
 #-------------------------------------------------------------------------------
@@ -78,6 +78,9 @@ $O\DllMain.obj: $S\$(@B).cpp
     $(CXX) $(CXXFLAGS) %s
 
 $O\Menu.obj: $S\$(@B).cpp $S\$(@B).h $(NPPDEPS) $(RESDEPS)
+    $(CXX) $(CXXFLAGS) %s
+
+$O\Properties.obj: $S\$(@B).cpp $S\$(@B).h
     $(CXX) $(CXXFLAGS) %s
 
 $O\System.obj: $S\$(@B).cpp $S\$(@B).h $(NPPDEPS)

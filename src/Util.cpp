@@ -1,3 +1,4 @@
+/// @file
 /*
     Util.cpp
     Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
@@ -23,26 +24,29 @@
 #include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
-// XXX experimental for tooltips
-//#include <commctrl.h>
+//#include <commctrl.h> // XXX experimental for statusbar and tooltips
 
 //------------------------------------------------------------------------------
 
 namespace NppPlugin {
 
-// For title/options see the M_* constants.
+/** Displays a simple message box. For title/options see the M_* constants. */
 INT msgBox(const TCHAR *msg, TCHAR *title, UINT options)
 {
-    return MessageBox(sys_getNppHwnd(), msg, title != NULL ? title : PLUGIN_FULL_NAME, options);
+    return ::MessageBox(sys_getNppHandle(), msg, title != NULL ? title : PLUGIN_FULL_NAME, options);
 }
 
-// errorCode from GetLastError
+/** Displays an error box. If errorCode is 0 GetLastError is called for it. */
 void errBox(TCHAR *lpszFunction, DWORD errorCode)
 {
     LPVOID lpMsgBuf;
     LPVOID lpDisplayBuf;
 
-    FormatMessage(
+    if (errorCode == 0) {
+        errorCode = ::GetLastError();
+    }
+
+    ::FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -52,33 +56,34 @@ void errBox(TCHAR *lpszFunction, DWORD errorCode)
         (LPTSTR)&lpMsgBuf,
         0, NULL );
 
-    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
+    lpDisplayBuf = (LPVOID)::LocalAlloc(LMEM_ZEROINIT,
         (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
 
-    StringCchPrintf((LPTSTR)lpDisplayBuf,
-        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+    ::StringCchPrintf((LPTSTR)lpDisplayBuf,
+        ::LocalSize(lpDisplayBuf) / sizeof(TCHAR),
         _T("%s failed with error %d: %s"),
         lpszFunction, errorCode, lpMsgBuf);
 
     msgBox((TCHAR*)lpDisplayBuf, M_ERR);
 
-    LocalFree(lpMsgBuf);
-    LocalFree(lpDisplayBuf);
+    ::LocalFree(lpMsgBuf);
+    ::LocalFree(lpDisplayBuf);
 }
 
+/** Writes a formatted string to the debug log file. */
 void dbgLog(const char* format, ...)
 {
     if (gCfg.debug && gCfg.logFile[0]) {
         FILE *fp;
-        fopen_s(&fp, gCfg.logFile, "a+");
+        ::fopen_s(&fp, gCfg.logFile, "a+");
         if (fp) {
             va_list argptr;
             va_start(argptr, format);
-            vfprintf(fp, format, argptr);
+            ::vfprintf(fp, format, argptr);
             va_end(argptr);
-            fputc('\n', fp);
-            fflush(fp);
-            fclose(fp);
+            ::fputc('\n', fp);
+            ::fflush(fp);
+            ::fclose(fp);
         }
     }
 }
@@ -89,29 +94,30 @@ void createIfNotPresent(TCHAR *filename, const char *contents)
     HANDLE hFile;
     DWORD len, bytes;
 
-    hFile = CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = ::CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile != INVALID_HANDLE_VALUE) {
-        len = strlen(contents);
-        suc = WriteFile(hFile, contents, len, &bytes, NULL);
+        len = ::strlen(contents);
+        suc = ::WriteFile(hFile, contents, len, &bytes, NULL);
         if (!suc || bytes != len) {
             TCHAR msg[MAX_PATH_P1];
-            StringCchCopy(msg, MAX_PATH, _T("Failed creating file: "));
-            StringCchCat(msg, MAX_PATH, filename);
+            ::StringCchCopy(msg, MAX_PATH, _T("Failed creating file: "));
+            ::StringCchCat(msg, MAX_PATH, filename);
             msgBox(msg, M_ERR);
         }
-        CloseHandle(hFile);
+        ::CloseHandle(hFile);
     }
 }
 
 //------------------------------------------------------------------------------
+/// @namespace NppPlugin.pth Contains functions for manipulating paths.
 
 namespace pth {
 
-/* Removes the file name extension. */
+/** Removes the file name extension. */
 TCHAR* remExt(TCHAR *p)
 {
     size_t len;
-    if (StringCchLength(p, MAX_PATH, &len) == S_OK) {
+    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
         while (len-- > 0) {
             if (*(p + len) == _T('.')) {
                 *(p + len) = 0;
@@ -122,16 +128,16 @@ TCHAR* remExt(TCHAR *p)
     return p;
 }
 
-/* Removes the path, leaving only the file name. */
+/** Removes the path, leaving only the file name. */
 TCHAR* remPath(TCHAR *p)
 {
     size_t len;
     TCHAR s[MAX_PATH_P1];
-    if (StringCchLength(p, MAX_PATH, &len) == S_OK) {
+    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
         while (len-- > 0) {
             if (*(p + len) == _T('\\') || *(p + len) == _T('/')) {
-                StringCchCopy(s, MAX_PATH, p + len + 1);
-                StringCchCopy(p, MAX_PATH, s);
+                ::StringCchCopy(s, MAX_PATH, p + len + 1);
+                ::StringCchCopy(p, MAX_PATH, s);
                 break;
             }
         }
@@ -139,11 +145,11 @@ TCHAR* remPath(TCHAR *p)
     return p;
 }
 
-/* Removes the file name, leaving only the path and trailing slash. */
+/** Removes the file name, leaving only the path and trailing slash. */
 TCHAR* remName(TCHAR *p)
 {
     size_t len;
-    if (StringCchLength(p, MAX_PATH, &len) == S_OK) {
+    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
         while (len-- > 0) {
             if (*(p + len) == _T('\\') || *(p + len) == _T('/')) {
                 *(p + len + 1) = 0;
@@ -154,15 +160,15 @@ TCHAR* remName(TCHAR *p)
     return p;
 }
 
-/* Append a backslash if it is not already present on the end of the string. */
+/** Append a backslash if it is not already present on the end of the string. */
 bool addSlash(TCHAR *p)
 {
     size_t len;
     bool added = false;
-    if (StringCchLength(p, MAX_PATH, &len) == S_OK) {
+    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
         TCHAR *s = p + len - 1;
         if (*s != _T('\\') && *s != _T('/')) {
-            StringCchCat(p, MAX_PATH, _T("\\"));
+            ::StringCchCat(p, MAX_PATH, _T("\\"));
             added = true;
         }
     }
@@ -171,104 +177,105 @@ bool addSlash(TCHAR *p)
 
 bool dirExists(TCHAR *p)
 {
-  DWORD a = GetFileAttributes(p);
+  DWORD a = ::GetFileAttributes(p);
   return (bool)(a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 } // end namespace pth
 
 //------------------------------------------------------------------------------
+/// @namespace NppPlugin.dlg Contains functions for managing dialog controls.
 
 namespace dlg {
 
-bool setText(HWND hDlg, UINT idDlgCtrl, const TCHAR* pszText)
+bool setText(HWND hDlg, UINT idCtrl, const TCHAR* text)
 {
-    HWND hDlgItem = GetDlgItem(hDlg, idDlgCtrl);
-    if (hDlgItem) {
-        return SetWindowText(hDlgItem, pszText) ? true : false;
+    bool status = false;
+    HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
+    if (hCtrl) {
+        status = ::SetWindowText(hCtrl, text) ? true : false;
+        redrawControl(hDlg, hCtrl);
     }
-    return false;
+    return status;
 }
 
-bool getText(HWND hDlg, UINT idDlgCtrl, TCHAR *buf)
+bool getText(HWND hDlg, UINT idCtrl, TCHAR *buf)
 {
-    HWND hEdit = GetDlgItem(hDlg, idDlgCtrl);
+    HWND hEdit = ::GetDlgItem(hDlg, idCtrl);
     if (hEdit) {
-        //buf[0] = SES_MAX_LEN;
-        //SendMessage(hEdit, EM_GETLINE, 0, (LPARAM)buf);
         buf[0] = 0;
-        GetWindowText(hEdit, (LPTSTR)buf, SES_MAX_LEN);
+        ::GetWindowText(hEdit, (LPTSTR)buf, SES_NAME_MAX_LEN);
         return true;
     }
     return false;
 }
 
-bool edtModified(HWND hDlg, UINT idDlgCtrl)
+bool edtModified(HWND hDlg, UINT idCtrl)
 {
     bool modified = false;
-    HWND hEdit = GetDlgItem(hDlg, idDlgCtrl);
+    HWND hEdit = ::GetDlgItem(hDlg, idCtrl);
     if (hEdit) {
-        if (SendMessage(hEdit, EM_GETMODIFY, 0, 0)) {
+        if (::SendMessage(hEdit, EM_GETMODIFY, 0, 0)) {
             modified = true;
         }
     }
     return modified;
 }
 
-bool setCheck(HWND hDlg, UINT idDlgCtrl, bool bChecked)
+bool setCheck(HWND hDlg, UINT idCtrl, bool bChecked)
 {
-    HWND hCheckBox = GetDlgItem(hDlg, idDlgCtrl);
+    HWND hCheckBox = ::GetDlgItem(hDlg, idCtrl);
     if (hCheckBox) {
-        SendMessage(hCheckBox, BM_SETCHECK, (WPARAM) (bChecked ? BST_CHECKED : BST_UNCHECKED), 0);
+        ::SendMessage(hCheckBox, BM_SETCHECK, (WPARAM) (bChecked ? BST_CHECKED : BST_UNCHECKED), 0);
         return true;
     }
     return false;
 }
 
-bool getCheck(HWND hDlg, UINT idDlgCtrl)
+bool getCheck(HWND hDlg, UINT idCtrl)
 {
-    HWND hCheckBox = GetDlgItem(hDlg, idDlgCtrl);
+    HWND hCheckBox = ::GetDlgItem(hDlg, idCtrl);
     if (hCheckBox) {
-        return (SendMessage(hCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED) ? true : false;
+        return (::SendMessage(hCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED) ? true : false;
     }
     return false;
 }
 
-bool focus(HWND hDlg, UINT idDlgCtrl)
+bool focus(HWND hDlg, UINT idCtrl)
 {
-    HWND h = GetDlgItem(hDlg, idDlgCtrl);
+    HWND h = ::GetDlgItem(hDlg, idCtrl);
     if (h) {
         // which is correct???
         SetFocus(h);
-        //SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)h, TRUE);
-        //PostMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)h, TRUE);
+        //::SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)h, TRUE);
+        //::PostMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)h, TRUE);
         return true;
     }
     return false;
 }
 
-INT getLbSelData(HWND hDlg, UINT idDlgCtrl)
+INT getLbSelData(HWND hDlg, UINT idCtrl)
 {
-    INT i = SES_NONE;
+    INT i = SI_NONE;
     HWND hLst;
-    hLst = GetDlgItem(hDlg, idDlgCtrl);
+    hLst = ::GetDlgItem(hDlg, idCtrl);
     if (hLst) {
-        i = (INT)SendMessage(hLst, LB_GETCURSEL, 0, 0);
-        i = (INT)SendMessage(hLst, LB_GETITEMDATA, i, 0);
+        i = (INT)::SendMessage(hLst, LB_GETCURSEL, 0, 0);
+        i = (INT)::SendMessage(hLst, LB_GETITEMDATA, i, 0);
     }
     return i;
 }
 
-INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data)
+INT getLbIdxByData(HWND hDlg, UINT idCtrl, INT data)
 {
     HWND hLst;
     INT count, i, d, idx = -1;
-    hLst = GetDlgItem(hDlg, idDlgCtrl);
+    hLst = ::GetDlgItem(hDlg, idCtrl);
     if (hLst) {
-        count = (INT)SendMessage(hLst, LB_GETCOUNT, 0, 0);
+        count = (INT)::SendMessage(hLst, LB_GETCOUNT, 0, 0);
         if (count != LB_ERR) {
             for (i = 0; i < count; ++i) {
-                d = (INT)SendMessage(hLst, LB_GETITEMDATA, i, 0);
+                d = (INT)::SendMessage(hLst, LB_GETITEMDATA, i, 0);
                 if (d == data) {
                     idx = i;
                     break;
@@ -279,8 +286,17 @@ INT getLbIdxByData(HWND hDlg, UINT idDlgCtrl, INT data)
     return idx;
 }
 
-/* Centers window hWnd relative to window hParentWnd with the given sizes
-   and offsets. */
+// http://stackoverflow.com/questions/1823883/updating-text-in-a-c-win32-api-static-control-drawn-with-ws-ex-transparent
+void redrawControl(HWND hDlg, HWND hCtrl)
+{
+    RECT r;
+    ::GetClientRect(hCtrl, &r);
+    ::InvalidateRect(hCtrl, &r, TRUE);
+    ::MapWindowPoints(hCtrl, hDlg, (POINT *)&r, 2);
+    ::RedrawWindow(hDlg, &r, NULL, RDW_ERASE | RDW_INVALIDATE);
+}
+
+/** Centers window hWnd relative to window hParentWnd with the given sizes and offsets. */
 bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, INT width, INT height, bool bRepaint)
 {
     RECT rect, rectParent;
@@ -288,43 +304,42 @@ bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, INT width, 
     if (hParentWnd == NULL) {
         hParentWnd = GetParent(hWnd);
     }
-    GetWindowRect(hParentWnd, &rectParent);
-    GetWindowRect(hWnd, &rect);
+    ::GetWindowRect(hParentWnd, &rectParent);
+    ::GetWindowRect(hWnd, &rect);
     width = width > 0 ? width : rect.right - rect.left;
     height = height > 0 ? height : rect.bottom - rect.top;
     x = ((rectParent.right - rectParent.left) - width) / 2;
     x += rectParent.left + xOffset;
     y = ((rectParent.bottom - rectParent.top) - height) / 2;
     y += rectParent.top + yOffset;
-    return MoveWindow(hWnd, x, y, width, height, bRepaint) ? true : false;
+    return ::MoveWindow(hWnd, x, y, width, height, bRepaint) ? true : false;
 }
 
-/* Sets the control's position and/or size relative to the right and bottom
-   edges of the dialog.
-   toChange: X=1, Y=2, W=4, H=8
-   duoRight: offset from dialog right edge in dialog units
-   duoBottom: offset from dialog bottom edge in dialog units
-   last: if true, the control will be redrawn, sometimes needed for the last row of controls on a dialog
+/** Sets the control's position and/or size relative to the right and bottom edges of the dialog.
+    @param toChange  X=1, Y=2, W=4, H=8
+    @param duoRight  offset from dialog right edge in dialog units
+    @param duoBottom offset from dialog bottom edge in dialog units
+    @param last      if true, the control will be redrawn, sometimes needed for the last row of controls on a dialog
 */
 void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool last)
 {
-    HWND hCtrl = GetDlgItem(hDlg, idCtrl);
+    HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {
         RECT ro = {0, 0, duoRight, duoBottom};
-        MapDialogRect(hDlg, &ro);
+        ::MapDialogRect(hDlg, &ro);
         RECT rc;
         POINT p;
-        GetWindowRect(hCtrl, &rc);
+        ::GetWindowRect(hCtrl, &rc);
 
         p.x = rc.left;
         p.y = rc.top;
-        ScreenToClient(hDlg, &p);
+        ::ScreenToClient(hDlg, &p);
         rc.left = p.x;
         rc.top = p.y;
 
         p.x = rc.right;
         p.y = rc.bottom;
-        ScreenToClient(hDlg, &p);
+        ::ScreenToClient(hDlg, &p);
         rc.right = p.x;
         rc.bottom = p.y;
 
@@ -358,12 +373,94 @@ void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoR
             }
         }
 
-        MoveWindow(hCtrl, x, y, w, h, true);
+        ::MoveWindow(hCtrl, x, y, w, h, true);
         if (last) {
-            RedrawWindow(hCtrl, NULL, NULL, RDW_ERASE | RDW_INVALIDATE); // XXX DEBUG
+            redrawControl(hDlg, hCtrl);
         }
     }
 }
+
+/*
+bool setSbText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text)
+{
+    HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
+    if (hCtrl) {
+        return ::SendMessage(hCtrl, SB_SETTEXT, (SBT_NOBORDERS << 8) | nPart, (LPARAM)text) ? true : false;
+    }
+    return false;
+}
+
+bool setSbtText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text)
+{
+    HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
+    if (hCtrl) {
+        return ::SendMessage(hCtrl, SB_SETTIPTEXT, nPart, (LPARAM)text) ? true : false;
+    }
+    return false;
+}
+*/
+
+// Description: 
+//   Creates a status bar and divides it into the specified number of parts.
+// Parameters:
+//   hwndParent - parent window for the status bar.
+//   idStatus - child window identifier of the status bar.
+//   hinst - handle to the application instance.
+//   cParts - number of parts into which to divide the status bar.
+// Returns:
+//   The handle to the status bar.
+// Copied from: http://msdn.microsoft.com/en-us/library/windows/desktop/hh298378(v=vs.85).aspx
+/*
+HWND createStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts)
+{
+    HWND hwndStatus;
+    RECT rcClient;
+    HLOCAL hloc;
+    PINT paParts;
+    int i, nWidth;
+
+    // Ensure that the common control DLL is loaded.
+    //InitCommonControls();
+
+    // Create the status bar.
+    hwndStatus = ::CreateWindowEx(
+        0,                       // no extended styles
+        STATUSCLASSNAME,         // name of status bar class
+        (PCTSTR) NULL,           // no text when first created
+        SBARS_SIZEGRIP |         // includes a sizing grip
+        WS_CHILD | WS_VISIBLE |  // creates a visible child window
+        SBT_TOOLTIPS,
+        0, 0, 0, 0,              // ignores size and position
+        hwndParent,              // handle to parent window
+        (HMENU) idStatus,       // child window identifier
+        hinst,                   // handle to application instance
+        NULL);                   // no window creation data
+
+    // Get the coordinates of the parent window's client area.
+    ::GetClientRect(hwndParent, &rcClient);
+
+    // Allocate an array for holding the right edge coordinates.
+    hloc = ::LocalAlloc(LHND, sizeof(int) * cParts);
+    paParts = (PINT)::LocalLock(hloc);
+
+    // Calculate the right edge coordinate for each part, and
+    // copy the coordinates to the array.
+    nWidth = rcClient.right / cParts;
+    int rightEdge = nWidth;
+    for (i = 0; i < cParts; i++) { 
+       paParts[i] = rightEdge;
+       rightEdge += nWidth;
+    }
+
+    // Tell the status bar to create the window parts.
+    ::SendMessage(hwndStatus, SB_SETPARTS, (WPARAM) cParts, (LPARAM)paParts);
+
+    // Free the array, and return.
+    ::LocalUnlock(hloc);
+    ::LocalFree(hloc);
+    return hwndStatus;
+}
+*/
 
 // Description:
 //   Creates a tooltip for an item in a dialog box.
@@ -380,10 +477,10 @@ HWND createTooltip(int idCtrl, HWND hDlg, PTSTR text)
     if (!idCtrl || !hDlg || !text) {
         return (HWND)NULL;
     }
-    HWND hCtrl = GetDlgItem(hDlg, idCtrl);
-    HWND hTip = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, WS_POPUP,
+    HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
+    HWND hTip = ::CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL, WS_POPUP,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-        hDlg, NULL, sys_getDllHwnd(), NULL);
+        hDlg, NULL, sys_getDllHandle(), NULL);
     if (!hCtrl || !hTip) {
         return (HWND)NULL;
     }
@@ -393,8 +490,7 @@ HWND createTooltip(int idCtrl, HWND hDlg, PTSTR text)
     ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
     ti.uId = (UINT_PTR)hCtrl;
     ti.lpszText = text;
-    SendMessage(hTip, TTM_ADDTOOL, 0, (LPARAM)&ti);
-
+    ::SendMessage(hTip, TTM_ADDTOOL, 0, (LPARAM)&ti);
     return hTip;
 }
 */

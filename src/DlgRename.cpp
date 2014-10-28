@@ -35,7 +35,7 @@ namespace NppPlugin {
 
 namespace {
 
-TCHAR _lbNewName[SES_MAX_LEN];
+TCHAR _lbNewName[SES_NAME_MAX_LEN];
 
 bool onInit(HWND hDlg);
 bool onOk(HWND hDlg);
@@ -51,13 +51,13 @@ INT_PTR CALLBACK dlgRen_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 
             case IDOK:
                 if (onOk(hDlg)) {
-                    EndDialog(hDlg, 1);
+                    ::EndDialog(hDlg, 1);
                     return TRUE;
                 }
                 break;
 
             case IDCANCEL:
-                EndDialog(hDlg, 0);
+                ::EndDialog(hDlg, 0);
                 return TRUE;
         }
     }
@@ -85,7 +85,7 @@ bool onInit(HWND hDlg)
     dlg::setText(hDlg, IDC_REN_ETX_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
     dlg::focus(hDlg, IDC_REN_ETX_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -35);
-    ShowWindow(hDlg, SW_SHOW);
+    ::ShowWindow(hDlg, SW_SHOW);
     return true;
 }
 
@@ -94,7 +94,7 @@ bool onOk(HWND hDlg)
     bool status = false;
     TCHAR srcPathname[MAX_PATH_P1];
     TCHAR dstPathname[MAX_PATH_P1];
-    TCHAR newName[SES_MAX_LEN];
+    TCHAR newName[SES_NAME_MAX_LEN];
 
     // Set the destination file pathname.
     newName[0] = 0;
@@ -103,9 +103,9 @@ bool onOk(HWND hDlg)
         msgBox(_T("Missing file name."), M_WARN);
         return false;
     }
-    StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
-    StringCchCat(dstPathname, MAX_PATH, newName);
-    StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCat(dstPathname, MAX_PATH, newName);
+    ::StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
 
     // Set the source file that will be renamed.
     INT sesSelIdx = dlgSes_getLbSelectedData();
@@ -113,12 +113,12 @@ bool onOk(HWND hDlg)
 
     // Rename the file.
     _lbNewName[0] = 0;
-    if (MoveFileEx(srcPathname, dstPathname, 0)) {
-        StringCchCopy(_lbNewName, SES_MAX_LEN - 1, newName);
+    if (::MoveFileEx(srcPathname, dstPathname, 0)) {
+        ::StringCchCopy(_lbNewName, SES_NAME_MAX_LEN - 1, newName);
         status = true;
     }
     else {
-        errBox(_T("Rename"), GetLastError());
+        errBox(_T("Rename"));
     }
 
     return status;
