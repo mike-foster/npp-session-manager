@@ -1,6 +1,10 @@
 /*
 Original code by Lee Thomason (www.grinninglizard.com)
 
+Changes by Michael Foster (mfoster.com):
+- 2014-10-31: Removed "amp" from the entities table.
+- 2014-10-29: Added wide char versions of LoadFile and SaveFile.
+
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any
 damages arising from the use of this software.
@@ -54,10 +58,9 @@ struct Entity {
     char value;
 };
 
-static const int NUM_ENTITIES = 5;
+static const int NUM_ENTITIES = 4;
 static const Entity entities[NUM_ENTITIES] = {
     { "quot", 4,	DOUBLE_QUOTE },
-    { "amp", 3,		'&'  },
     { "apos", 4,	SINGLE_QUOTE },
     { "lt",	2, 		'<'	 },
     { "gt",	2,		'>'	 }
@@ -1711,12 +1714,35 @@ static FILE* callfopen( const char* filepath, const char* mode )
     return fp;
 }
 
+static FILE* callfopen( const wchar_t* filepath, const wchar_t* mode )
+{
+    FILE* fp = 0;
+    errno_t err = _wfopen_s( &fp, filepath, mode );
+    if ( err ) {
+        return 0;
+    }
+    return fp;
+}
+
 XMLError XMLDocument::LoadFile( const char* filename )
 {
     Clear();
     FILE* fp = callfopen( filename, "rb" );
     if ( !fp ) {
         SetError( XML_ERROR_FILE_NOT_FOUND, filename, 0 );
+        return _errorID;
+    }
+    LoadFile( fp );
+    fclose( fp );
+    return _errorID;
+}
+
+XMLError XMLDocument::LoadFile( const wchar_t* filename )
+{
+    Clear();
+    FILE* fp = callfopen( filename, L"rb" );
+    if ( !fp ) {
+        SetError( XML_ERROR_FILE_NOT_FOUND, 0, 0 );
         return _errorID;
     }
     LoadFile( fp );
@@ -1775,6 +1801,18 @@ XMLError XMLDocument::SaveFile( const char* filename, bool compact )
     FILE* fp = callfopen( filename, "w" );
     if ( !fp ) {
         SetError( XML_ERROR_FILE_COULD_NOT_BE_OPENED, filename, 0 );
+        return _errorID;
+    }
+    SaveFile(fp, compact);
+    fclose( fp );
+    return _errorID;
+}
+
+XMLError XMLDocument::SaveFile( const wchar_t* filename, bool compact )
+{
+    FILE* fp = callfopen( filename, L"w" );
+    if ( !fp ) {
+        SetError( XML_ERROR_FILE_COULD_NOT_BE_OPENED, 0, 0 );
         return _errorID;
     }
     SaveFile(fp, compact);

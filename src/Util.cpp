@@ -1,22 +1,16 @@
-/// @file
 /*
-    Util.cpp
-    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
-
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      Util.cpp
+    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
 */
 
 #include "System.h"
@@ -30,181 +24,192 @@
 
 namespace NppPlugin {
 
+//------------------------------------------------------------------------------
+
+namespace msg {
+
 /** Displays a simple message box. For title/options see the M_* constants. */
-INT msgBox(const TCHAR *msg, TCHAR *title, UINT options)
+INT show(LPCWSTR msg, LPWSTR title, UINT options)
 {
-    return ::MessageBox(sys_getNppHandle(), msg, title != NULL ? title : PLUGIN_FULL_NAME, options);
+    return ::MessageBoxW(sys_getNppHandle(), msg, title != NULL ? title : PLUGIN_FULL_NAME, options);
 }
 
-/** Displays an error box. If errorCode is 0 GetLastError is called for it. */
-void errBox(TCHAR *lpszFunction, DWORD errorCode)
+/** Displays an error message and logs it. lastError is expected to be from GetLastError. */
+void error(DWORD lastError, LPCWSTR format, ...)
 {
-    LPVOID lpMsgBuf;
-    LPVOID lpDisplayBuf;
+    INT len;
+    va_list argptr;
+    LPWSTR buf, buf1, buf2 = NULL, lem, lastErrorMsg = NULL;
 
-    if (errorCode == 0) {
-        errorCode = ::GetLastError();
+    va_start(argptr, format);
+    len = ::_vscwprintf(format, argptr);
+    buf1 = (LPWSTR)sys_alloc((len + 2) * sizeof(WCHAR));
+    if (buf1 == NULL) {
+        log("Error in msg::error allocating memory for: \"%S\".", format);
+        return;
+    }
+    ::vswprintf_s(buf1, len + 1, format, argptr);
+    va_end(argptr);
+    buf = buf1;
+
+    if (lastError) {
+        FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, lastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), lastErrorMsg, 0, NULL);
+        lem = lastErrorMsg == NULL ? EMPTY_STR : lastErrorMsg;
+        LPCWSTR fmt = L"%s\nError %i: %s";
+        len = ::_scwprintf(fmt, buf1, lastError, lem);
+        buf2 = (LPWSTR)sys_alloc((len + 2) * sizeof(WCHAR));
+        if (buf2) {
+            ::swprintf_s(buf2, len + 1, fmt, buf1, lastError, lem);
+            buf = buf2;
+        }
     }
 
-    ::FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        errorCode,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR)&lpMsgBuf,
-        0, NULL );
-
-    lpDisplayBuf = (LPVOID)::LocalAlloc(LMEM_ZEROINIT,
-        (lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
-
-    ::StringCchPrintf((LPTSTR)lpDisplayBuf,
-        ::LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-        _T("%s failed with error %d: %s"),
-        lpszFunction, errorCode, lpMsgBuf);
-
-    msgBox((TCHAR*)lpDisplayBuf, M_ERR);
-
-    ::LocalFree(lpMsgBuf);
-    ::LocalFree(lpDisplayBuf);
+    show(buf, M_ERR);
+    log("%S", buf);
+    sys_free(buf1);
+    sys_free(buf2);
+    if (lastErrorMsg) {
+        LocalFree((HLOCAL)lastErrorMsg);
+    }
 }
 
-/** Writes a formatted string to the debug log file. */
-void dbgLog(const char* format, ...)
+/** Writes a formatted UTF-8 string to the debug log file. */
+void log(const char *format, ...)
 {
     if (gCfg.debug && gCfg.logFile[0]) {
         FILE *fp;
-        ::fopen_s(&fp, gCfg.logFile, "a+");
+        ::_wfopen_s(&fp, gCfg.logFile, L"a+");
         if (fp) {
             va_list argptr;
             va_start(argptr, format);
-            ::vfprintf(fp, format, argptr);
+            ::vfprintf(fp, format, argptr); // Expects 'format' to be UTF-8, vfwprintf_s would write UTF-16
             va_end(argptr);
-            ::fputc('\n', fp);
+            ::fputwc(L'\n', fp);
             ::fflush(fp);
             ::fclose(fp);
         }
     }
 }
 
-void createIfNotPresent(TCHAR *filename, const char *contents)
+} // end namespace msg
+
+//------------------------------------------------------------------------------
+
+namespace pth {
+
+/** Removes the file name extension.
+    @return non-zero on error */
+errno_t removeExt(LPWSTR buf, size_t bufLen)
+{
+    errno_t err;
+    WCHAR drive[_MAX_DRIVE], dir[_MAX_DIR], fname[_MAX_FNAME];
+    err = ::_wsplitpath_s(buf, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, NULL, 0);
+    if (err == 0) {
+        err = ::_wmakepath_s(buf, bufLen, drive, dir, fname, NULL);
+    }
+    return err;
+}
+
+/** Removes the file name, leaving only the path and trailing slash.
+    @return non-zero on error */
+errno_t removeName(LPWSTR buf, size_t bufLen)
+{
+    errno_t err;
+    WCHAR drive[_MAX_DRIVE], dir[_MAX_DIR];
+    err = ::_wsplitpath_s(buf, drive, _MAX_DRIVE, dir, _MAX_DIR, NULL, 0, NULL, 0);
+    if (err == 0) {
+        err = ::_wmakepath_s(buf, bufLen, drive, dir, NULL, NULL);
+    }
+    return err;
+}
+
+/** Removes the path, leaving only the file name.
+    @return non-zero on error */
+errno_t removePath(LPWSTR buf, size_t bufLen)
+{
+    errno_t err;
+    WCHAR fname[_MAX_FNAME], ext[_MAX_EXT];
+    err = ::_wsplitpath_s(buf, NULL, 0, NULL, 0, fname, _MAX_FNAME, ext, _MAX_EXT);
+    if (err == 0) {
+        err = ::_wmakepath_s(buf, bufLen, NULL, NULL, fname, ext);
+    }
+    return err;
+}
+
+/** Appends a backslash if a trailing backslash or foreslash is not already present. */
+void appendSlash(LPWSTR buf, size_t bufLen)
+{
+    LPWSTR p;
+    if (buf != NULL) {
+        p = ::wcsrchr(buf, L'\0');
+        if (p != NULL) {
+            p = ::CharPrevW(buf, p);
+            if (p != NULL && *p != L'\\' && *p != L'/') {
+                ::StringCchCatW(buf, bufLen, L"\\");
+            }
+        }
+    }
+}
+
+/** @return true if path is an existing directory */
+bool dirExists(LPCWSTR path)
+{
+    DWORD a = ::GetFileAttributesW(path);
+    return (bool)(a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+/** @return true if pathname is an existing file */
+bool fileExists(LPCWSTR pathname)
+{
+    DWORD a = ::GetFileAttributesW(pathname);
+    return (bool)(a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+/** Creates a new file with initial contents, if the file doesn't already exist. */
+void createFileIfMissing(LPCWSTR pathname, const char *contents)
 {
     BOOL suc;
     HANDLE hFile;
     DWORD len, bytes;
 
-    hFile = ::CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = ::CreateFileW(pathname, GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile != INVALID_HANDLE_VALUE) {
         len = ::strlen(contents);
         suc = ::WriteFile(hFile, contents, len, &bytes, NULL);
         if (!suc || bytes != len) {
-            TCHAR msg[MAX_PATH_P1];
-            ::StringCchCopy(msg, MAX_PATH, _T("Failed creating file: "));
-            ::StringCchCat(msg, MAX_PATH, filename);
-            msgBox(msg, M_ERR);
+            WCHAR msg[MAX_PATH];
+            ::StringCchCopyW(msg, MAX_PATH, L"Failed creating file: ");
+            ::StringCchCatW(msg, MAX_PATH, pathname);
+            msg::show(msg, M_ERR);
         }
         ::CloseHandle(hFile);
     }
 }
 
-//------------------------------------------------------------------------------
-/// @namespace NppPlugin.pth Contains functions for manipulating paths.
-
-namespace pth {
-
-/** Removes the file name extension. */
-TCHAR* remExt(TCHAR *p)
-{
-    size_t len;
-    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
-        while (len-- > 0) {
-            if (*(p + len) == _T('.')) {
-                *(p + len) = 0;
-                break;
-            }
-        }
-    }
-    return p;
-}
-
-/** Removes the path, leaving only the file name. */
-TCHAR* remPath(TCHAR *p)
-{
-    size_t len;
-    TCHAR s[MAX_PATH_P1];
-    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
-        while (len-- > 0) {
-            if (*(p + len) == _T('\\') || *(p + len) == _T('/')) {
-                ::StringCchCopy(s, MAX_PATH, p + len + 1);
-                ::StringCchCopy(p, MAX_PATH, s);
-                break;
-            }
-        }
-    }
-    return p;
-}
-
-/** Removes the file name, leaving only the path and trailing slash. */
-TCHAR* remName(TCHAR *p)
-{
-    size_t len;
-    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
-        while (len-- > 0) {
-            if (*(p + len) == _T('\\') || *(p + len) == _T('/')) {
-                *(p + len + 1) = 0;
-                break;
-            }
-        }
-    }
-    return p;
-}
-
-/** Append a backslash if it is not already present on the end of the string. */
-bool addSlash(TCHAR *p)
-{
-    size_t len;
-    bool added = false;
-    if (::StringCchLength(p, MAX_PATH, &len) == S_OK) {
-        TCHAR *s = p + len - 1;
-        if (*s != _T('\\') && *s != _T('/')) {
-            ::StringCchCat(p, MAX_PATH, _T("\\"));
-            added = true;
-        }
-    }
-    return added;
-}
-
-bool dirExists(TCHAR *p)
-{
-  DWORD a = ::GetFileAttributes(p);
-  return (bool)(a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY));
-}
-
 } // end namespace pth
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.dlg Contains functions for managing dialog controls.
 
 namespace dlg {
 
-bool setText(HWND hDlg, UINT idCtrl, const TCHAR* text)
+bool setText(HWND hDlg, UINT idCtrl, LPCWSTR text)
 {
     bool status = false;
     HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {
-        status = ::SetWindowText(hCtrl, text) ? true : false;
+        status = ::SetWindowTextW(hCtrl, text) ? true : false;
         redrawControl(hDlg, hCtrl);
     }
     return status;
 }
 
-bool getText(HWND hDlg, UINT idCtrl, TCHAR *buf)
+bool getText(HWND hDlg, UINT idCtrl, LPWSTR buf, INT bufLen)
 {
     HWND hEdit = ::GetDlgItem(hDlg, idCtrl);
     if (hEdit) {
         buf[0] = 0;
-        ::GetWindowText(hEdit, (LPTSTR)buf, SES_NAME_MAX_LEN);
+        ::GetWindowTextW(hEdit, buf, bufLen);
         return true;
     }
     return false;
@@ -246,7 +251,7 @@ bool focus(HWND hDlg, UINT idCtrl)
     HWND h = ::GetDlgItem(hDlg, idCtrl);
     if (h) {
         // which is correct???
-        SetFocus(h);
+        ::SetFocus(h);
         //::SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)h, TRUE);
         //::PostMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)h, TRUE);
         return true;
@@ -302,7 +307,7 @@ bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, INT width, 
     RECT rect, rectParent;
     INT  x, y;
     if (hParentWnd == NULL) {
-        hParentWnd = GetParent(hWnd);
+        hParentWnd = ::GetParent(hWnd);
     }
     ::GetWindowRect(hParentWnd, &rectParent);
     ::GetWindowRect(hWnd, &rect);
@@ -319,9 +324,9 @@ bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset, INT yOffset, INT width, 
     @param toChange  X=1, Y=2, W=4, H=8
     @param duoRight  offset from dialog right edge in dialog units
     @param duoBottom offset from dialog bottom edge in dialog units
-    @param last      if true, the control will be redrawn, sometimes needed for the last row of controls on a dialog
+    @param redraw    if true, the control will be redrawn, sometimes needed for the last row of controls on a dialog
 */
-void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool last)
+void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool redraw)
 {
     HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {
@@ -374,14 +379,14 @@ void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoR
         }
 
         ::MoveWindow(hCtrl, x, y, w, h, true);
-        if (last) {
+        if (redraw) {
             redrawControl(hDlg, hCtrl);
         }
     }
 }
 
 /*
-bool setSbText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text)
+bool setSbText(HWND hDlg, UINT idCtrl, INT nPart, LPCWSTR text)
 {
     HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {
@@ -390,7 +395,7 @@ bool setSbText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text)
     return false;
 }
 
-bool setSbtText(HWND hDlg, UINT idCtrl, INT nPart, const TCHAR* text)
+bool setSbtText(HWND hDlg, UINT idCtrl, INT nPart, LPCWSTR text)
 {
     HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {

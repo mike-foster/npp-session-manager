@@ -1,26 +1,24 @@
 /*
-    DllMain.h
-    Copyright 2011,2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      DllMain.cpp
+    @copyright Copyright 2011,2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    The DLL entry point.
 */
 
 #include "System.h"
 #include "SessionMgr.h"
 #include "Menu.h"
+#include "Properties.h"
 
 using namespace NppPlugin::api;
 
@@ -61,9 +59,10 @@ extern "C" __declspec(dllexport) void setInfo(NppData nppd)
     sys_init(nppd);
     app_init();
     mnu_init();
+    prp_init();
 }
 
-extern "C" __declspec(dllexport) const TCHAR* getName()
+extern "C" __declspec(dllexport) LPCWSTR getName()
 {
     return app_getName();
 }
@@ -83,9 +82,7 @@ extern "C" __declspec(dllexport) LRESULT messageProc(UINT Message, WPARAM wParam
     return app_msgProc(Message, wParam, lParam);
 }
 
-#ifdef UNICODE
 extern "C" __declspec(dllexport) BOOL isUnicode()
 {
     return TRUE;
 }
-#endif

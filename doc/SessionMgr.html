@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 0.8.2</h1>
+  <h1>Session Manager 0.8.4.1</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -38,6 +38,7 @@
     <li><a href="#Feedback">Feedback</a></li>
     <li><a href="#Advanced">Advanced</a>
       <ul>
+        <li><a href="#API">API</a></li>
         <li><a href="#settings-ini">settings.ini</a></li>
         <li><a href="#GlobalProperties">Global Properties</a></li>
         <li><a href="#Shutdown">Shutdown</a></li>
@@ -174,7 +175,7 @@
       <ul>
         <li>Add B to A: Check the <tt>Load into current</tt> checkbox. The <tt>Load without closing</tt> checkbox is automatically checked. Load session B. Now session A is current and includes all of session B's files.</li>
         <li>Add A to B: Uncheck the <tt>Load into current</tt> checkbox and check the <tt>Load without closing</tt> checkbox. Load session B. Now session B is current and includes all of session A's files.</li>
-        <li>Replace A with B: Check the <tt>Load into current</tt> checkbox and uncheck the <tt>Load without closing</tt> checkbox. Load session B. Now session A is current and only contains session B's files.</li>
+        <li>Replace A with B: Check the <tt>Load into current</tt> checkbox and uncheck the <tt>Load without closing</tt> checkbox. Load session B. Now session A is current and only contains session B's files (it is now a copy of B).</li>
       </ul>
     </li>
     <li><b>Context Menu</b>: This great tip was contributed by <a href='https://sourceforge.net/p/notepad-plus/discussion/482781/thread/0cade5f7/?page=2#8dd4'>danrathbun</a>. He shows us how to add a Session Manager submenu to the context (right-click) menu.
@@ -216,9 +217,13 @@ To this:
 <h2 id="Advanced">Advanced</h2>
 <div>
   <p>This section contains advanced and technical topics which are not necessary to understand for normal usage of Session Manager.</p>
+  <h3 id="API">API</h3>
+  <div>
+    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has complete documentation of this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Clients can load sessions, save the current session, get the current session name, set the session directory and extension, and more.</p>
+  <div>
   <h3 id="settings-ini">settings.ini</h3>
   <div>
-    <p>The following properties are not accessible via the Settings dialog but must be edited directly in the "settings.ini" file. Close Notepad++ and use some other editor to edit this file.</p>
+    <p>The following properties are not accessible via the Settings dialog but must be edited directly in the "settings.ini" file. Close Notepad++ and use some other editor to edit this file. Note that you must save this file as UTF-16LE.</p>
     <ul>
       <li><b>saveDelay</b>: You probably will not need to change this property. See the <a href="#Shutdown">Shutdown</a> section for details. The default value is <tt>3</tt>.</li>
       <li><b>sessionsW</b>, <b>sessionsH</b>, <b>settingsW</b> and <b>settingsH</b>: These properties are in the <tt>[dialog]</tt> section. They store the sizes of the Sessions and Settings dialogs. You can set these to <tt>0</tt> to reset their sizes to the defaults.</li>
@@ -241,14 +246,14 @@ sub6=&amp;About...</pre>
   <h3 id="GlobalProperties">Global Properties</h3>
   <div>
     <p>Notepad++ saves a file's bookmarks (and other properties) in the session file, so the same file in different sessions will not have the same bookmarks. Session Manager can keep files' bookmarks (and a little more) synchronized across different sessions (See <tt>Global bookmarks</tt> in the <a href="#SettingsDialog">Settings Dialog</a> section).</p>
-    <p>The file "file-properties.xml", in the Session Manager configuration directory, stores bookmarks, firstVisibleLine, language and encoding for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
+    <p>The file "global.xml", in the Session Manager configuration directory, stores bookmarks, firstVisibleLine, language and encoding for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
       <ul>
         <li>After a session is saved, the global bookmarks, firstVisibleLine, language and encoding are updated from the session properties.</li>
         <li>When a session is about to be loaded, the session bookmarks, language and encoding are updated from the global properties, then the session is loaded.</li>
         <li>When an existing document is added to a session, its bookmarks and firstVisibleLine are updated from the global properties, then the session is saved.</li>
       </ul>
-    <p>File nodes are never removed from the global properties file so if you remove a certain file from all sessions then later add it to a session it will have bookmarks and firstVisibleLine restored from the last time it was part of a session.</p>
-    <p>This feature was introduced in Session Manager 0.8, so if you have been using version &lt;= 0.7.1 and you install version &gt;= 0.8, the global properties file will be initially empty. Your global bookmarks will get updated as you load different sessions. You can speed up this process by loading all your sessions, one by one, in order from earliest to latest last-modified time, or in order from least to most important.</p>
+    <p>File nodes are never removed from the global properties file (except when the file no longer exists) so if you remove a certain file from all sessions then later add it to a session it will have bookmarks and firstVisibleLine restored from the last time it was part of a session.</p>
+    <p>The global properties feature was introduced in Session Manager 0.8, so if you have been using version &lt;= 0.7.1 and you install version &gt;= 0.8, the global properties file will be initially empty. Your global bookmarks will get updated as you load different sessions. You can speed up this process by loading all your sessions, one by one, in order from earliest to latest last-modified time, or in order from least to most important.</p>
   </div>
   <h3 id="Shutdown">Shutdown</h3>
   <div>
@@ -268,7 +273,27 @@ sub6=&amp;About...</pre>
 
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
-  <h3>0.8.3, 28Oct2014 (merged to master, binary not released)</h3>
+  <h3>0.8.4.1, 06Nov2014 (binary not released)</h3>
+  <ul>
+    <li>Unicode-related fixes and improvements:
+      <ul>
+        <li>Modified TinyXml2's load/save to support unicode file names.</li>
+        <li>Adds an XML declaration if it is missing from the global properties file. However, NPP saves session files without a declaration.</li>
+        <li>Rewrote the 'pth' functions to be more unicode safe.</li>
+        <li>The debug log file name and messages can now be unicode.</li>
+        <li>No longer includes 'tchar.h' and no longer uses _T, TCHAR and related macros. Uses wide chars and wide stdlib and Win32 functions explicitly. Still defines UNICODE and _UNICODE.</li>
+        <li>Session files are read/written as UTF-8. The 'settings.ini' file is still read/written as UTF-16LE &ndash; keep that in mind if you edit the file manually. I may eventually change that file to XML format and UTF-8 encoding.</li>
+        <li>Writes pathnames in session files (using <a href="https://sourceforge.net/projects/utfcpp">UTF8-CPP</a>) in the format NPP requires: all chars &lt; 32 or &gt; 126 are converted to entities.</li>
+      </ul>
+    </li>
+    <li>Renamed 'file-properties.xml' to 'global.xml'. Sorry for the non-back-compat change. You can just rename the old file to the new name.</li>
+    <li>Improved error handling and messages, but it needs more testing.</li>
+    <li>Using dynamic allocation in many places instead of static buffers.</li>
+    <li>Using newer style for BrowseForFolder (should be supported by 98, ME and above).</li>
+    <li>On startup, cleans the global file properties file by removing File elements whose files do not exist on disk.</li>
+    <li>Implemented an API that can be called by NPP or other plugins. Documented in 'SessionMgrApi.h'.</li>
+  </ul>
+  <h3>0.8.3, 28Oct2014 (binary not released)</h3>
   <ul>
     <li>Bug fix: Now properly updates current and previous session names on delete or rename.</li>
     <li>Now will not let you delete the current session.</li>
@@ -297,7 +322,7 @@ sub6=&amp;About...</pre>
   </ul>
   <h3>0.8, 05Oct2014</h3>
   <ul>
-    <li>Global bookmarks! Uses TinyXml2.</li>
+    <li>Global bookmarks! Uses <a href="http://www.grinninglizard.com/tinyxml2/">TinyXml2</a>.</li>
     <li>Saves the session when the bookmark margin is clicked.</li>
     <li>Writes messages to a log file when in debug mode.</li>
     <li>Uses Windows SDK v7.1, was v7.0a. Still uses MSVS2010 command-line tool chain.</li>

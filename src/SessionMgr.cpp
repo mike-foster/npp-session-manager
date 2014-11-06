@@ -1,22 +1,16 @@
-/// @file
 /*
-    SessionMgr.cpp
-    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
-
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      SessionMgr.cpp
+    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
 */
 
 #include "System.h"
@@ -25,6 +19,7 @@
 #include "Menu.h"
 #include "Util.h"
 #include "Properties.h"
+#include "SessionMgrApi.h"
 #include <algorithm>
 #include <strsafe.h>
 #include <time.h>
@@ -45,14 +40,20 @@ namespace {
 /// @class Session
 class Session
 {
-    public:
-    TCHAR name[SES_NAME_MAX_LEN];
-    FILETIME modifiedTime;
-    Session(TCHAR *sn, FILETIME mod)
+  public:
+    LPWSTR name;
+    FILETIME modified;
+    Session(LPCWSTR sesName, FILETIME modTime)
     {
-        ::StringCchCopy(name, SES_NAME_MAX_LEN - 1, sn);
-        modifiedTime.dwLowDateTime = mod.dwLowDateTime;
-        modifiedTime.dwHighDateTime = mod.dwHighDateTime;
+        size_t len;
+        if (::StringCchLengthW(sesName, SES_NAME_BUF_LEN, &len) == S_OK) {
+            name = (LPWSTR)sys_alloc((len + 1) * sizeof(WCHAR));
+            if (name) {
+                ::StringCchCopyW(name, SES_NAME_BUF_LEN, sesName);
+            }
+        }
+        modified.dwLowDateTime = modTime.dwLowDateTime;
+        modified.dwHighDateTime = modTime.dwHighDateTime;
     }
 };
 
@@ -68,7 +69,8 @@ time_t _shutdownTimer;     ///< for determining if files are closing due to a sh
 time_t _titlebarTimer;     ///< for updating the titlebar text
 
 void onNppReady();
-void removeBracketedPrefix(TCHAR *s);
+void removeBracketedPrefix(LPWSTR s);
+void resetSessions();
 
 } // end namespace
 
@@ -76,7 +78,6 @@ bool sortByAlpha(const Session s1, const Session s2);
 bool sortByDate(const Session s1, const Session s2);
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.api Contains functions called only from DllMain.
 
 namespace api {
 
@@ -97,7 +98,7 @@ void app_onUnload()
 {
     LOG("---------- STOP  %S %s", PLUGIN_FULL_NAME, RES_VERSION_S);
     _appReady = false;
-    _sessions.clear();
+    resetSessions();
 }
 
 void app_init()
@@ -106,18 +107,18 @@ void app_init()
     app_readSessionDirectory();
 }
 
-const TCHAR* app_getName()
+LPCWSTR app_getName()
 {
     return mnu_getMainMenuLabel();
 }
 
-/** Handles Notepad++ and Scintilla notifications. */
+/** Handles Notepad++ and Scintilla notifications and processes timers. */
 void app_onNotify(SCNotification *pscn)
 {
     uptr_t bufferId = pscn->nmhdr.idFrom;
     unsigned int notificationCode = pscn->nmhdr.code;
 
-    // Notepad++ notifications
+    // Notepad++
     if (pscn->nmhdr.hwndFrom == sys_getNppHandle()) {
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
@@ -184,7 +185,7 @@ void app_onNotify(SCNotification *pscn)
         } // end switch
     }
 
-    // Scintilla notifications
+    // Scintilla
     else if (pscn->nmhdr.hwndFrom == sys_getSciHandle(1) || pscn->nmhdr.hwndFrom == sys_getSciHandle(2)) {
         if (gCfg.debug >= 10) {
             switch (notificationCode) {
@@ -228,8 +229,83 @@ void app_onNotify(SCNotification *pscn)
     }
 }
 
+/** Session Manager API. Handles messages from NPP or a plugin.
+    @since v0.8.4.1
+    @see   SessionMgrApi.h */
 LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
+    if (Message == NPPM_MSGTOPLUGIN) {
+        INT si;
+        SessionMgrApiData *api = (SessionMgrApiData*)lParam;
+        if (gCfg.debug >= 10) {
+            switch (api->message) {
+                case SESMGRM_SES_LOAD:     LOG("SESMGRM_SES_LOAD"); break;
+                case SESMGRM_SES_LOAD_PRV: LOG("SESMGRM_SES_LOAD_PRV"); break;
+                case SESMGRM_SES_LOAD_DEF: LOG("SESMGRM_SES_LOAD_DEF"); break;
+                case SESMGRM_SES_SAVE:     LOG("SESMGRM_SES_SAVE"); break;
+                case SESMGRM_SES_GET_NAME: LOG("SESMGRM_SES_GET_NAME"); break;
+                case SESMGRM_SES_GET_FQN:  LOG("SESMGRM_SES_GET_FQN"); break;
+                case SESMGRM_CFG_GET_DIR:  LOG("SESMGRM_CFG_GET_DIR"); break;
+                case SESMGRM_CFG_GET_EXT:  LOG("SESMGRM_CFG_GET_EXT"); break;
+                case SESMGRM_CFG_SET_DIR:  LOG("SESMGRM_CFG_SET_DIR"); break;
+                case SESMGRM_CFG_SET_EXT:  LOG("SESMGRM_CFG_SET_EXT"); break;
+            }
+        }
+        if (!_appReady || _sesLoading) {
+            LOGG(10, "SESMGR_BUSY");
+            api->iData = SESMGR_BUSY;
+            return 1;
+        }
+        switch (api->message) {
+            case SESMGRM_SES_LOAD:
+                si = app_getSessionIndex((LPWSTR)api->wData);
+                if (si <= SI_NONE) {
+                    api->iData = SESMGR_ERROR; // session not found in current list
+                }
+                else {
+                    app_loadSession(si);
+                }
+                break;
+            case SESMGRM_SES_LOAD_PRV:
+                app_loadSession(SI_PREVIOUS);
+                break;
+            case SESMGRM_SES_LOAD_DEF:
+                app_loadSession(SI_DEFAULT);
+                break;
+            case SESMGRM_SES_SAVE:
+                app_saveSession(SI_CURRENT);
+                break;
+            case SESMGRM_SES_GET_NAME:
+                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, app_getSessionName(SI_CURRENT));
+                break;
+            case SESMGRM_SES_GET_FQN:
+                app_getSessionFile(SI_CURRENT, (LPWSTR)api->wData);
+                break;
+            case SESMGRM_CFG_GET_DIR:
+                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, gCfg.getSesDir());
+                break;
+            case SESMGRM_CFG_SET_DIR:
+                if (!gCfg.setSesDir((LPWSTR)api->wData)) {
+                    api->iData = SESMGR_ERROR; // error creating directory
+                }
+                else {
+                    gCfg.save();
+                    app_readSessionDirectory();
+                }
+                break;
+            case SESMGRM_CFG_GET_EXT:
+                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, gCfg.getSesExt());
+                break;
+            case SESMGRM_CFG_SET_EXT:
+                gCfg.setSesExt((LPWSTR)api->wData);
+                gCfg.save();
+                app_readSessionDirectory();
+                break;
+        }
+        if (api->iData == SESMGR_NULL) {
+            api->iData = SESMGR_OK;
+        }
+    }
     return 1;
 }
 
@@ -242,13 +318,12 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
     in the new list. */
 void app_readSessionDirectory()
 {
-    DWORD dwError=0;
-    WIN32_FIND_DATA ffd;
-    TCHAR sesFileSpec[MAX_PATH_P1];
-    TCHAR sesName[SES_NAME_MAX_LEN];
-    TCHAR sesCur[SES_NAME_MAX_LEN];
-    TCHAR sesPrv[SES_NAME_MAX_LEN];
-    HANDLE hFind = INVALID_HANDLE_VALUE;
+    HANDLE hFind;
+    WIN32_FIND_DATAW ffd;
+    WCHAR sesFileSpec[MAX_PATH];
+    WCHAR sesName[SES_NAME_BUF_LEN];
+    WCHAR sesCur[SES_NAME_BUF_LEN];
+    WCHAR sesPrv[SES_NAME_BUF_LEN];
 
     LOGF("");
 
@@ -258,32 +333,32 @@ void app_readSessionDirectory()
     if (!_sessions.empty()) {
         // If a session is current/previous save its name.
         if (_sesCurIdx > SI_NONE) {
-            ::StringCchCopy(sesCur, MAX_PATH, _sessions[_sesCurIdx].name);
+            ::StringCchCopyW(sesCur, MAX_PATH, _sessions[_sesCurIdx].name);
         }
         if (_sesPrvIdx > SI_NONE) {
-            ::StringCchCopy(sesPrv, MAX_PATH, _sessions[_sesPrvIdx].name);
+            ::StringCchCopyW(sesPrv, MAX_PATH, _sessions[_sesPrvIdx].name);
         }
-        _sessions.clear();
+        resetSessions();
     }
     // Create the file spec.
-    ::StringCchCopy(sesFileSpec, MAX_PATH, gCfg.getSesDir());
-    ::StringCchCat(sesFileSpec, MAX_PATH, _T("*"));
-    ::StringCchCat(sesFileSpec, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopyW(sesFileSpec, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCatW(sesFileSpec, MAX_PATH, L"*");
+    ::StringCchCatW(sesFileSpec, MAX_PATH, gCfg.getSesExt());
     // Loop over files in the session directory, save each in the vector.
-    hFind = ::FindFirstFile(sesFileSpec, &ffd);
-    if (INVALID_HANDLE_VALUE == hFind) {
+    hFind = ::FindFirstFileW(sesFileSpec, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) {
         _sesCurIdx = SI_DEFAULT;
         return;
     }
     _appReady = false;
     do {
-        ::StringCchCopy(sesName, SES_NAME_MAX_LEN - 1, ffd.cFileName);
-        pth::remExt(sesName);
+        ::StringCchCopyW(sesName, SES_NAME_BUF_LEN, ffd.cFileName);
+        pth::removeExt(sesName, SES_NAME_BUF_LEN);
         Session ses(sesName, ffd.ftLastWriteTime);
         _sessions.push_back(ses);
     }
-    while (::FindNextFile(hFind, &ffd) != 0);
-    dwError = ::GetLastError();
+    while (::FindNextFileW(hFind, &ffd) != 0);
+    DWORD lastError = ::GetLastError();
     ::FindClose(hFind);
     // Sort before restoring indexes
     if (gCfg.sortAlphaEnabled()) {
@@ -299,8 +374,8 @@ void app_readSessionDirectory()
     if (sesPrv[0] != 0) {
         _sesPrvIdx = app_getSessionIndex(sesPrv);
     }
-    if (dwError != ERROR_NO_MORE_FILES) {
-        errBox(_T(__FUNCTION__), dwError);
+    if (lastError != ERROR_NO_MORE_FILES) {
+        msg::error(lastError, L"%s: Error reading session files \"%s\".", _W(__FUNCTION__), sesFileSpec);
     }
     _appReady = true;
 }
@@ -308,14 +383,14 @@ void app_readSessionDirectory()
 /** Sorts the sessions vector ascending alphabetically. */
 bool sortByAlpha(const Session s1, const Session s2)
 {
-    return ::lstrcmp(s1.name, s2.name) <= 0;
+    return ::lstrcmpW(s1.name, s2.name) <= 0;
 }
 
 /** Sorts the sessions vector descending by the file's last modified time. For
     sessions that have the same last modified time it sorts ascending alphabetically. */
 bool sortByDate(const Session s1, const Session s2)
 {
-    INT result = ::CompareFileTime(&s1.modifiedTime, &s2.modifiedTime);
+    INT result = ::CompareFileTime(&s1.modified, &s2.modified);
     if (result < 0) {
         return false;
     }
@@ -333,7 +408,7 @@ void app_loadSession(INT si)
 }
 void app_loadSession(INT si, bool lic, bool lwc)
 {
-    TCHAR sesFile[MAX_PATH_P1];
+    WCHAR sesFile[MAX_PATH];
     HWND hNpp = sys_getNppHandle();
 
     LOGF("%i, %i, %i", si, lic, lwc);
@@ -366,11 +441,11 @@ void app_loadSession(INT si, bool lic, bool lwc)
     // Close all open files
     if (!lwc) {
         LOGG(10, "Closing documents for session %i", _sesCurIdx);
-        ::SendMessage(hNpp, NPPM_MENUCOMMAND, 0, IDM_FILE_CLOSEALL);
+        ::SendMessageW(hNpp, NPPM_MENUCOMMAND, 0, IDM_FILE_CLOSEALL);
     }
     LOGG(10, "Opening documents for session %i", si);
     // Load session
-    ::SendMessage(hNpp, NPPM_LOADSESSION, 0, (LPARAM)sesFile);
+    ::SendMessageW(hNpp, NPPM_LOADSESSION, 0, (LPARAM)sesFile);
     _sesLoading = false;
     if (!lic) {
         if (si > SI_NONE) {
@@ -400,10 +475,10 @@ void app_saveSession(INT si)
     else if (si == SI_PREVIOUS) {
         si = _sesPrvIdx;
     }
-    TCHAR sesFile[MAX_PATH_P1];
+    WCHAR sesFile[MAX_PATH];
     app_getSessionFile(si, sesFile);
 
-    ::SendMessage(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
+    ::SendMessageW(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
     _sesCurIdx = si > SI_NONE ? si : SI_DEFAULT;
     if (gCfg.globalBookmarksEnabled()) {
         prp::updateGlobalFromSession(sesFile);
@@ -425,7 +500,7 @@ INT app_getSessionCount()
 
 /** Returns the index of name in _sessions, else SI_NONE if not found.
     If name is NULL returns the current session's index. */
-INT app_getSessionIndex(TCHAR *name)
+INT app_getSessionIndex(LPWSTR name)
 {
     if (name == NULL) {
         return _sesCurIdx;
@@ -433,7 +508,7 @@ INT app_getSessionIndex(TCHAR *name)
     INT i = 0;
     vector<Session>::iterator it;
     for (it = _sessions.begin(); it < _sessions.end(); ++it) {
-        if (::lstrcmp(it->name, name) == 0) {
+        if (::lstrcmpW(it->name, name) == 0) {
             return i;
         }
         ++i;
@@ -463,11 +538,11 @@ void app_resetPreviousIndex()
 
 /** Assigns newName to the session at index si. If si is current or previous
     updates the ini file and NPP bars then returns true. */
-bool app_renameSession(INT si, TCHAR *newName)
+bool app_renameSession(INT si, LPWSTR newName)
 {
     bool curOrPrv = false;
     if (app_isValidSessionIndex(si)) {
-        ::StringCchCopy(_sessions[si].name, SES_NAME_MAX_LEN - 1, newName);
+        ::StringCchCopyW(_sessions[si].name, SES_NAME_BUF_LEN, newName);
         if (si == _sesCurIdx) {
             curOrPrv = true;
             gCfg.saveCurrent(newName);
@@ -485,8 +560,8 @@ bool app_renameSession(INT si, TCHAR *newName)
 
 /** Returns a pointer to the session name at index si in _sessions. If si is
     SI_CURRENT or SI_PREVIOUS returns a pointer to the current or previous
-    session's name. Else returns a pointer to the 'none' session name. */
-const TCHAR* app_getSessionName(INT si)
+    session's name. Else returns a pointer to the 'none' or 'default' session name. */
+LPCWSTR app_getSessionName(INT si)
 {
     if (si == SI_CURRENT) {
         si = _sesCurIdx;
@@ -494,14 +569,16 @@ const TCHAR* app_getSessionName(INT si)
     else if (si == SI_PREVIOUS) {
         si = _sesPrvIdx;
     }
-    // TODO: was SES_NAME_DEFAULT, need to confirm this change doesn't cause a problem
+    if (si == SI_DEFAULT) {
+        return SES_NAME_DEFAULT;
+    }
     return app_isValidSessionIndex(si) ? _sessions[si].name : SES_NAME_NONE;
 }
 
 /** Copies into buf the full pathname of the session at index si. If si is
     SI_CURRENT or SI_PREVIOUS copies the current or previous session's
     pathname. Else copies the default session pathname. */
-void app_getSessionFile(INT si, TCHAR *buf)
+void app_getSessionFile(INT si, LPWSTR buf)
 {
     if (si == SI_CURRENT) {
         si = _sesCurIdx;
@@ -510,12 +587,15 @@ void app_getSessionFile(INT si, TCHAR *buf)
         si = _sesPrvIdx;
     }
     if (app_isValidSessionIndex(si)) {
-        ::StringCchCopy(buf, MAX_PATH, gCfg.getSesDir());
-        ::StringCchCat(buf, MAX_PATH, _sessions[si].name);
-        ::StringCchCat(buf, MAX_PATH, gCfg.getSesExt());
+        ::StringCchCopyW(buf, MAX_PATH, gCfg.getSesDir());
+        ::StringCchCatW(buf, MAX_PATH, _sessions[si].name);
+        ::StringCchCatW(buf, MAX_PATH, gCfg.getSesExt());
     }
     else {
-        ::StringCchCopy(buf, MAX_PATH, sys_getDefSesFile());
+        ::StringCchCopyW(buf, MAX_PATH, sys_getCfgDir());
+        ::StringCchCatW(buf, MAX_PATH, SES_NAME_DEFAULT);
+        ::StringCchCatW(buf, MAX_PATH, gCfg.getSesExt());
+        pth::createFileIfMissing(buf, SES_DEFAULT_CONTENTS);
     }
 }
 
@@ -528,33 +608,29 @@ void app_showSessionInNppBars()
         return;
     }
 
-    const int maxLen1 = MAX_PATH;
-    const int maxLen2 = MAX_PATH_T2;
-    TCHAR buf1[MAX_PATH_P1];
-    TCHAR buf2[MAX_PATH_T2_P1];
+    WCHAR buf1[MAX_PATH];
+    WCHAR buf2[MAX_PATH];
     bool sbar = gCfg.showInStatusbarEnabled();
     bool tbar = gCfg.showInTitlebarEnabled();
 
     if (sbar || tbar) {
         LOGF("");
     }
-
     if (sbar) {
-        ::StringCchCopy(buf1, maxLen1, _T("session : "));
-        ::StringCchCat(buf1, maxLen1, app_getSessionName(SI_CURRENT));
-        ::StringCchCat(buf1, maxLen1, _T("    previous : "));
-        ::StringCchCat(buf1, maxLen1, app_getSessionName(SI_PREVIOUS));
-        ::SendMessage(sys_getNppHandle(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buf1);
+        ::StringCchCopyW(buf1, MAX_PATH, L"session : ");
+        ::StringCchCatW(buf1, MAX_PATH, app_getSessionName(SI_CURRENT));
+        ::StringCchCatW(buf1, MAX_PATH, L"    previous : ");
+        ::StringCchCatW(buf1, MAX_PATH, app_getSessionName(SI_PREVIOUS));
+        ::SendMessageW(sys_getNppHandle(), NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buf1);
     }
-
     if (tbar) {
-        ::GetWindowText(sys_getNppHandle(), buf1, maxLen1);
+        ::GetWindowTextW(sys_getNppHandle(), buf1, MAX_PATH);
         removeBracketedPrefix(buf1);
-        ::StringCchCopy(buf2, maxLen2, _T("["));
-        ::StringCchCat(buf2, maxLen2, app_getSessionName(SI_CURRENT));
-        ::StringCchCat(buf2, maxLen2, _T("] "));
-        ::StringCchCat(buf2, maxLen2, buf1);
-        ::SendMessage(sys_getNppHandle(), WM_SETTEXT, 0, (LPARAM)buf2);
+        ::StringCchCopyW(buf2, MAX_PATH, L"[");
+        ::StringCchCatW(buf2, MAX_PATH, app_getSessionName(SI_CURRENT));
+        ::StringCchCatW(buf2, MAX_PATH, L"] ");
+        ::StringCchCatW(buf2, MAX_PATH, buf1);
+        ::SendMessageW(sys_getNppHandle(), WM_SETTEXT, 0, (LPARAM)buf2);
     }
 }
 
@@ -564,7 +640,7 @@ namespace {
 
 void onNppReady()
 {
-    TCHAR name[MAX_PATH_P1];
+    WCHAR name[MAX_PATH];
     name[0] = 0;
     _appReady = true;
     if (gCfg.autoLoadEnabled()) {
@@ -578,27 +654,35 @@ void onNppReady()
 }
 
 /** Removes existing prefixes before adding a new one. */
-void removeBracketedPrefix(TCHAR *s)
+void removeBracketedPrefix(LPWSTR s)
 {
     size_t i = 0, len;
-    const int maxLen = MAX_PATH_T2;
-    TCHAR buf[MAX_PATH_T2_P1];
+    WCHAR buf[MAX_PATH];
 
-    if (::StringCchLength(s, maxLen, &len) == S_OK) {
-        while (i < len && *(s + i) == _T('[')) {
-            while (i < len && *(s + i) != _T(']')) {
+    if (::StringCchLengthW(s, MAX_PATH, &len) == S_OK) {
+        while (i < len && *(s + i) == L'[') {
+            while (i < len && *(s + i) != L']') {
                 ++i;
             }
-            if (i < len && *(s + i) == _T(']')) {
+            if (i < len && *(s + i) == L']') {
                 ++i;
             }
-            while (i < len && *(s + i) == _T(' ')) {
+            while (i < len && *(s + i) == L' ') {
                 ++i;
             }
         }
-        ::StringCchCopy(buf, maxLen, s + i);
-        ::StringCchCopy(s, maxLen, buf);
+        ::StringCchCopyW(buf, MAX_PATH, s + i);
+        ::StringCchCopyW(s, MAX_PATH, buf);
     }
+}
+
+void resetSessions()
+{
+    vector<Session>::iterator it;
+    for (it = _sessions.begin(); it < _sessions.end(); ++it) {
+        sys_free(it->name);
+    }
+    _sessions.clear();
 }
 
 } // end namespace

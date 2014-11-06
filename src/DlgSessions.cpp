@@ -1,21 +1,18 @@
 /*
-    DlgSessions.cpp
-    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      DlgSessions.cpp
+    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    The "Sessions" dialog.
 */
 
 #include "System.h"
@@ -266,7 +263,7 @@ bool onDelete(HWND hDlg)
     bool status = false;
     _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
     if (_lbSelectedData == app_getCurrentIndex()) {
-        msgBox(_T("Cannot delete current session."), M_WARN);
+        msg::show(L"Cannot delete current session.", M_WARN);
     }
     else if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_DEL_DLG), hDlg, dlgDel_msgProc)) {
         if (_lbSelectedData == app_getPreviousIndex()) {
@@ -313,7 +310,6 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     int i, len;
 
     //LOGE(31, "Sessions: w=%d, h=%d", dlgW, dlgH);
-
     if (dlgW == 0) {
         ::GetClientRect(hDlg, &r);
         dlgW = r.right;

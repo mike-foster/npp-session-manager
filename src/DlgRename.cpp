@@ -1,21 +1,18 @@
 /*
-    DlgRename.cpp
-    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      DlgRename.cpp
+    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    The "Rename Session" dialog.
 */
 
 #include "System.h"
@@ -35,7 +32,7 @@ namespace NppPlugin {
 
 namespace {
 
-TCHAR _lbNewName[SES_NAME_MAX_LEN];
+WCHAR _lbNewName[SES_NAME_BUF_LEN];
 
 bool onInit(HWND hDlg);
 bool onOk(HWND hDlg);
@@ -70,8 +67,8 @@ INT_PTR CALLBACK dlgRen_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
     return FALSE;
 }
 
-/* DlgSessions uses this to get the new name. */
-TCHAR* dlgRen_getLbNewName()
+/** DlgSessions uses this to get the new name. */
+LPWSTR dlgRen_getLbNewName()
 {
     return _lbNewName;
 }
@@ -92,20 +89,20 @@ bool onInit(HWND hDlg)
 bool onOk(HWND hDlg)
 {
     bool status = false;
-    TCHAR srcPathname[MAX_PATH_P1];
-    TCHAR dstPathname[MAX_PATH_P1];
-    TCHAR newName[SES_NAME_MAX_LEN];
+    WCHAR srcPathname[MAX_PATH];
+    WCHAR dstPathname[MAX_PATH];
+    WCHAR newName[SES_NAME_BUF_LEN];
 
     // Set the destination file pathname.
     newName[0] = 0;
-    dlg::getText(hDlg, IDC_REN_ETX_NAME, newName);
+    dlg::getText(hDlg, IDC_REN_ETX_NAME, newName, SES_NAME_BUF_LEN);
     if (newName[0] == 0) {
-        msgBox(_T("Missing file name."), M_WARN);
+        msg::show(L"Missing file name.", M_WARN);
         return false;
     }
-    ::StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
-    ::StringCchCat(dstPathname, MAX_PATH, newName);
-    ::StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopyW(dstPathname, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCatW(dstPathname, MAX_PATH, newName);
+    ::StringCchCatW(dstPathname, MAX_PATH, gCfg.getSesExt());
 
     // Set the source file that will be renamed.
     INT sesSelIdx = dlgSes_getLbSelectedData();
@@ -113,12 +110,13 @@ bool onOk(HWND hDlg)
 
     // Rename the file.
     _lbNewName[0] = 0;
-    if (::MoveFileEx(srcPathname, dstPathname, 0)) {
-        ::StringCchCopy(_lbNewName, SES_NAME_MAX_LEN - 1, newName);
+    if (::MoveFileExW(srcPathname, dstPathname, 0)) {
+        ::StringCchCopyW(_lbNewName, SES_NAME_BUF_LEN, newName);
         status = true;
     }
     else {
-        errBox(_T("Rename"));
+        DWORD le = ::GetLastError();
+        msg::error(le, L"%s: Error renaming from \"%s\" to \"%s\".", _W(__FUNCTION__), srcPathname, dstPathname);
     }
 
     return status;

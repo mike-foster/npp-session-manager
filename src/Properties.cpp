@@ -1,28 +1,25 @@
-/// @file
 /*
-    Properties.cpp
-    Copyright 2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      Properties.cpp
+    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    Implements global file properties.
 */
 
 #include "System.h"
 #include "Properties.h"
 #include "Config.h"
 #include "Util.h"
+#include "utf8\unchecked.h"
 #include "xml\tinyxml2.h"
 
 //------------------------------------------------------------------------------
@@ -49,10 +46,23 @@ namespace {
 #define XA_FIRSTVISIBLELINE "firstVisibleLine"
 #define XA_LINE "line"
 
+INT utf8ToAscii(const char *str, char *buf = NULL);
+void removeMissingFilesFromGlobal();
+
 } // end namespace
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.prp Implements global file properties.
+
+namespace api {
+
+void prp_init()
+{
+    removeMissingFilesFromGlobal();
+}
+
+} // end namespace api
+
+//------------------------------------------------------------------------------
 
 namespace prp {
 
@@ -75,7 +85,7 @@ Example session file:
     </Session>
 </NotepadPlus>
 
-Example file-properties.xml file:
+Example global.xml file:
 
 <NotepadPlus>
     <FileProperties>
@@ -93,19 +103,20 @@ Example file-properties.xml file:
 /** Updates global file properties from local (session) file properties.
     After a session is saved, the global bookmarks, firstVisibleLine, language
     and encoding are updated from the session properties. */
-void updateGlobalFromSession(TCHAR *sesFile)
+void updateGlobalFromSession(LPWSTR sesFile)
 {
-    const char *p;
-    tinyxml2::XMLError err;
+    DWORD lastErr;
+    const char *target;
+    tinyxml2::XMLError xmlErr;
 
     LOGF("%S", sesFile);
 
     // Load the properties file (global file properties)
     tinyxml2::XMLDocument globalDoc;
-    err = globalDoc.LoadFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
+    xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
     tinyxml2::XMLElement *globalPropsEle, *globalFileEle, *globalMarkEle;
@@ -113,14 +124,11 @@ void updateGlobalFromSession(TCHAR *sesFile)
     globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
 
     // Load the session file (file properties local to a session)
-    size_t num;
-    char mbSesFile[MAX_PATH_T2];
-    ::wcstombs_s(&num, mbSesFile, MAX_PATH_T2, sesFile, _TRUNCATE);
     tinyxml2::XMLDocument localDoc;
-    err = localDoc.LoadFile(mbSesFile);
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the session file: '%s'.", err, mbSesFile);
-        SHOW_ERROR;
+    xmlErr = localDoc.LoadFile(sesFile);
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
     tinyxml2::XMLElement *localViewEle, *localFileEle, *localMarkEle;
@@ -133,18 +141,18 @@ void updateGlobalFromSession(TCHAR *sesFile)
         localFileEle = localViewEle->FirstChildElement(XN_FILE);
         while (localFileEle) {
             // Find the global File element corresponding to the current local File element
-            p = localFileEle->Attribute(XA_FILENAME);
-            LOGG(30, "File = %s", p);
+            target = localFileEle->Attribute(XA_FILENAME);
+            LOGG(30, "File = %s", target);
             globalFileEle = globalPropsEle->FirstChildElement(XN_FILE);
             while (globalFileEle) {
-                if (globalFileEle->Attribute(XA_FILENAME, p)) {
+                if (globalFileEle->Attribute(XA_FILENAME, target)) {
                     break; // found it
                 }
                 globalFileEle = globalFileEle->NextSiblingElement(XN_FILE);
             }
             if (!globalFileEle) { // not found so create one
                 globalFileEle = globalDoc.NewElement(XN_FILE);
-                globalFileEle->SetAttribute(XA_FILENAME, p);
+                globalFileEle->SetAttribute(XA_FILENAME, target);
             }
             globalPropsEle->InsertFirstChild(globalFileEle); // an existing element will get moved to the top
             // Update global File attributes with values from the current local File attributes
@@ -168,31 +176,37 @@ void updateGlobalFromSession(TCHAR *sesFile)
         localViewEle = localViewEle->NextSiblingElement(XN_SUBVIEW);
     }
 
+    // Add XML declaration if missing
+    if (memcmp(globalDoc.FirstChild()->Value(), "xml", 3) != 0) {
+        globalDoc.InsertFirstChild(globalDoc.NewDeclaration());
+    }
     // Save changes to the properties file
-    err = globalDoc.SaveFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i saving the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
+    xmlErr = globalDoc.SaveFile(sys_getPropsFile());
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
     }
 }
 
 /** Updates local (session) file properties from global file properties.
     When a session is about to be loaded, the session bookmarks, language and
     encoding are updated from the global properties, then the session is loaded. */
-void updateSessionFromGlobal(TCHAR *sesFile)
+void updateSessionFromGlobal(LPWSTR sesFile)
 {
-    const char *p;
+    char *buf;
+    DWORD lastErr;
+    const char *target;
     bool save = false;
-    tinyxml2::XMLError err;
+    tinyxml2::XMLError xmlErr;
 
     LOGF("%S", sesFile);
 
     // Load the properties file (global file properties)
     tinyxml2::XMLDocument globalDoc;
-    err = globalDoc.LoadFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
+    xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
     tinyxml2::XMLElement *globalPropsEle, *globalFileEle, *globalMarkEle;
@@ -200,14 +214,11 @@ void updateSessionFromGlobal(TCHAR *sesFile)
     globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
 
     // Load the session file (file properties local to a session)
-    size_t num;
-    char mbSesFile[MAX_PATH_T2];
-    ::wcstombs_s(&num, mbSesFile, MAX_PATH_T2, sesFile, _TRUNCATE);
     tinyxml2::XMLDocument localDoc;
-    err = localDoc.LoadFile(mbSesFile);
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the session file: '%s'.", err, mbSesFile);
-        SHOW_ERROR;
+    xmlErr = localDoc.LoadFile(sesFile);
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
     tinyxml2::XMLElement *localViewEle, *localFileEle, *localMarkEle;
@@ -220,11 +231,11 @@ void updateSessionFromGlobal(TCHAR *sesFile)
         localFileEle = localViewEle->FirstChildElement(XN_FILE);
         while (localFileEle) {
             // Find the global File element corresponding to the current local File element
-            p = localFileEle->Attribute(XA_FILENAME);
-            LOGG(30, "File = %s", p);
+            target = localFileEle->Attribute(XA_FILENAME);
+            LOGG(30, "File = %s", target);
             globalFileEle = globalPropsEle->FirstChildElement(XN_FILE);
             while (globalFileEle) {
-                if (globalFileEle->Attribute(XA_FILENAME, p)) {
+                if (globalFileEle->Attribute(XA_FILENAME, target)) {
                     break; // found it
                 }
                 globalFileEle = globalFileEle->NextSiblingElement(XN_FILE);
@@ -232,6 +243,13 @@ void updateSessionFromGlobal(TCHAR *sesFile)
             if (globalFileEle) {
                 save = true;
                 // Update current local File attributes with values from the global File attributes
+                buf = (char*)sys_alloc(utf8ToAscii(target));
+                if (buf == NULL) {
+                    return;
+                }
+                utf8ToAscii(target, buf); // NPP expects the pathname to be encoded like this
+                localFileEle->SetAttribute(XA_FILENAME, buf);
+                sys_free(buf);
                 localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
                 localFileEle->SetAttribute(XA_ENCODING, globalFileEle->Attribute(XA_ENCODING));
                 localFileEle->DeleteChildren();
@@ -257,12 +275,16 @@ void updateSessionFromGlobal(TCHAR *sesFile)
         localViewEle = localViewEle->NextSiblingElement(XN_SUBVIEW);
     }
 
-    // Save changes to the session file
     if (save) {
-        err = localDoc.SaveFile(mbSesFile);
-        if (err != tinyxml2::XML_SUCCESS) {
-            LOG("Error %i saving the session file: '%s'.", err, mbSesFile);
-            SHOW_ERROR;
+        // Add XML declaration if missing
+        if (memcmp(localDoc.FirstChild()->Value(), "xml", 3) != 0) {
+            localDoc.InsertFirstChild(localDoc.NewDeclaration());
+        }
+        // Save changes to the session file
+        xmlErr = localDoc.SaveFile(sesFile);
+        if (xmlErr != tinyxml2::XML_SUCCESS) {
+            lastErr = ::GetLastError();
+            msg::error(lastErr, L"%s: Error %i saving session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         }
     }
 }
@@ -272,25 +294,29 @@ void updateSessionFromGlobal(TCHAR *sesFile)
     firstVisibleLine are updated from the global properties. */
 void updateDocumentFromGlobal(INT bufferId)
 {
-    size_t num;
-    INT line, pos, view;
-    TCHAR pathname[MAX_PATH_P1];
-    char mbPathname[MAX_PATH_T2_P1];
+    char *mbPathname;
+    WCHAR pathname[MAX_PATH];
+    INT line, pos, view, mbLen;
     HWND hNpp = sys_getNppHandle();
 
     LOGF("%i", bufferId);
 
     // Get pathname for bufferId
     ::SendMessage(hNpp, NPPM_GETFULLPATHFROMBUFFERID, bufferId, (LPARAM)pathname);
-    ::wcstombs_s(&num, mbPathname, MAX_PATH_T2, pathname, _TRUNCATE);
+    mbLen = ::WideCharToMultiByte(CP_UTF8, 0, pathname, -1, NULL, 0, NULL, NULL);
+    mbPathname = (char*)sys_alloc(mbLen);
+    if (mbPathname == NULL) {
+        return;
+    }
+    ::WideCharToMultiByte(CP_UTF8, 0, pathname, -1, mbPathname, mbLen, NULL, NULL);
     LOGG(20, "File = %s", mbPathname);
-
     // Load the properties file (global file properties)
     tinyxml2::XMLDocument globalDoc;
-    tinyxml2::XMLError err = globalDoc.LoadFile(sys_getPropsFile());
-    if (err != tinyxml2::XML_SUCCESS) {
-        LOG("Error %i loading the properties file: '%s'.", err, sys_getPropsFile());
-        SHOW_ERROR;
+    tinyxml2::XMLError xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        DWORD lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
+        sys_free(mbPathname);
         return;
     }
     tinyxml2::XMLElement *globalFileEle, *globalMarkEle;
@@ -304,6 +330,7 @@ void updateDocumentFromGlobal(INT bufferId)
         }
         globalFileEle = globalFileEle->NextSiblingElement(XN_FILE);
     }
+    sys_free(mbPathname);
     if (!globalFileEle) { // not found
         return;
     }
@@ -333,5 +360,100 @@ void updateDocumentFromGlobal(INT bufferId)
 }
 
 } // end namespace prp
+
+//------------------------------------------------------------------------------
+
+namespace {
+
+/** If buf is non-NULL, converts a UTF-8 string to a string where all chars < 32
+    or > 126 are converted to entities.
+    @return the number of bytes in the converted string including the terminator */
+INT utf8ToAscii(const char *str, char *buf)
+{
+    INT bytes = 0;
+    char *b = buf;
+    const char *s = str;
+    utf8::uint32_t cp;
+    while (*s) {
+        cp = utf8::unchecked::next(s);
+        if (cp < 32 || cp > 126) {
+            if (buf) {
+                ::sprintf_s(b, 9, "&#x%04X;", cp);
+                b += 8;
+            }
+            bytes += 8;
+        }
+        else {
+            if (buf) {
+                *b++ = (unsigned char)cp;
+            }
+            ++bytes;
+        }
+    }
+    if (buf) {
+        *b = 0;
+    }
+    return bytes + 1;
+}
+
+/** Removes global File elements whose files do not exist on disk. */
+void removeMissingFilesFromGlobal()
+{
+    INT wLen;
+    DWORD lastErr;
+    bool save = false;
+    LPWSTR wPathname;
+    const char *mbPathname;
+    tinyxml2::XMLError xmlErr;
+    tinyxml2::XMLElement *propsEle, *fileEle, *currentFileEle;
+
+    LOGF("");
+
+    // Load the properties file (global file properties)
+    tinyxml2::XMLDocument globalDoc;
+    xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    if (xmlErr != tinyxml2::XML_SUCCESS) {
+        lastErr = ::GetLastError();
+        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
+        return;
+    }
+    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
+    propsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
+    fileEle = propsEle->FirstChildElement(XN_FILE);
+
+    // Iterate over the File elements and remove those whose files do not exist
+    while (fileEle) {
+        mbPathname = fileEle->Attribute(XA_FILENAME);
+        wLen = ::MultiByteToWideChar(CP_UTF8, 0, mbPathname, -1, NULL, 0);
+        wPathname = (LPWSTR)sys_alloc(wLen * sizeof(WCHAR));
+        if (wPathname == NULL) {
+            return;
+        }
+        ::MultiByteToWideChar(CP_UTF8, 0, mbPathname, -1, wPathname, wLen);
+        currentFileEle = fileEle;
+        fileEle = fileEle->NextSiblingElement(XN_FILE);
+        if (!pth::fileExists(wPathname)) {
+            save = true;
+            propsEle->DeleteChild(currentFileEle);
+            LOGG(20, "File = %s", mbPathname);
+        }
+        sys_free(wPathname);
+    }
+
+    if (save) {
+        // Add XML declaration if missing
+        if (memcmp(globalDoc.FirstChild()->Value(), "xml", 3) != 0) {
+            globalDoc.InsertFirstChild(globalDoc.NewDeclaration());
+        }
+        // Save changes to the properties file
+        xmlErr = globalDoc.SaveFile(sys_getPropsFile());
+        if (xmlErr != tinyxml2::XML_SUCCESS) {
+            lastErr = ::GetLastError();
+            msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
+        }
+    }
+}
+
+} // end namespace
 
 } // end namespace NppPlugin

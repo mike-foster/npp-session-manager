@@ -1,21 +1,18 @@
 /*
-    DlgDelete.cpp
-    Copyright 2011,2013,2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      DlgDelete.cpp
+    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    The "Delete Session" dialog.
 */
 
 #include "System.h"
@@ -82,15 +79,16 @@ bool onInit(HWND hDlg)
 
 bool onOk(HWND hDlg)
 {
-    TCHAR sesPth[MAX_PATH_P1];
+    WCHAR sesPth[MAX_PATH];
     INT sesSelIdx = dlgSes_getLbSelectedData();
     if (app_isValidSessionIndex(sesSelIdx)) {
         app_getSessionFile(sesSelIdx, sesPth);
-        if (::DeleteFile(sesPth)) {
+        if (::DeleteFileW(sesPth)) {
             return true;
         }
         else {
-            errBox(_T("Delete"));
+            DWORD le = ::GetLastError();
+            msg::error(le, L"%s: Error deleting \"%s\".", _W(__FUNCTION__), sesPth);
         }
     }
     return false;

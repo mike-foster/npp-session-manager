@@ -1,21 +1,18 @@
 /*
-    DlgNew.cpp
-    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      DlgNew.cpp
+    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    The "New Session" dialog.
 */
 
 #include "System.h"
@@ -35,13 +32,13 @@ namespace NppPlugin {
 
 namespace {
 
-TCHAR _lbNewName[SES_NAME_MAX_LEN];
+WCHAR _lbNewName[SES_NAME_BUF_LEN];
 
 bool onInit(HWND hDlg);
 bool onOk(HWND hDlg);
-bool newAsEmpty(TCHAR *dstPathname);
-bool newFromOpen(TCHAR *dstPathname);
-bool newByCopy(TCHAR *dstPathname);
+bool newAsEmpty(LPWSTR dstPathname);
+bool newFromOpen(LPWSTR dstPathname);
+bool newByCopy(LPWSTR dstPathname);
 
 } // end namespace
 
@@ -67,9 +64,9 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             case IDC_NEW_RAD_OPEN:
             case IDC_NEW_RAD_COPY:
                 if (HIWORD(wParam) == BN_CLICKED) {
-                    TCHAR buf[SES_NAME_MAX_LEN];
+                    WCHAR buf[SES_NAME_BUF_LEN];
                     buf[0] = 0;
-                    dlg::getText(hDlg, IDC_NEW_ETX_NAME, buf);
+                    dlg::getText(hDlg, IDC_NEW_ETX_NAME, buf, SES_NAME_BUF_LEN);
                     if (buf[0] == 0) {
                         dlg::setText(hDlg, IDC_NEW_ETX_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
                     }
@@ -88,8 +85,8 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
     return FALSE;
 }
 
-/* DlgSessions uses this to get the new name. */
-TCHAR* dlgNew_getLbNewName()
+/** DlgSessions uses this to get the new name. */
+LPWSTR dlgNew_getLbNewName()
 {
     return _lbNewName;
 }
@@ -110,19 +107,19 @@ bool onInit(HWND hDlg)
 bool onOk(HWND hDlg)
 {
     bool succ;
-    TCHAR newName[SES_NAME_MAX_LEN];
-    TCHAR dstPathname[MAX_PATH_P1];
+    WCHAR newName[SES_NAME_BUF_LEN];
+    WCHAR dstPathname[MAX_PATH];
 
     // Set the destination file pathname.
     newName[0] = 0;
-    dlg::getText(hDlg, IDC_NEW_ETX_NAME, newName);
+    dlg::getText(hDlg, IDC_NEW_ETX_NAME, newName, SES_NAME_BUF_LEN);
     if (newName[0] == 0) {
-        msgBox(_T("Missing file name."), M_WARN);
+        msg::show(L"Missing file name.", M_WARN);
         return false;
     }
-    ::StringCchCopy(dstPathname, MAX_PATH, gCfg.getSesDir());
-    ::StringCchCat(dstPathname, MAX_PATH, newName);
-    ::StringCchCat(dstPathname, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopyW(dstPathname, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCatW(dstPathname, MAX_PATH, newName);
+    ::StringCchCatW(dstPathname, MAX_PATH, gCfg.getSesExt());
 
     if (dlg::getCheck(hDlg, IDC_NEW_RAD_EMPTY)) {
         succ = newAsEmpty(dstPathname);
@@ -134,41 +131,42 @@ bool onOk(HWND hDlg)
         succ = newByCopy(dstPathname);
     }
     if (succ) {
-        ::StringCchCopy(_lbNewName, SES_NAME_MAX_LEN - 1, newName);
+        ::StringCchCopyW(_lbNewName, SES_NAME_BUF_LEN, newName);
     }
     return succ;
 }
 
-/* Creates a new, empty session. */
-bool newAsEmpty(TCHAR *dstPathname)
+/** Creates a new, empty session. */
+bool newAsEmpty(LPWSTR dstPathname)
 {
-    createIfNotPresent(dstPathname, SES_DEFAULT_CONTENTS);
+    pth::createFileIfMissing(dstPathname, SES_DEFAULT_CONTENTS);
     return true;
 }
 
-/* Creates a new session containing the currently open files. */
-bool newFromOpen(TCHAR *dstPathname)
+/** Creates a new session containing the currently open files. */
+bool newFromOpen(LPWSTR dstPathname)
 {
     ::SendMessage(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)dstPathname);
     return true;
 }
 
-/* Creates a new session by copying the selected session. */
-bool newByCopy(TCHAR *dstPathname)
+/** Creates a new session by copying the selected session. */
+bool newByCopy(LPWSTR dstPathname)
 {
     bool status = false;
-    TCHAR srcPathname[MAX_PATH_P1];
+    WCHAR srcPathname[MAX_PATH];
 
     // Set the source file pathname.
     INT sesSelIdx = dlgSes_getLbSelectedData();
     app_getSessionFile(sesSelIdx, srcPathname);
     // Copy the file.
     _lbNewName[0] = 0;
-    if (::CopyFile(srcPathname, dstPathname, TRUE)) {
+    if (::CopyFileW(srcPathname, dstPathname, TRUE)) {
         status = true;
     }
     else {
-        errBox(_T("Copy"));
+        DWORD le = ::GetLastError();
+        msg::error(le, L"%s: Error copying from \"%s\" to \"%s\".", _W(__FUNCTION__), srcPathname, dstPathname);
     }
     return status;
 }

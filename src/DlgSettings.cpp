@@ -1,21 +1,18 @@
 /*
-    DlgSettings.cpp
-    Copyright 2011-2014 Michael Foster (http://mfoster.com/npp/)
+    This file is part of SessionMgr, A Plugin for Notepad++. SessionMgr is free
+    software: you can redistribute it and/or modify it under the terms of the
+    GNU General Public License as published by the Free Software Foundation,
+    either version 3 of the License, or (at your option) any later version.
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+    more details. You should have received a copy of the GNU General Public
+    License along with this program. If not, see <http://www.gnu.org/licenses/>.
+*//**
+    @file      DlgSettings.cpp
+    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
 
-    This file is part of SessionMgr, A Plugin for Notepad++.
-
-    SessionMgr is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    The "Settings" dialog.
 */
 
 #include "System.h"
@@ -35,8 +32,8 @@ namespace NppPlugin {
 
 namespace {
 
-TCHAR *MSG_NO_CHANGES = _T("There were no changes.");
-TCHAR *MSG_DIR_ERROR = _T("An error occurred while creating the new session directory.\nThis setting was not changed.");
+LPCWSTR MSG_NO_CHANGES = L"There were no changes.";
+LPCWSTR MSG_DIR_ERROR = L"An error occurred while creating the new session directory.\nThis setting was not changed.";
 
 INT _minWidth = 0, _minHeight = 0;
 bool _inInit, _opChanged, _dirChanged;
@@ -45,7 +42,7 @@ INT onOk(HWND hDlg);
 bool onInit(HWND hDlg);
 void onResize(HWND hDlg, INT w = 0, INT h = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
-bool getFolderName(HWND parent, TCHAR *buf);
+bool getFolderName(HWND parent, LPWSTR buf);
 
 } // end namespace
 
@@ -63,10 +60,10 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 okStat = onOk(hDlg);
                 ::EndDialog(hDlg, 1);
                 if (okStat == 1) {
-                    msgBox(MSG_NO_CHANGES, M_INFO);
+                    msg::show(MSG_NO_CHANGES, M_INFO);
                 }
                 else if (okStat == 2) {
-                    msgBox(MSG_DIR_ERROR, M_WARN);
+                    msg::show(MSG_DIR_ERROR, M_WARN);
                 }
                 return TRUE;
                 break;
@@ -92,7 +89,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 return TRUE;
             case IDC_CFG_BTN_BRW:
                 if (!_inInit && ntfy == BN_CLICKED) {
-                    TCHAR pthBuf[MAX_PATH_P1];
+                    WCHAR pthBuf[MAX_PATH];
                     if (getFolderName(hDlg, pthBuf)) {
                         _dirChanged = true;
                         dlg::setText(hDlg, IDC_CFG_ETX_DIR, pthBuf);
@@ -122,8 +119,8 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 
 namespace {
 
-/* Determines minimum dialog size. Populates controls with current values from
-   gCfg. Resizes, centers and displays the dialog window. */
+/** Determines minimum dialog size. Populates controls with current values from
+    gCfg. Resizes, centers and displays the dialog window. */
 bool onInit(HWND hDlg)
 {
     RECT r;
@@ -163,13 +160,13 @@ bool onInit(HWND hDlg)
     return true;
 }
 
-/* Gets values, if changed, from dialog box controls. Updates the global
-   config object and save them to the ini file. */
+/** Gets values, if changed, from dialog box controls. Updates the global
+    config object and save them to the ini file. */
 INT onOk(HWND hDlg)
 {
     INT stat = 0;
     bool change = false;
-    TCHAR buf[MAX_PATH_P1];
+    WCHAR buf[MAX_PATH];
 
     if (_opChanged) {
         change = true;
@@ -183,11 +180,11 @@ INT onOk(HWND hDlg)
     }
     if (_dirChanged) {
         change = true;
-        dlg::getText(hDlg, IDC_CFG_ETX_DIR, buf);
+        dlg::getText(hDlg, IDC_CFG_ETX_DIR, buf, MAX_PATH);
         if (!gCfg.setSesDir(buf)) {
             stat = 2; // error creating ses dir
         }
-        dlg::getText(hDlg, IDC_CFG_ETX_EXT, buf);
+        dlg::getText(hDlg, IDC_CFG_ETX_EXT, buf, MAX_PATH);
         gCfg.setSesExt(buf);
     }
 
@@ -205,13 +202,12 @@ INT onOk(HWND hDlg)
     return stat;
 }
 
-/* Resizes and repositions dialog controls. */
+/** Resizes and repositions dialog controls. */
 void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
     RECT r;
 
     //LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
-
     if (dlgW == 0) {
         ::GetClientRect(hDlg, &r);
         dlgW = r.right;
@@ -228,34 +224,32 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     gCfg.saveCfgDlgSize(r.right - r.left, r.bottom - r.top);
 }
 
-/* Sets the minimum size the user can resize to. */
+/** Sets the minimum size the user can resize to. */
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p)
 {
     p->ptMinTrackSize.x = _minWidth;
     p->ptMinTrackSize.y = _minHeight;
 }
 
-/* Copied and slightly modifed from:
-   npp.6.2.3.src\PowerEditor\src\MISC\Common\Common.cpp */
-bool getFolderName(HWND parent, TCHAR *buf)
+/** Copied and slightly modifed from: npp.6.2.3.src\PowerEditor\src\MISC\Common\Common.cpp */
+bool getFolderName(HWND parent, LPWSTR buf)
 {
     bool ok = false;
     LPMALLOC pShellMalloc = 0;
 
     if (::SHGetMalloc(&pShellMalloc) == NO_ERROR) {
-        BROWSEINFO info;
+        BROWSEINFOW info;
         ::memset(&info, 0, sizeof(info));
         info.hwndOwner = parent;
         info.pidlRoot = NULL;
-        TCHAR szDisplayName[MAX_PATH];
-        info.pszDisplayName = szDisplayName;
-        info.lpszTitle = _T("Select a sessions folder");
-        info.ulFlags = 0;
-        // Execute the browsing dialog.
-        LPITEMIDLIST pidl = ::SHBrowseForFolder(&info);
+        WCHAR displayName[MAX_PATH];
+        info.pszDisplayName = displayName;
+        info.lpszTitle = L"Select a sessions folder";
+        info.ulFlags = BIF_NEWDIALOGSTYLE;
+        LPITEMIDLIST pidl = ::SHBrowseForFolderW(&info);
         // pidl will be null if they cancel the browse dialog, else not null if they select a folder.
         if (pidl) {
-            if (::SHGetPathFromIDList(pidl, buf)) {
+            if (::SHGetPathFromIDListW(pidl, buf)) {
                 ok = true;
             }
             pShellMalloc->Free(pidl);

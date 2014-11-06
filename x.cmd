@@ -1,8 +1,8 @@
 @echo off
 
 set npp_plugin_dir=c:\bin\npp\plugins
-set sessionmgr_old_ver=0.7.1
-set sessionmgr_new_ver=0.8.3
+set sessionmgr_old_ver=0.8.3
+set sessionmgr_new_ver=0.8.4
 
 set do_c=0
 set do_b=0
@@ -16,7 +16,7 @@ if %do_c% equ 1 goto clean
 if %do_b% equ 1 goto build
 if %do_d% equ 1 goto deploy
 
-echo Usage: x [c|b|d][ ]...
+echo Usage: x (c|b|d)[ ]...
 echo where c = clean, b = build, d = deploy
 goto silent_exit
 
@@ -50,8 +50,7 @@ if exist %npp_plugin_dir%\SessionMgr.dll (
             echo Backup ERROR 1
             goto error_exit
         )
-    )
-    else (
+    ) else (
         echo Backup ERROR 2
         goto error_exit
     )
@@ -63,13 +62,11 @@ if exist %npp_plugin_dir%\SessionMgr-%sessionmgr_old_ver%.dll (
             echo Backup ERROR 3
             goto error_exit
         )
-    )
-    else (
+    ) else (
         echo Backup ERROR 4
         goto error_exit
     )
 )
-
 copy /y obj\SessionMgr.dll %npp_plugin_dir%\SessionMgr-%sessionmgr_new_ver%.dll
 if errorlevel 1 (
     echo Deploy ERROR

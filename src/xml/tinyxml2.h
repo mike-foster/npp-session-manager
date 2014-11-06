@@ -1,6 +1,9 @@
 /*
 Original code by Lee Thomason (www.grinninglizard.com)
 
+Changes by Michael Foster (mfoster.com):
+- 2014-10-29: Added wide char versions of LoadFile and SaveFile.
+
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any
 damages arising from the use of this software.
@@ -1536,6 +1539,7 @@ public:
     	an errorID.
     */
     XMLError LoadFile( const char* filename );
+    XMLError LoadFile( const wchar_t* filename );
 
     /**
     	Load an XML file from disk. You are responsible
@@ -1552,6 +1556,7 @@ public:
     	an errorID.
     */
     XMLError SaveFile( const char* filename, bool compact = false );
+    XMLError SaveFile( const wchar_t* filename, bool compact = false );
 
     /**
     	Save the XML file to disk. You are responsible
