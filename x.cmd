@@ -1,8 +1,8 @@
 @echo off
 
 set npp_plugin_dir=c:\bin\npp\plugins
-set sessionmgr_old_ver=0.8.3
-set sessionmgr_new_ver=0.8.4
+set sessionmgr_old_ver=0.8.4.1
+set sessionmgr_new_ver=1.0
 
 set do_c=0
 set do_b=0
