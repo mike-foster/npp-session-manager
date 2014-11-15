@@ -15,7 +15,7 @@
     Session Manager API
 
     Clients should send NPPM_MSGTOPLUGIN to NPP with wParam pointing
-    to L"SessionMgr" and lParam pointing to a SessionMgrApiData object.
+    to L"SessionMgr.dll" and lParam pointing to a SessionMgrApiData object.
 */
 
 #ifndef NPP_PLUGIN_SESSIONMGRAPI_H

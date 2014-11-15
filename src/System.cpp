@@ -61,8 +61,6 @@ void sys_onUnload()
 
 void sys_init(NppData nppd)
 {
-//    _propsFile[0] = 0;
-
     // Save NPP handles
     _hNpp = nppd._nppHandle;
     _hSci1 = nppd._scintillaMainHandle;

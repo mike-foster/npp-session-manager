@@ -42,7 +42,6 @@ namespace {
 /// XML attributes
 #define XA_FILENAME "filename"
 #define XA_LANG "lang"
-#define XA_ENCODING "encoding"
 #define XA_FIRSTVISIBLELINE "firstVisibleLine"
 #define XA_LINE "line"
 
@@ -89,11 +88,11 @@ Example global.xml file:
 
 <NotepadPlus>
     <FileProperties>
-        <File firstVisibleLine="444" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\SessionMgr.cpp">
+        <File firstVisibleLine="444" lang="C++" filename="C:\prj\npp-session-manager_global-marks\src\SessionMgr.cpp">
             <Mark line="312" />
             <Mark line="466" />
         </File>
-        <File firstVisibleLine="451" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\xml\tinyxml2.h">
+        <File firstVisibleLine="451" lang="C++" filename="C:\prj\npp-session-manager_global-marks\src\xml\tinyxml2.h">
             <Mark line="483" />
         </File>
     </FileProperties>
@@ -101,8 +100,8 @@ Example global.xml file:
 */
 
 /** Updates global file properties from local (session) file properties.
-    After a session is saved, the global bookmarks, firstVisibleLine, language
-    and encoding are updated from the session properties. */
+    After a session is saved, the global bookmarks, firstVisibleLine and
+    language are updated from the session properties. */
 void updateGlobalFromSession(LPWSTR sesFile)
 {
     DWORD lastErr;
@@ -157,10 +156,9 @@ void updateGlobalFromSession(LPWSTR sesFile)
             globalPropsEle->InsertFirstChild(globalFileEle); // an existing element will get moved to the top
             // Update global File attributes with values from the current local File attributes
             globalFileEle->SetAttribute(XA_LANG, localFileEle->Attribute(XA_LANG));
-            globalFileEle->SetAttribute(XA_ENCODING, localFileEle->Attribute(XA_ENCODING));
             globalFileEle->SetAttribute(XA_FIRSTVISIBLELINE, localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             globalFileEle->DeleteChildren();
-            LOGG(30, "lang = '%s', encoding = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_ENCODING), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
+            LOGG(30, "lang = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             // Iterate over the local Mark elements for the current local File element
             localMarkEle = localFileEle->FirstChildElement(XN_MARK);
             while (localMarkEle) {
@@ -189,8 +187,8 @@ void updateGlobalFromSession(LPWSTR sesFile)
 }
 
 /** Updates local (session) file properties from global file properties.
-    When a session is about to be loaded, the session bookmarks, language and
-    encoding are updated from the global properties, then the session is loaded. */
+    When a session is about to be loaded, the session bookmarks and language
+    are updated from the global properties, then the session is loaded. */
 void updateSessionFromGlobal(LPWSTR sesFile)
 {
     char *buf;
@@ -251,9 +249,8 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                 localFileEle->SetAttribute(XA_FILENAME, buf);
                 sys_free(buf);
                 localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
-                localFileEle->SetAttribute(XA_ENCODING, globalFileEle->Attribute(XA_ENCODING));
                 localFileEle->DeleteChildren();
-                LOGG(30, "lang = '%s', encoding = '%s'", globalFileEle->Attribute(XA_LANG), globalFileEle->Attribute(XA_ENCODING));
+                LOGG(30, "lang = '%s'", globalFileEle->Attribute(XA_LANG));
                 // Iterate over the global Mark elements for the current global File element
                 globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
                 while (globalMarkEle) {
@@ -335,7 +332,7 @@ void updateDocumentFromGlobal(INT bufferId)
         return;
     }
 
-    // TODO: If I knew how I would set lang and encoding here
+    // TODO: Need to set lang here
 
     // Determine containing view and tab for bufferId
     pos = ::SendMessage(hNpp, NPPM_GETPOSFROMBUFFERID, bufferId, 0);

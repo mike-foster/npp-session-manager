@@ -648,7 +648,9 @@ void onNppReady()
         _sesPrvIdx = app_getSessionIndex(name);
         gCfg.readCurrent(name);
         if (name[0] != 0) {
-            app_loadSession(app_getSessionIndex(name));
+            /* On startup, pass lic=false because there is no current session here,
+            and pass lwc=true so we don't close files opened via the NPP command line. */
+            app_loadSession(app_getSessionIndex(name), false, true);
         }
     }
 }

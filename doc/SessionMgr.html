@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 1.0</h1>
+  <h1>Session Manager 1.0.1</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -118,13 +118,13 @@
   <h3>Options</h3>
   <p>The following options affect how a session is loaded. See the Combining Sessions topic in the <a href='#Tips'>Tips</a> section for more information on their usage.</p>
   <ul>
-    <li><b>Load into current</b> (<tt>alt+i</tt>): If this option is checked the selected session will be loaded but it will not become the current session, although the currently open files will be closed unless you check the next option.</li>
-    <li><b>Load without closing</b> (<tt>alt+w</tt>): If this option is checked the currently open files will not be closed before the selected session is loaded. For convenience this option is checked automatically when the above option is checked.</li>
+    <li><b>Load into current</b> (<tt>alt+i</tt>): If this option is checked the selected session will be loaded but it will not become the current session although the currently open files will be closed unless you check the next option. Your changes to this option are not saved.</li>
+    <li><b>Load without closing</b> (<tt>alt+w</tt>): If this option is checked the currently open files will not be closed before the selected session is loaded. For convenience this option is checked automatically when the above option is checked. Your changes to this option are not saved.</li>
   </ul>
   <p>The following options determine how the sessions list is sorted.</p>
   <ul>
-    <li><b>Sort by alpha</b> (<tt>alt+a</tt>): Sorts alphabetically.</li>
-    <li><b>Sort by date</b> (<tt>alt+d</tt>): Sorts by most recently used. Sessions with the same last-modified time are sorted alphabetically.</li>
+    <li><b>Sort by alpha</b> (<tt>alt+a</tt>): Sorts alphabetically. Your changes to this option are saved.</li>
+    <li><b>Sort by date</b> (<tt>alt+d</tt>): Sorts by most recently used. Sessions with the same last-modified time are sorted alphabetically. Your changes to this option are saved.</li>
   </ul>
   <p>The Sessions dialog is resizable and remembers its size. Drag one of the corners or sides of the dialog to resize it.</p>
 </div>
@@ -145,8 +145,8 @@
       <p>If <tt>Auto save</tt> is disabled sessions will only be saved when you select <tt>Save current</tt> from the plugin menu or click the <tt>Save</tt> button on the Sessions dialog. The default value for <tt>Auto save</tt> is <tt>1</tt> (enabled).</p>
     </li>
     <li><b>Auto load</b>: If this is enabled the most recently opened session will be loaded when Notepad++ starts up. If you enable <tt>Auto load</tt> you should disable the Notepad++ <i class="smaller">Remember current session for next launch</i> feature. The default value for <tt>Auto load</tt> is <tt>0</tt> (disabled).</li>
-    <li><b>Load into current</b>: If this is enabled the <tt>Load into current</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt> (disabled).</li>
-    <li><b>Load without closing</b>: If this is enabled the <tt>Load without closing</tt> checkbox will be checked when the Sessions dialog is displayed. The default value is <tt>0</tt> (disabled).</li>
+    <li><b>Load into current</b>: This setting is applied any time a session is loaded. It also determines the initial state of the <tt>Load into current</tt> checkbox on the Sessions dialog. The default value is <tt>0</tt> (disabled).</li>
+    <li><b>Load without closing</b>: This setting is applied any time a session is loaded except on startup where it is considered enabled. It also determines the initial state of the <tt>Load without closing</tt> checkbox on the Sessions dialog. The default value is <tt>0</tt> (disabled).</li>
     <li><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default value is <tt>0</tt> (disabled).</li>
     <li><b>Show in status bar</b>: If this is enabled the current and previous session names will be displayed in the Notepad++ status bar. The default value is <tt>0</tt> (disabled).</li>
     <li><b>Global bookmarks</b>: This enables or disables the global bookmarks feature (see the <a href="#GlobalProperties">Global Properties</a> section). Note that if <tt>Auto save</tt> is disabled your global bookmarks will only get updated when you manually save the current session. The default value for <tt>Global bookmarks</tt> is <tt>1</tt> (enabled).</li>
@@ -203,7 +203,7 @@
 To this:
 <pre>&lt;Item MenuEntryName="Edit" MenuItemName="Select All" ItemNameAs="&Select All"/&gt;</pre>
         </li>
-        <li>Save your changes to the "contextMenu.xml" file and restart Notepad++. Now try <tt>right-click,m,o</tt>. There are many possibilites. Configure it to what is most convenient for yourself.</li>
+        <li>Save your changes to the "contextMenu.xml" file and restart Notepad++. Now try <tt>right-click,m,o</tt>. Instead of right-clicking you can use the context menu key (if your keyboard has it): <tt>ctx-key,m,o</tt>. There are many possibilites. Configure it to what is most convenient for you.</li>
       </ul>
     </li>
   </ul>
@@ -219,7 +219,7 @@ To this:
   <p>This section contains advanced and technical topics which are not necessary to understand for normal usage of Session Manager.</p>
   <h3 id="API">API</h3>
   <div>
-    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has complete documentation of this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Clients can load sessions, save the current session, get the current session name, set the session directory and extension, and more.</p>
+    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has complete documentation of this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr.dll"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Clients can load sessions, save the current session, get the current session name, set the session directory and extension, and more.</p>
   <div>
   <h3 id="settings-ini">settings.ini</h3>
   <div>
@@ -246,10 +246,10 @@ sub6=&amp;About...</pre>
   <h3 id="GlobalProperties">Global Properties</h3>
   <div>
     <p>Notepad++ saves a file's bookmarks (and other properties) in the session file, so the same file in different sessions will not have the same bookmarks. Session Manager can keep files' bookmarks (and a little more) synchronized across different sessions (See <tt>Global bookmarks</tt> in the <a href="#SettingsDialog">Settings Dialog</a> section).</p>
-    <p>The file "global.xml", in the Session Manager configuration directory, stores bookmarks, firstVisibleLine, language and encoding for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
+    <p>The file "global.xml", in the Session Manager configuration directory, stores bookmarks, firstVisibleLine and language for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
       <ul>
-        <li>After a session is saved, the global bookmarks, firstVisibleLine, language and encoding are updated from the session properties.</li>
-        <li>When a session is about to be loaded, the session bookmarks, language and encoding are updated from the global properties, then the session is loaded.</li>
+        <li>After a session is saved, the global bookmarks, firstVisibleLine and language are updated from the session properties.</li>
+        <li>When a session is about to be loaded, the session bookmarks and language are updated from the global properties, then the session is loaded.</li>
         <li>When an existing document is added to a session, its bookmarks and firstVisibleLine are updated from the global properties, then the session is saved.</li>
       </ul>
     <p>File nodes are never removed from the global properties file (except when the file no longer exists) so if you remove a certain file from all sessions then later add it to a session it will have bookmarks and firstVisibleLine restored from the last time it was part of a session.</p>
@@ -273,6 +273,12 @@ sub6=&amp;About...</pre>
 
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
+  <h3>1.0.1, 15Nov2014</h3>
+  <ul>
+    <li>Fixed a regression bug reported by <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/thread/3b372eec/#e74d">Bernd G</a> (thanks!). Now, on startup, regardless of these options in the settings file, it considers <tt>Load into current</tt> to be false because there is no current session on startup, and it considers <tt>Load without closing</tt> to be true so it doesn't close files opened via the NPP command line.</li>
+    <li>Removed global properties support for the "encoding" attribute. It seems NPP doesn't use it, it's always -1.</li>
+    <li>Updated the help file.</li>
+  </ul>
   <h3>1.0, 06Nov2014</h3>
   <ul>
     <li>After three years Session Manager is finally released as version 1.0!</li>
