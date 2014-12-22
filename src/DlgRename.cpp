@@ -32,9 +32,9 @@ namespace NppPlugin {
 
 namespace {
 
-WCHAR _lbNewName[SES_NAME_BUF_LEN];
+ChildDialogData *_dialogData;
 
-bool onInit(HWND hDlg);
+void onInit(HWND hDlg);
 bool onOk(HWND hDlg);
 
 } // end namespace
@@ -43,47 +43,42 @@ bool onOk(HWND hDlg);
 
 INT_PTR CALLBACK dlgRen_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam)
 {
+    INT_PTR status = FALSE;
+
     if (uMessage == WM_COMMAND) {
         switch (LOWORD(wParam)) {
 
             case IDOK:
                 if (onOk(hDlg)) {
                     ::EndDialog(hDlg, 1);
-                    return TRUE;
+                    status = TRUE;
                 }
                 break;
 
             case IDCANCEL:
                 ::EndDialog(hDlg, 0);
-                return TRUE;
+                status = TRUE;
+                break;
         }
     }
     else if (uMessage == WM_INITDIALOG) {
-        if (onInit(hDlg)) {
-            return TRUE;
-        }
+        _dialogData = (ChildDialogData*)lParam;
+        onInit(hDlg);
     }
 
-    return FALSE;
-}
-
-/** DlgSessions uses this to get the new name. */
-LPWSTR dlgRen_getLbNewName()
-{
-    return _lbNewName;
+    return status;
 }
 
 //------------------------------------------------------------------------------
 
 namespace {
 
-bool onInit(HWND hDlg)
+void onInit(HWND hDlg)
 {
-    dlg::setText(hDlg, IDC_REN_ETX_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
+    dlg::setText(hDlg, IDC_REN_ETX_NAME, app_getSessionName(_dialogData->selectedSessionIndex));
     dlg::focus(hDlg, IDC_REN_ETX_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -35);
     ::ShowWindow(hDlg, SW_SHOW);
-    return true;
 }
 
 bool onOk(HWND hDlg)
@@ -105,13 +100,12 @@ bool onOk(HWND hDlg)
     ::StringCchCatW(dstPathname, MAX_PATH, gCfg.getSesExt());
 
     // Set the source file that will be renamed.
-    INT sesSelIdx = dlgSes_getLbSelectedData();
-    app_getSessionFile(sesSelIdx, srcPathname);
+    app_getSessionFile(_dialogData->selectedSessionIndex, srcPathname);
 
     // Rename the file.
-    _lbNewName[0] = 0;
+    _dialogData->newSessionName[0] = 0;
     if (::MoveFileExW(srcPathname, dstPathname, 0)) {
-        ::StringCchCopyW(_lbNewName, SES_NAME_BUF_LEN, newName);
+        ::StringCchCopyW(_dialogData->newSessionName, SES_NAME_BUF_LEN, newName);
         status = true;
     }
     else {

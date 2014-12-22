@@ -5,7 +5,7 @@
 html, body {
   color: #333;
   background-color: #a7a09a;
-  font-size: medium;
+  font-size: small;
   font-family: verdana,arial,helvetica,sans-serif;
 }
 body {
@@ -21,7 +21,7 @@ b {
   font-weight: bold;
 }
 tt {
-  font-size: medium;
+  font-size: small;
   font-family: 'courier new',monospace;
 }
 a {
@@ -39,20 +39,23 @@ a:hover {
   text-decoration:none;
 }
 h1 {
-  color: #666;
+  color: #555;
   font-size: xx-large;
   margin: .5em 0 .2em 0;
 }
-h2, h3 {
+h2, h3, h4 {
   color: #555;
   margin: 1.2em 0 .5em 0;
 }
 h2 {
-  font-size: large;
+  font-size: x-large;
 }
 h3 {
-  font-size: small;
-  text-decoration: underline;
+  font-size: large;
+  /* text-decoration: underline; */
+}
+h4 {
+  font-size: medium;
 }
 pre {
   font-family: 'courier new',monospace;
@@ -66,7 +69,7 @@ pre {
   max-height: 32em;
 }
 ul#contents li {
-  font-size: smaller;
+  /* font-size: smaller; */
   margin-top: 1px;
   margin-bottom: 1px;
 }
@@ -91,10 +94,10 @@ ul#contents li {
 #layout-header p {
   /* font-style: italic; */
   font-weight: bold;
-  font-size: smaller;
+  /* font-size: smaller; */
 }
 #layout-hmenu {
-  font-size: smaller;
+  /* font-size: smaller; */
   position: relative;
   left: 1px;
   width: 918px;
@@ -124,7 +127,7 @@ ul#contents li {
   clear: both;
   position: relative;
   padding: 5px 20px 5px 20px;
-  font-size: smaller;
+  /* font-size: smaller; */
   background-color: #eee;
   border-top: 1px solid #fff;
   text-align: right;

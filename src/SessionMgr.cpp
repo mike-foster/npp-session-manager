@@ -19,6 +19,7 @@
 #include "Menu.h"
 #include "Util.h"
 #include "Properties.h"
+#include "ContextMenu.h"
 #include "SessionMgrApi.h"
 #include <algorithm>
 #include <strsafe.h>
@@ -37,29 +38,10 @@ namespace {
 
 #define NPP_BOOKMARK_MARGIN_ID 1
 
-/// @class Session
-class Session
-{
-  public:
-    LPWSTR name;
-    FILETIME modified;
-    Session(LPCWSTR sesName, FILETIME modTime)
-    {
-        size_t len;
-        if (::StringCchLengthW(sesName, SES_NAME_BUF_LEN, &len) == S_OK) {
-            name = (LPWSTR)sys_alloc((len + 1) * sizeof(WCHAR));
-            if (name) {
-                ::StringCchCopyW(name, SES_NAME_BUF_LEN, sesName);
-            }
-        }
-        modified.dwLowDateTime = modTime.dwLowDateTime;
-        modified.dwHighDateTime = modTime.dwHighDateTime;
-    }
-};
-
-vector<Session> _sessions; ///< stores sessions read from disk
-INT _sesCurIdx;            ///< current _sessions index
-INT _sesPrvIdx;            ///< previous _sessions index
+vector<Session> _sessions; ///< stores info on sessions read from disk
+INT _sesCurIdx;            ///< current session index
+INT _sesPrvIdx;            ///< previous session index
+INT _sesDefIdx;            ///< default session index
 INT _bidFileOpened;        ///< bufferId from most recent NPPN_FILEOPENED
 INT _bidBufferActivated;   ///< XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
 bool _sesIsDirty;          ///< XXX experimental. if true, current session needs to be saved. this should only be set true in cases where saving the session is deferred
@@ -67,10 +49,13 @@ bool _appReady;            ///< if false, plugin should do nothing
 bool _sesLoading;          ///< if true, a session is loading
 time_t _shutdownTimer;     ///< for determining if files are closing due to a shutdown
 time_t _titlebarTimer;     ///< for updating the titlebar text
+time_t _bookmarkTimer;     ///< for saving the session on a click in the bookmark margin
 
 void onNppReady();
 void removeBracketedPrefix(LPWSTR s);
+void indexSessions();
 void resetSessions();
+INT normalizeSessionIndex(INT si);
 
 } // end namespace
 
@@ -85,13 +70,15 @@ void app_onLoad()
 {
     _appReady = false;
     _sesLoading = false;
-    _sesCurIdx = SI_DEFAULT;
+    _sesCurIdx = SI_NONE;
     _sesPrvIdx = SI_NONE;
+    _sesDefIdx = SI_NONE;
     _bidFileOpened = 0;
     _bidBufferActivated = 0;
     _sesIsDirty = false;
     _shutdownTimer = 0;
     _titlebarTimer = 0;
+    _bookmarkTimer = 0;
 }
 
 void app_onUnload()
@@ -109,7 +96,7 @@ void app_init()
 
 LPCWSTR app_getName()
 {
-    return mnu_getMainMenuLabel();
+    return mnu_getMenuLabel();
 }
 
 /** Handles Notepad++ and Scintilla notifications and processes timers. */
@@ -203,7 +190,7 @@ void app_onNotify(SCNotification *pscn)
                 break;
             case SCN_MARGINCLICK:
                 if (_appReady && !_sesLoading && gCfg.autoSaveEnabled() && pscn->margin == NPP_BOOKMARK_MARGIN_ID) {
-                    app_saveSession(_sesCurIdx);
+                    _bookmarkTimer = ::time(NULL);
                 }
                 break;
         }
@@ -225,6 +212,17 @@ void app_onNotify(SCNotification *pscn)
         if (::time(NULL) - _titlebarTimer > 1) {
             _titlebarTimer = 0;
             app_showSessionInNppBars();
+        }
+    }
+    if (_bookmarkTimer > 0) {
+        if (_appReady && !_sesLoading) {
+            if (::time(NULL) - _bookmarkTimer > 1) {
+                _bookmarkTimer = 0;
+                app_saveSession(_sesCurIdx);
+            }
+        }
+        else {
+            _bookmarkTimer = 0;
         }
     }
 }
@@ -309,9 +307,18 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
     return 1;
 }
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
+
+/** Session constructor. */
+Session::Session(LPCWSTR sesName, FILETIME modTime)
+{
+    ::StringCchCopyW(name, SES_NAME_BUF_LEN, sesName);
+    modified.dwLowDateTime = modTime.dwLowDateTime;
+    modified.dwHighDateTime = modTime.dwHighDateTime;
+    isFavorite = false;
+}
 
 /** Reads all session names from the session directory. If there is a current
     and/or previous session it is made current and/or previous again if it is
@@ -327,18 +334,21 @@ void app_readSessionDirectory()
 
     LOGF("");
 
-    // Clear the sessions vector.
     sesCur[0] = 0;
     sesPrv[0] = 0;
+    // If a session is current/previous save its name then clear the sessions vector.
     if (!_sessions.empty()) {
-        // If a session is current/previous save its name.
         if (_sesCurIdx > SI_NONE) {
-            ::StringCchCopyW(sesCur, MAX_PATH, _sessions[_sesCurIdx].name);
+            ::StringCchCopyW(sesCur, SES_NAME_BUF_LEN, _sessions[_sesCurIdx].name);
         }
         if (_sesPrvIdx > SI_NONE) {
-            ::StringCchCopyW(sesPrv, MAX_PATH, _sessions[_sesPrvIdx].name);
+            ::StringCchCopyW(sesPrv, SES_NAME_BUF_LEN, _sessions[_sesPrvIdx].name);
         }
         resetSessions();
+    }
+    else { // on startup
+        gCfg.readCurrentName(sesCur);
+        gCfg.readPreviousName(sesPrv);
     }
     // Create the file spec.
     ::StringCchCopyW(sesFileSpec, MAX_PATH, gCfg.getSesDir());
@@ -355,38 +365,39 @@ void app_readSessionDirectory()
         ::StringCchCopyW(sesName, SES_NAME_BUF_LEN, ffd.cFileName);
         pth::removeExt(sesName, SES_NAME_BUF_LEN);
         Session ses(sesName, ffd.ftLastWriteTime);
+        ses.isFavorite = mnu_isFavorite(sesName);
         _sessions.push_back(ses);
     }
     while (::FindNextFileW(hFind, &ffd) != 0);
     DWORD lastError = ::GetLastError();
     ::FindClose(hFind);
-    // Sort before restoring indexes
+    // Sort before indexing.
     if (gCfg.sortAlphaEnabled()) {
         std::sort(_sessions.begin(), _sessions.end(), sortByAlpha);
     }
     else {
         std::sort(_sessions.begin(), _sessions.end(), sortByDate);
     }
-    // If a session was current/previous try to make it current/previous again.
-    if (sesCur[0] != 0) {
-        _sesCurIdx = app_getSessionIndex(sesCur);
-    }
-    if (sesPrv[0] != 0) {
-        _sesPrvIdx = app_getSessionIndex(sesPrv);
-    }
+    // Assign session indexes. If a session was current/previous try to make it
+    // current/previous again else use the default session.
+    indexSessions();
+    _sesDefIdx = app_getSessionIndex(gCfg.getDefaultName());
+    _sesCurIdx = app_getSessionIndex(sesCur);
+    _sesPrvIdx = app_getSessionIndex(sesPrv);
+
     if (lastError != ERROR_NO_MORE_FILES) {
         msg::error(lastError, L"%s: Error reading session files \"%s\".", _W(__FUNCTION__), sesFileSpec);
     }
     _appReady = true;
 }
 
-/** Sorts the sessions vector ascending alphabetically. */
+/** Sorts the _sessions vector ascending alphabetically. */
 bool sortByAlpha(const Session s1, const Session s2)
 {
     return ::lstrcmpW(s1.name, s2.name) <= 0;
 }
 
-/** Sorts the sessions vector descending by the file's last modified time. For
+/** Sorts the _sessions vector descending by the files' last modified times. For
     sessions that have the same last modified time it sorts ascending alphabetically. */
 bool sortByDate(const Session s1, const Session s2)
 {
@@ -406,29 +417,28 @@ void app_loadSession(INT si)
 {
     app_loadSession(si, gCfg.loadIntoCurrentEnabled(), gCfg.loadWithoutClosingEnabled());
 }
-void app_loadSession(INT si, bool lic, bool lwc)
+void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad)
 {
     WCHAR sesFile[MAX_PATH];
     HWND hNpp = sys_getNppHandle();
 
-    LOGF("%i, %i, %i", si, lic, lwc);
+    LOGF("%i, %i, %i, %i", si, lic, lwc, firstLoad);
 
     if (!_appReady || _sesLoading) {
         return;
     }
-    if (si == SI_PREVIOUS) {
-        if (_sesPrvIdx <= SI_NONE) {
-            return;
-        }
-        si = _sesPrvIdx;
+
+    si = normalizeSessionIndex(si);
+    if (si <= SI_NONE) {
+        return;
     }
 
-    if (!lic && _sesCurIdx > SI_NONE) {
+    if (!lic && _sesCurIdx > SI_NONE && !firstLoad) {
         if (gCfg.autoSaveEnabled()) {
             app_saveSession(_sesCurIdx); // Save the current session before closing it
         }
         _sesPrvIdx = _sesCurIdx;
-        gCfg.savePrevious(_sessions[_sesPrvIdx].name); // Write new previous session name to ini file
+        gCfg.savePreviousName(_sessions[_sesPrvIdx].name); // Write new previous session name to ini file
     }
 
     _sesLoading = true;
@@ -448,15 +458,9 @@ void app_loadSession(INT si, bool lic, bool lwc)
     ::SendMessageW(hNpp, NPPM_LOADSESSION, 0, (LPARAM)sesFile);
     _sesLoading = false;
     if (!lic) {
-        if (si > SI_NONE) {
-            _sesCurIdx = si;
-            gCfg.saveCurrent(_sessions[si].name); // Write new current session name to ini file
-            app_showSessionInNppBars();
-        }
-        else {
-            _sesCurIdx = SI_DEFAULT;
-            gCfg.saveCurrent(EMPTY_STR);
-        }
+        _sesCurIdx = si;
+        gCfg.saveCurrentName(_sessions[si].name); // Write new current session name to ini file
+        app_showSessionInNppBars();
     }
 }
 
@@ -469,133 +473,144 @@ void app_saveSession(INT si)
         return;
     }
     LOGG(10, "Session %s dirty", _sesIsDirty ? "IS" : "is NOT"); // XXX experimental
-    if (si == SI_CURRENT) {
-        si = _sesCurIdx;
-    }
-    else if (si == SI_PREVIOUS) {
-        si = _sesPrvIdx;
+    si = normalizeSessionIndex(si);
+    if (si <= SI_NONE) {
+        return;
     }
     WCHAR sesFile[MAX_PATH];
     app_getSessionFile(si, sesFile);
-
     ::SendMessageW(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
-    _sesCurIdx = si > SI_NONE ? si : SI_DEFAULT;
+    _sesCurIdx = si;
     if (gCfg.globalBookmarksEnabled()) {
         prp::updateGlobalFromSession(sesFile);
     }
     _sesIsDirty = false;
 }
 
-/** Returns true if session index si is valid, else false. */
+/** @return true if session index si is valid, else false */
 bool app_isValidSessionIndex(INT si)
 {
     return (si >= 0 && si < (signed)_sessions.size());
 }
 
-/** Returns the number of items in the _sessions vector. */
+/** @return the number of items in the _sessions vector */
 INT app_getSessionCount()
 {
     return _sessions.size();
 }
 
-/** Returns the index of name in _sessions, else SI_NONE if not found.
-    If name is NULL returns the current session's index. */
-INT app_getSessionIndex(LPWSTR name)
+/** @return the session index of name, else the default session index */
+INT app_getSessionIndex(LPCWSTR name)
 {
-    if (name == NULL) {
-        return _sesCurIdx;
+    if (name == NULL || *name == 0) {
+        return _sesDefIdx;
     }
     INT i = 0;
-    vector<Session>::iterator it;
-    for (it = _sessions.begin(); it < _sessions.end(); ++it) {
+    for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
         if (::lstrcmpW(it->name, name) == 0) {
             return i;
         }
         ++i;
     }
-    return SI_NONE;
+    return _sesDefIdx;
 }
 
-/** Returns the current _sessions index. */
+/** @return the current session index */
 INT app_getCurrentIndex()
 {
     return _sesCurIdx;
 }
 
-/** Returns the previous _sessions index. */
+/** @return the previous session index */
 INT app_getPreviousIndex()
 {
     return _sesPrvIdx;
 }
 
-/** Sets the previous _sessions index to SI_NONE and updates the ini file and NPP bars. */
+/** @return the default session index */
+INT app_getDefaultIndex()
+{
+    return _sesDefIdx;
+}
+
+/** Sets the previous session index to the default index and updates the
+    settings file and NPP bars. */
 void app_resetPreviousIndex()
 {
-    _sesPrvIdx = SI_NONE;
-    gCfg.savePrevious(SES_NAME_NONE);
+    _sesPrvIdx = _sesDefIdx;
+    gCfg.savePreviousName(gCfg.getDefaultName());
     app_showSessionInNppBars();
 }
 
-/** Assigns newName to the session at index si. If si is current or previous
-    updates the ini file and NPP bars then returns true. */
-bool app_renameSession(INT si, LPWSTR newName)
+/** Assigns newName to the session at index si. If si is current, previous
+    or default updates the settings file and NPP bars with the new name. */
+void app_renameSession(INT si, LPWSTR newName)
 {
     bool curOrPrv = false;
     if (app_isValidSessionIndex(si)) {
         ::StringCchCopyW(_sessions[si].name, SES_NAME_BUF_LEN, newName);
         if (si == _sesCurIdx) {
             curOrPrv = true;
-            gCfg.saveCurrent(newName);
+            gCfg.saveCurrentName(newName);
         }
-        else if (si == _sesPrvIdx) {
+        if (si == _sesPrvIdx) {
             curOrPrv = true;
-            gCfg.savePrevious(newName);
+            gCfg.savePreviousName(newName);
+        }
+        if (si == _sesDefIdx) {
+            gCfg.saveDefaultName(newName);
         }
         if (curOrPrv) {
             app_showSessionInNppBars();
         }
     }
-    return curOrPrv;
 }
 
-/** Returns a pointer to the session name at index si in _sessions. If si is
-    SI_CURRENT or SI_PREVIOUS returns a pointer to the current or previous
-    session's name. Else returns a pointer to the 'none' or 'default' session name. */
+/** @return a pointer to the session name at index si
+    TODO: return default name instead of SES_NAME_NONE? or return NULL? */
 LPCWSTR app_getSessionName(INT si)
 {
-    if (si == SI_CURRENT) {
-        si = _sesCurIdx;
-    }
-    else if (si == SI_PREVIOUS) {
-        si = _sesPrvIdx;
-    }
-    if (si == SI_DEFAULT) {
-        return SES_NAME_DEFAULT;
-    }
+    si = normalizeSessionIndex(si);
     return app_isValidSessionIndex(si) ? _sessions[si].name : SES_NAME_NONE;
 }
 
-/** Copies into buf the full pathname of the session at index si. If si is
-    SI_CURRENT or SI_PREVIOUS copies the current or previous session's
-    pathname. Else copies the default session pathname. */
+/** Copies into buf the full pathname of the session at index si. */
 void app_getSessionFile(INT si, LPWSTR buf)
 {
-    if (si == SI_CURRENT) {
-        si = _sesCurIdx;
-    }
-    else if (si == SI_PREVIOUS) {
-        si = _sesPrvIdx;
-    }
-    if (app_isValidSessionIndex(si)) {
-        ::StringCchCopyW(buf, MAX_PATH, gCfg.getSesDir());
-        ::StringCchCatW(buf, MAX_PATH, _sessions[si].name);
-        ::StringCchCatW(buf, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopyW(buf, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCatW(buf, MAX_PATH, app_getSessionName(si));
+    ::StringCchCatW(buf, MAX_PATH, gCfg.getSesExt());
+}
+
+/** @return a pointer to the Session object at index si */
+Session* app_getSessionObject(INT si)
+{
+    si = normalizeSessionIndex(si);
+    return app_isValidSessionIndex(si) ? &_sessions[si] : NULL;
+}
+
+/** Creates the default session file if it doesn't already exist. Having default
+    session files in the sessions directory was implemented in v1.1. For now
+    this provides backwards-compatibility by copying the default file from
+    the old location to the new and then deleting the old file. */
+void app_confirmDefaultSession()
+{
+    WCHAR oldFile[MAX_PATH], newFile[MAX_PATH];
+
+    ::StringCchCopyW(oldFile, MAX_PATH, sys_getCfgDir());
+    ::StringCchCatW(oldFile, MAX_PATH, L"default");
+    ::StringCchCatW(oldFile, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCopyW(newFile, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCatW(newFile, MAX_PATH, gCfg.getDefaultName());
+    ::StringCchCatW(newFile, MAX_PATH, gCfg.getSesExt());
+    if (pth::fileExists(oldFile)) {
+        if (!::CopyFileW(oldFile, newFile, TRUE)) {
+            pth::createFileIfMissing(newFile, SES_DEFAULT_CONTENTS);
+        }
+        ::DeleteFileW(oldFile);
     }
     else {
-        ::StringCchCopyW(buf, MAX_PATH, sys_getCfgDir());
-        ::StringCchCatW(buf, MAX_PATH, SES_NAME_DEFAULT);
-        ::StringCchCatW(buf, MAX_PATH, gCfg.getSesExt());
-        pth::createFileIfMissing(buf, SES_DEFAULT_CONTENTS);
+        pth::createFileIfMissing(newFile, SES_DEFAULT_CONTENTS);
     }
 }
 
@@ -634,6 +649,40 @@ void app_showSessionInNppBars()
     }
 }
 
+/** Removes all favorites from the settings file then adds all the currently
+    marked favorite sessions. */
+void app_updateFavorites()
+{
+    INT favIdx = 1;
+
+    gCfg.deleteFavorites();
+    ctx::deleteFavorites();
+    for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
+        if (it->isFavorite) {
+            gCfg.addFavorite(favIdx++, it->name);
+            ctx::addFavorite(it->name);
+        }
+    }
+    ctx::saveContextMenu();
+}
+
+/** @return the 0-based sessions listbox index for the first visible Session
+    whose name begins with targetChar. */
+INT app_getLbIdxStartingWith(WCHAR targetChar)
+{
+    INT lbIdx = 0;
+
+    for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
+        if (it->isVisible) {
+            if ((WCHAR)::CharUpperW((LPWSTR)it->name[0]) == targetChar) {
+                return lbIdx;
+            }
+            ++lbIdx;
+        }
+    }
+    return -1;
+}
+
 //------------------------------------------------------------------------------
 
 namespace {
@@ -644,18 +693,18 @@ void onNppReady()
     name[0] = 0;
     _appReady = true;
     if (gCfg.autoLoadEnabled()) {
-        gCfg.readPrevious(name);
+        gCfg.readPreviousName(name);
         _sesPrvIdx = app_getSessionIndex(name);
-        gCfg.readCurrent(name);
+        gCfg.readCurrentName(name);
         if (name[0] != 0) {
             /* On startup, pass lic=false because there is no current session here,
             and pass lwc=true so we don't close files opened via the NPP command line. */
-            app_loadSession(app_getSessionIndex(name), false, true);
+            app_loadSession(app_getSessionIndex(name), false, true, true);
         }
     }
 }
 
-/** Removes existing prefixes before adding a new one. */
+/** Removes a possible bracketed prefix including any trailing spaces. */
 void removeBracketedPrefix(LPWSTR s)
 {
     size_t i = 0, len;
@@ -678,13 +727,36 @@ void removeBracketedPrefix(LPWSTR s)
     }
 }
 
+/** Assigns sequential, 0-based numbers (session indexes) to the Session objects
+    in the _sessions vector. Must not be called before the _sessions vector is sorted. */
+void indexSessions()
+{
+    INT idx = 0;
+    for (vector<Session>::iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
+        it->index = idx;
+        ++idx;
+    }
+}
+
+/** Empties the _sessions vector. */
 void resetSessions()
 {
-    vector<Session>::iterator it;
-    for (it = _sessions.begin(); it < _sessions.end(); ++it) {
-        sys_free(it->name);
-    }
     _sessions.clear();
+}
+
+/** Converts a possible virtual index to a real index, else returns si. */
+INT normalizeSessionIndex(INT si)
+{
+    if (si == SI_CURRENT) {
+        si = _sesCurIdx;
+    }
+    else if (si == SI_PREVIOUS) {
+        si = _sesPrvIdx;
+    }
+    if (si == SI_DEFAULT) {
+        si = _sesDefIdx;
+    }
+    return si;
 }
 
 } // end namespace

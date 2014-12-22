@@ -24,6 +24,7 @@
 #include "DlgDelete.h"
 #include "Util.h"
 #include "res\resource.h"
+#include <strsafe.h>
 
 //------------------------------------------------------------------------------
 
@@ -33,19 +34,23 @@ namespace NppPlugin {
 
 namespace {
 
-INT _lbSelectedData;
+bool _inInit, _favoriteChanged;
 INT _minWidth = 0, _minHeight = 0;
-bool _inInit, _sortChanged;
+WCHAR _currentFilter[FIL_EXP_BUF_LEN];
 
-bool onInit(HWND hDlg);
+void onInit(HWND hDlg);
 bool onOk(HWND hDlg);
+bool onFilterChange(HWND hDlg, WORD ntfy);
 bool onNew(HWND hDlg);
 bool onRename(HWND hDlg);
 bool onDelete(HWND hDlg);
-bool onDefault(HWND hDlg);
-void saveOptions(HWND hDlg);
 bool onPrevious(HWND hDlg);
-bool fillListBox(HWND hDlg, INT sesCurIdx = SI_CURRENT);
+INT onVirtualKey(HWND hDlg, WCHAR vKey);
+INT getSelSesIdx(HWND hDlg);
+void populateFiltersList(HWND hDlg);
+bool isFiltered(LPCWSTR sesName);
+void getSessionMark(Session *ses, LPWSTR buf);
+bool populateSessionsList(HWND hDlg, INT sesSelIdx = SI_CURRENT);
 void onResize(HWND hDlg, INT dlgW = 0, INT dlgH = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 
@@ -55,83 +60,104 @@ void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 
 INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam)
 {
+    INT_PTR status = FALSE;
     WORD ctrl = LOWORD(wParam);
     WORD ntfy = HIWORD(wParam);
+
     if (uMessage == WM_COMMAND) {
         switch (ctrl) {
             case IDC_SES_LST_SES:
                 if (ntfy == LBN_DBLCLK) {
                     if (onOk(hDlg)) {
-                        return TRUE;
+                        status = TRUE;
                     }
                 }
                 break;
             case IDOK:
             case IDC_SES_BTN_LOAD:
                 if (onOk(hDlg)) {
-                    return TRUE;
+                    status = TRUE;
+                }
+                break;
+            case IDC_SES_CMB_FIL:
+                if (!_inInit && (ntfy == CBN_SELCHANGE || ntfy == CBN_KILLFOCUS)) {
+                    if (onFilterChange(hDlg, ntfy)) {
+                        status = TRUE;
+                    }
                 }
                 break;
             case IDC_SES_BTN_PRV:
                 if (onPrevious(hDlg)) {
-                    return TRUE;
-                }
-                break;
-            case IDC_SES_BTN_DEF:
-                if (onDefault(hDlg)) {
-                    return TRUE;
+                    status = TRUE;
                 }
                 break;
             case IDC_SES_BTN_SAVE:
                 app_saveSession(SI_CURRENT);
-                dlg::focus(hDlg, IDC_SES_BTN_LOAD);
-                return TRUE;
+                dlg::focus(hDlg, IDC_SES_BTN_LOAD, false);
+                status = TRUE;
                 break;
             case IDC_SES_BTN_NEW:
                 if (ntfy == BN_CLICKED) {
-                    dlg::focus(hDlg, IDC_SES_BTN_LOAD);
+                    dlg::focus(hDlg, IDC_SES_BTN_LOAD, false);
                     if (onNew(hDlg)) {
-                        return TRUE;
+                        status = TRUE;
                     }
                 }
                 break;
             case IDC_SES_BTN_REN:
                 if (ntfy == BN_CLICKED) {
-                    dlg::focus(hDlg, IDC_SES_BTN_LOAD);
+                    dlg::focus(hDlg, IDC_SES_BTN_LOAD, false);
                     if (onRename(hDlg)) {
-                        return TRUE;
+                        status = TRUE;
                     }
                 }
                 break;
             case IDC_SES_BTN_DEL:
                 if (ntfy == BN_CLICKED) {
-                    dlg::focus(hDlg, IDC_SES_BTN_LOAD);
+                    dlg::focus(hDlg, IDC_SES_BTN_LOAD, false);
                     if (onDelete(hDlg)) {
-                        return TRUE;
+                        status = TRUE;
                     }
+                }
+                break;
+            case IDC_SES_BTN_FAV:
+                if (ntfy == BN_CLICKED) {
+                    Session *ses = (Session*)dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
+                    ses->isFavorite = !ses->isFavorite;
+                    WCHAR tmpBuf[SES_NAME_BUF_LEN + 3];
+                    getSessionMark(ses, tmpBuf);
+                    ::StringCchCatW(tmpBuf, SES_NAME_BUF_LEN + 3, ses->name);
+                    dlg::lbReplaceSelItem(hDlg, IDC_SES_LST_SES, tmpBuf, (LPARAM)ses);
+                    _favoriteChanged = true;
                 }
                 break;
             case IDCANCEL:
             case IDC_SES_BTN_CANCEL:
                 ::EndDialog(hDlg, 0);
-                return TRUE;
+                gCfg.addFilter(_currentFilter);
+                if (_favoriteChanged) {
+                    app_updateFavorites();
+                }
+                status = TRUE;
+                break;
             case IDC_SES_CHK_LIC:
                 if (ntfy == BN_CLICKED) {
                     if (dlg::getCheck(hDlg, IDC_SES_CHK_LIC)) {
                         dlg::setCheck(hDlg, IDC_SES_CHK_LWC, true);
                     }
                 }
-                return TRUE;
+                status = TRUE;
+                break;
             case IDC_SES_RAD_ALPHA:
             case IDC_SES_RAD_DATE:
                 if (!_inInit && ntfy == BN_CLICKED) {
-                    _sortChanged = true;
-                    saveOptions(hDlg);
+                    gCfg.saveSortOrder(dlg::getCheck(hDlg, IDC_SES_RAD_ALPHA) ? SORT_ORDER_ALPHA : SORT_ORDER_DATE);
                     app_readSessionDirectory();
-                    fillListBox(hDlg);
+                    populateSessionsList(hDlg);
                 }
-                return TRUE;
-        }
+                status = TRUE;
+                break;
+        } // end switch
     }
     else if (uMessage == WM_WINDOWPOSCHANGED) {
         LPWINDOWPOS wp = (LPWINDOWPOS)lParam;
@@ -143,91 +169,97 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
         onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
     }
     else if (uMessage == WM_INITDIALOG) {
-        if (onInit(hDlg)) {
-            return TRUE;
-        }
+        onInit(hDlg);
     }
-    else if (uMessage == WM_SETFOCUS) {
-        dlg::focus(hDlg, IDC_SES_LST_SES);
+    else if (uMessage == WM_VKEYTOITEM) {
+        //LOG("WM_VKEYTOITEM: vkey=%i, pos=%i", ctrl, ntfy);
+        status = onVirtualKey(hDlg, (WCHAR)ctrl);
     }
-    return FALSE;
-}
 
-/* Child dialogs use this to get the vector index of the session selected in the list. */
-INT dlgSes_getLbSelectedData()
-{
-    return _lbSelectedData;
+    return status;
 }
 
 //------------------------------------------------------------------------------
 
 namespace {
 
-/* Determines minimum dialog size. Populates controls. Resizes, centers and
-   displays the dialog window. */
-bool onInit(HWND hDlg)
+/** Determines minimum dialog size. Populates controls. Resizes, centers and
+    displays the dialog window. */
+void onInit(HWND hDlg)
 {
     RECT r;
-    bool ret = false;
+    bool alpha;
 
+    _favoriteChanged = false;
     _inInit = true;
-    _sortChanged = false;
     if (_minWidth == 0) {
         ::GetWindowRect(hDlg, &r);
         _minWidth = r.right - r.left;
         _minHeight = r.bottom - r.top;
     }
-    dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SI_CURRENT));
-    dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SI_PREVIOUS));
     dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.loadIntoCurrentEnabled());
     dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.loadWithoutClosingEnabled());
-    bool alpha = gCfg.sortAlphaEnabled();
+    alpha = gCfg.sortAlphaEnabled();
     dlg::setCheck(hDlg, IDC_SES_RAD_ALPHA, alpha);
     dlg::setCheck(hDlg, IDC_SES_RAD_DATE, !alpha);
 
-    if (fillListBox(hDlg)) {
-        INT w, h;
-        gCfg.readSesDlgSize(&w, &h);
-        if (w <= 0 || h <= 0) {
-            w = 0;
-            h = 0;
-        }
-        dlg::centerWnd(hDlg, sys_getNppHandle(), 0, 0, w, h, true);
-        onResize(hDlg);
-        ::ShowWindow(hDlg, SW_SHOW);
-        ret = true;
+    populateFiltersList(hDlg);
+    populateSessionsList(hDlg);
+    INT w, h;
+    gCfg.readSesDlgSize(&w, &h);
+    if (w <= 0 || h <= 0) {
+        w = 0;
+        h = 0;
     }
+    dlg::centerWnd(hDlg, sys_getNppHandle(), 0, 0, w, h, true);
+    onResize(hDlg);
+    ::ShowWindow(hDlg, SW_SHOW);
+    dlg::focus(hDlg, IDC_SES_LST_SES);
 
     _inInit = false;
-    return ret;
 }
 
 bool onOk(HWND hDlg)
 {
-    ::EndDialog(hDlg, 0);
-    app_loadSession(dlg::getLbSelData(hDlg, IDC_SES_LST_SES), dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
-    return true;
-}
-
-bool onDefault(HWND hDlg)
-{
-    ::EndDialog(hDlg, 0);
-    app_loadSession(SI_DEFAULT, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
-    return true;
-}
-
-void saveOptions(HWND hDlg)
-{
-    if (_sortChanged) {
-        gCfg.setSortOrder(dlg::getCheck(hDlg, IDC_SES_RAD_ALPHA) ? SORT_ORDER_ALPHA : SORT_ORDER_DATE);
-        gCfg.save();
-        _sortChanged = false;
+    ::EndDialog(hDlg, 1);
+    gCfg.addFilter(_currentFilter);
+    if (_favoriteChanged) {
+        app_updateFavorites();
     }
+    app_loadSession(getSelSesIdx(hDlg), dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
+    return true;
+}
+
+bool onFilterChange(HWND hDlg, WORD ntfy)
+{
+    WCHAR buf[FIL_EXP_BUF_LEN];
+
+    if (ntfy == CBN_SELCHANGE) {
+        dlg::getCbSelText(hDlg, IDC_SES_CMB_FIL, buf);
+    }
+    else {
+        dlg::getText(hDlg, IDC_SES_CMB_FIL, buf, FIL_EXP_BUF_LEN);
+    }
+    if (buf[0] != 0 && ::lstrcmpW(_currentFilter, buf) != 0) {
+        ::StringCchCopyW(_currentFilter, FIL_EXP_BUF_LEN, buf);
+        populateSessionsList(hDlg);
+        if (ntfy == CBN_SELCHANGE) {
+            _inInit = true;
+            dlg::focus(hDlg, IDC_SES_LST_SES, false);
+            _inInit = false;
+        }
+        return true;
+    }
+    return false;
 }
 
 bool onPrevious(HWND hDlg)
 {
-    ::EndDialog(hDlg, 0);
+    ::EndDialog(hDlg, 1);
+    gCfg.addFilter(_currentFilter);
+    if (_favoriteChanged) {
+        app_updateFavorites();
+    }
     app_loadSession(SI_PREVIOUS, dlg::getCheck(hDlg, IDC_SES_CHK_LIC), dlg::getCheck(hDlg, IDC_SES_CHK_LWC));
     return true;
 }
@@ -235,10 +267,11 @@ bool onPrevious(HWND hDlg)
 bool onNew(HWND hDlg)
 {
     bool status = false;
-    _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_NEW_DLG), hDlg, dlgNew_msgProc)) {
+    ChildDialogData cdd;
+    cdd.selectedSessionIndex = getSelSesIdx(hDlg);
+    if (::DialogBoxParam(sys_getDllHandle(), MAKEINTRESOURCE(IDD_NEW_DLG), hDlg, dlgNew_msgProc, (LPARAM)&cdd)) {
         app_readSessionDirectory();
-        status = fillListBox(hDlg, app_getSessionIndex(dlgNew_getLbNewName()));
+        status = populateSessionsList(hDlg, app_getSessionIndex(cdd.newSessionName));
     }
     return status;
 }
@@ -246,14 +279,17 @@ bool onNew(HWND hDlg)
 bool onRename(HWND hDlg)
 {
     bool status = false;
-    _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_REN_DLG), hDlg, dlgRen_msgProc)) {
-        if (app_renameSession(_lbSelectedData, dlgRen_getLbNewName())) {
-            dlg::setText(hDlg, IDC_SES_CTX_CUR, app_getSessionName(SI_CURRENT));
-            dlg::setText(hDlg, IDC_SES_CTX_PRV, app_getSessionName(SI_PREVIOUS));
+    ChildDialogData cdd;
+    Session *ses = (Session*)dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
+
+    cdd.selectedSessionIndex = ses->index;
+    if (::DialogBoxParam(sys_getDllHandle(), MAKEINTRESOURCE(IDD_REN_DLG), hDlg, dlgRen_msgProc, (LPARAM)&cdd)) {
+        if (ses->isFavorite) {
+            _favoriteChanged = true;
         }
+        app_renameSession(ses->index, cdd.newSessionName);
         app_readSessionDirectory();
-        status = fillListBox(hDlg, app_getSessionIndex(dlgRen_getLbNewName()));
+        status = populateSessionsList(hDlg, app_getSessionIndex(cdd.newSessionName));
     }
     return status;
 }
@@ -261,43 +297,161 @@ bool onRename(HWND hDlg)
 bool onDelete(HWND hDlg)
 {
     bool status = false;
-    _lbSelectedData = dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
-    if (_lbSelectedData == app_getCurrentIndex()) {
-        msg::show(L"Cannot delete current session.", M_WARN);
+    ChildDialogData cdd;
+    Session *ses = (Session*)dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
+
+    cdd.selectedSessionIndex = ses->index;
+    if (ses->index == app_getDefaultIndex()) {
+        msg::show(L"Cannot delete the default session.", M_WARN);
     }
-    else if (::DialogBox(sys_getDllHandle(), MAKEINTRESOURCE(IDD_DEL_DLG), hDlg, dlgDel_msgProc)) {
-        if (_lbSelectedData == app_getPreviousIndex()) {
+    else if (ses->index == app_getCurrentIndex()) {
+        msg::show(L"Cannot delete the current session.", M_WARN);
+    }
+    else if (::DialogBoxParam(sys_getDllHandle(), MAKEINTRESOURCE(IDD_DEL_DLG), hDlg, dlgDel_msgProc, (LPARAM)&cdd)) {
+        if (ses->isFavorite) {
+            _favoriteChanged = true;
+        }
+        if (ses->index == app_getPreviousIndex()) {
             app_resetPreviousIndex();
-            dlg::setText(hDlg, IDC_SES_CTX_PRV, SES_NAME_NONE);
         }
         app_readSessionDirectory();
-        status = fillListBox(hDlg);
+        status = populateSessionsList(hDlg);
     }
     return status;
 }
 
-bool fillListBox(HWND hDlg, INT sesCurIdx)
+/** Selects the session whose name begins with the alphanumeric key pressed.
+    @return -2 if the event was handled else -1 */
+INT onVirtualKey(HWND hDlg, WCHAR vKey)
+{
+    INT lbIdx;
+    WCHAR ch = 0;
+
+    if (vKey == VK_OEM_MINUS) { // TODO: '_' = VK_SHIFT followed by VK_OEM_MINUS
+        ch = L'-';
+    }
+    else if ((vKey >= 0x30 && vKey <= 0x39) || (vKey >= 0x41 && vKey <= 0x5A)) { // '0' - '9' or 'A' - 'Z'
+        ch = vKey;
+    }
+    if (ch > 0) {
+        lbIdx = app_getLbIdxStartingWith(ch);
+        if (lbIdx >= 0) {
+            ::SendMessage(::GetDlgItem(hDlg, IDC_SES_LST_SES), LB_SETCURSEL, lbIdx, 0);
+        }
+        return -2;
+    }
+    return -1;
+}
+
+INT getSelSesIdx(HWND hDlg)
+{
+    Session *ses = (Session*)dlg::getLbSelData(hDlg, IDC_SES_LST_SES);
+    return ses ? ses->index : app_getDefaultIndex();
+}
+
+void populateFiltersList(HWND hDlg)
+{
+    HWND hCmb;
+    INT i = 1;
+    LPCWSTR exp;
+
+    hCmb = ::GetDlgItem(hDlg, IDC_SES_CMB_FIL);
+    if (hCmb) {
+        ::SendMessage(hCmb, CB_LIMITTEXT, FIL_EXP_BUF_LEN - 1, 0);
+        // XXX ::SendMessage(hCmb, CB_SETMINVISIBLE, 7, 0);
+        ::SendMessage(hCmb, CB_RESETCONTENT, 0, 0);
+        do {
+            exp = gCfg.getFilter(i);
+            if (exp) {
+                ::SendMessage(hCmb, CB_ADDSTRING, 0, (LPARAM)exp);
+            }
+            ++i;
+        } while (exp != NULL);
+        ::SendMessage(hCmb, CB_SETCURSEL, 0, 0);
+        ::StringCchCopyW(_currentFilter, FIL_EXP_BUF_LEN, gCfg.getFilter(1));
+    }
+}
+
+/** Filters the current and previous sessions and any session that contains the
+    filter. No filter or '*' filters everything.
+    @return true if sesName should be displayed in the sessions list, else false */
+bool isFiltered(LPCWSTR sesName)
+{
+    INT sesIdx = app_getSessionIndex(sesName);
+
+    if (_currentFilter[0] == 0 || _currentFilter[0] == L'*' ||
+        app_getCurrentIndex() == sesIdx || app_getPreviousIndex() == sesIdx ||
+        ::wcsstr(sesName, _currentFilter)
+    ) {
+        return true;
+    }
+    return false;
+}
+
+/** Determines the mark to be used for ses, if any, and writes it to buf. */
+void getSessionMark(Session *ses, LPWSTR buf)
+{
+    INT sesCurIdx, sesPrvIdx, sesDefIdx;
+
+    sesCurIdx = app_getCurrentIndex();
+    sesPrvIdx = app_getPreviousIndex();
+    sesDefIdx = app_getDefaultIndex();
+    if (ses->isFavorite) {
+        if (ses->index == sesCurIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[CURRENT_FAV_MARK]);
+        else if (ses->index == sesPrvIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[PREVIOUS_FAV_MARK]);
+        else if (ses->index == sesDefIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[DEFAULT_FAV_MARK]);
+        else ::StringCchCopyW(buf, 3, gCfg.markChars[FAVORITE_MARK]);
+    }
+    else {
+        if (ses->index == sesCurIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[CURRENT_MARK]);
+        else if (ses->index == sesPrvIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[PREVIOUS_MARK]);
+        else if (ses->index == sesDefIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[DEFAULT_MARK]);
+        else ::StringCchCopyW(buf, 3, L" \t");
+    }
+}
+
+bool populateSessionsList(HWND hDlg, INT sesSelIdx)
 {
     HWND hLst;
-    INT i, sesIdx, sesCount;
+    Session *ses;
+    WCHAR buf[SES_NAME_BUF_LEN + 3];
+    INT lbIdx, lbSelIdx = -1, sesIdx, sesCount;
+    INT tabStops[1] = {8};
 
-    LOGF("%i", sesCurIdx);
+    LOGF("%i", sesSelIdx);
 
     hLst = ::GetDlgItem(hDlg, IDC_SES_LST_SES);
     if (hLst) {
+        ::SendMessage(hLst, WM_SETREDRAW, FALSE, 0);
         ::SendMessage(hLst, LB_RESETCONTENT, 0, 0);
+        ::SendMessage(hLst, LB_SETTABSTOPS, 1, (LPARAM)tabStops);
         sesCount = app_getSessionCount();
-        if (sesCurIdx == SI_CURRENT) {
-            sesCurIdx = app_getCurrentIndex();
+        if (sesSelIdx == SI_CURRENT) {
+            sesSelIdx = app_getCurrentIndex();
         }
         for (sesIdx = 0; sesIdx < sesCount; ++sesIdx) {
-            i = (INT)::SendMessage(hLst, LB_ADDSTRING, 0, (LPARAM)app_getSessionName(sesIdx));
-            ::SendMessage(hLst, LB_SETITEMDATA, i, (LPARAM)sesIdx);
+            ses = app_getSessionObject(sesIdx);
+            if (ses) {
+                if (isFiltered(ses->name)) {
+                    ses->isVisible = true;
+                    getSessionMark(ses, buf);
+                    ::StringCchCatW(buf, SES_NAME_BUF_LEN + 3, ses->name);
+                    lbIdx = (INT)::SendMessage(hLst, LB_INSERTSTRING, -1, (LPARAM)buf);
+                    ::SendMessage(hLst, LB_SETITEMDATA, lbIdx, (LPARAM)ses);
+                    if (sesIdx == sesSelIdx) {
+                        lbSelIdx = lbIdx;
+                    }
+                }
+                else {
+                    ses->isVisible = false;
+                }
+            }
         }
-        i = dlg::getLbIdxByData(hDlg, IDC_SES_LST_SES, sesCurIdx);
-        if (i >= 0) {
-            ::SendMessage(hLst, LB_SETCURSEL, i, 0);
+        if (lbSelIdx >= 0) {
+            ::SendMessage(hLst, LB_SETCURSEL, lbSelIdx, 0);
         }
+        ::SendMessage(hLst, WM_SETREDRAW, TRUE, 0);
+        ::RedrawWindow(hLst, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
         return true;
     }
     return false;
@@ -315,13 +469,12 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
         dlgW = r.right;
         dlgH = r.bottom;
     }
-    // Resize the Current and Previous control text
-    dlg::adjToEdge(hDlg, IDC_SES_CTX_CUR, dlgW, dlgH, 4, IDC_SES_CTX_WRO, 0);
-    dlg::adjToEdge(hDlg, IDC_SES_CTX_PRV, dlgW, dlgH, 4, IDC_SES_CTX_WRO, 0);
+    // Resize the filters combo box
+    dlg::adjToEdge(hDlg, IDC_SES_CMB_FIL, dlgW, dlgH, 4, IDC_SES_CMB_WRO, 0);
     // Resize the session list
     dlg::adjToEdge(hDlg, IDC_SES_LST_SES, dlgW, dlgH, 4|8, IDC_SES_LST_WRO, IDC_SES_LST_HBO);
     // Move the buttons
-    INT btnCol[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_DEF, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_CANCEL};
+    INT btnCol[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_CANCEL};
     len = sizeof btnCol / sizeof INT;
     for (i = 0; i < len; ++i) {
         dlg::adjToEdge(hDlg, btnCol[i], dlgW, dlgH, 1, IDC_SES_BTN_XRO, 0);

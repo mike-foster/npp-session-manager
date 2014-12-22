@@ -23,16 +23,16 @@
 namespace NppPlugin {
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.api Contains functions called only from DllMain.
+/// @namespace NppPlugin::api Contains functions called only from DllMain.
 
 namespace api {
 
 void prp_init();
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.prp Implements global file properties.
+/// @namespace NppPlugin::prp Implements global file properties.
 
 namespace prp {
 
@@ -40,7 +40,7 @@ void updateGlobalFromSession(LPWSTR sesFile);
 void updateSessionFromGlobal(LPWSTR sesFile);
 void updateDocumentFromGlobal(INT bufferId);
 
-} // end namespace prp
+} // end namespace NppPlugin::prp
 
 } // end namespace NppPlugin
 

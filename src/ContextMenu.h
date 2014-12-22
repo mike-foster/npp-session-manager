@@ -9,17 +9,14 @@
     more details. You should have received a copy of the GNU General Public
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
-    @file      System.h
-    @copyright Copyright 2011,2014 Michael Foster <http://mfoster.com/npp/>
+    @file      ContextMenu.h
+    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
+
+    Manages a Session Manager submenu in the context (right-click) menu.
 */
 
-#ifndef NPP_PLUGIN_SYSTEM_H
-#define NPP_PLUGIN_SYSTEM_H
-
-#define SES_DEFAULT_CONTENTS "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<NotepadPlus><Session activeView=\"0\"><mainView activeIndex=\"0\"></mainView></Session></NotepadPlus>\n"
-
-#include <windows.h>
-#include "npp\PluginInterface.h"
+#ifndef NPP_PLUGIN_CONTEXTMENU_H
+#define NPP_PLUGIN_CONTEXTMENU_H
 
 //------------------------------------------------------------------------------
 
@@ -30,24 +27,23 @@ namespace NppPlugin {
 
 namespace api {
 
-void sys_onLoad(HINSTANCE hDLLInstance);
-void sys_onUnload();
-void sys_init(NppData nppd);
+void ctx_onUnload();
 
 } // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
+/** @namespace NppPlugin::ctx Contains functions for creating the context menu
+    items and managing the favorites there. */
 
-LPWSTR sys_getCfgDir();
-LPWSTR sys_getIniFile();
-LPWSTR sys_getPropsFile();
-LPCWSTR sys_getContextMenuFile();
-HINSTANCE sys_getDllHandle();
-HWND sys_getNppHandle();
-HWND sys_getSciHandle(INT v);
-LPVOID sys_alloc(INT bytes);
-void sys_free(LPVOID p);
+namespace ctx {
+
+void deleteFavorites();
+void addFavorite(LPCWSTR favName);
+void saveContextMenu();
+void unload();
+
+} // end namespace NppPlugin::ctx
 
 } // end namespace NppPlugin
 
-#endif // NPP_PLUGIN_SYSTEM_H
+#endif // NPP_PLUGIN_CONTEXTMENU_H

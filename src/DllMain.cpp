@@ -19,6 +19,7 @@
 #include "SessionMgr.h"
 #include "Menu.h"
 #include "Properties.h"
+#include "ContextMenu.h"
 
 using namespace NppPlugin::api;
 
@@ -44,6 +45,7 @@ BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
             break;
         case DLL_PROCESS_DETACH:
             if (--dllCount == 0) {
+                ctx_onUnload();
                 mnu_onUnload();
                 app_onUnload();
                 sys_onUnload();

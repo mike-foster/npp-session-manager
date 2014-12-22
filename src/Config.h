@@ -19,6 +19,10 @@
 #define NPP_PLUGIN_CONFIG_H
 
 #include "Menu.h"
+#include "SessionMgr.h"
+#include <list>
+
+using std::list;
 
 //------------------------------------------------------------------------------
 
@@ -26,6 +30,24 @@ namespace NppPlugin {
 
 #define SORT_ORDER_ALPHA 1
 #define SORT_ORDER_DATE  2
+
+#define FIL_EXP_BUF_LEN 50
+#define FIL_EXP_MAX     100
+
+#define CURRENT_MARK      0
+#define CURRENT_FAV_MARK  1
+#define PREVIOUS_MARK     2
+#define PREVIOUS_FAV_MARK 3
+#define DEFAULT_MARK      4
+#define DEFAULT_FAV_MARK  5
+#define FAVORITE_MARK     6
+
+class SessionFilter
+{
+  public:
+    WCHAR exp[FIL_EXP_BUF_LEN];
+    SessionFilter(LPCWSTR filter);
+};
 
 class Config
 {
@@ -39,26 +61,34 @@ class Config
     bool _showInTitlebar;
     bool _showInStatusbar;
     bool _globalBookmarks;
-    INT _sortOrder;
+    bool _useContextMenu;
+    list<SessionFilter> _filters;
+    UINT _sortOrder;
     UINT _saveDelay;
     WCHAR _directory[MAX_PATH];
     WCHAR _extension[MAX_PATH];
-    WCHAR _menuMainLabel[MNU_MAX_NAME_LEN + 1];
-    WCHAR _menuSubLabels[MNU_MAX_ITEMS + 1][MNU_MAX_NAME_LEN + 1];
+    WCHAR _defaultName[SES_NAME_BUF_LEN];
 
     // private methods
     BOOL saveDlgSize(bool ses, INT w, INT h);
+    void loadFilters();
+    BOOL saveFilters();
+    void loadMarks();
 
   public:
 
     // public properties
     INT debug;
     WCHAR logFile[MAX_PATH];
+    WCHAR markChars[7][3];
 
     // public methods
     void load();
     bool save();
-    void getMenuLabel(int idx, LPWSTR buf);
+    void getMenuLabel(INT prpIdx, LPWSTR buf);
+    bool getFavMenuLabel(INT prpIdx, LPWSTR buf);
+    void deleteFavorites();
+    void addFavorite(INT prpIdx, LPCWSTR favName);
 
     void setAutoSave(bool v) { _autoSave = v; }
     bool autoSaveEnabled() { return _autoSave; }
@@ -66,35 +96,39 @@ class Config
     bool autoLoadEnabled() { return _autoLoad; }
     void setGlobalBookmarks(bool v) { _globalBookmarks = v; }
     bool globalBookmarksEnabled() { return _globalBookmarks; }
+    void setUseContextMenu(bool v) { _useContextMenu = v; }
+    bool useContextMenuEnabled() { return _useContextMenu; }
+
     void setLoadIntoCurrent(bool v) { _loadIntoCurrent = v; }
     bool loadIntoCurrentEnabled() { return _loadIntoCurrent; }
     void setLoadWithoutClosing(bool v) { _loadWithoutClosing = v; }
     bool loadWithoutClosingEnabled() { return _loadWithoutClosing; }
-    void setSortOrder(int v) { _sortOrder = v; }
-    int getSortOrder() { return _sortOrder; }
     bool sortAlphaEnabled() { return _sortOrder == SORT_ORDER_ALPHA; }
-    bool sortDateEnabled() { return _sortOrder == SORT_ORDER_DATE; }
     void setShowInStatusbar(bool v);
     bool showInStatusbarEnabled() { return _showInStatusbar; }
     void setShowInTitlebar(bool v);
     bool showInTitlebarEnabled() { return _showInTitlebar; }
-    void setSaveDelay(LPWSTR p);
-    int getSaveDelay() { return _saveDelay; }
-    void getSaveDelay(LPWSTR buf, INT len);
+    UINT getSaveDelay() { return _saveDelay; }
 
     bool setSesDir(LPWSTR p);
     LPWSTR getSesDir() { return _directory; }
     void setSesExt(LPWSTR p);
     LPWSTR getSesExt() { return _extension; }
+    LPWSTR getDefaultName() { return _defaultName; }
 
-    void readCurrent(LPWSTR buf);
-    BOOL saveCurrent(LPWSTR s);
-    void readPrevious(LPWSTR s);
-    BOOL savePrevious(LPWSTR s);
+    BOOL saveSortOrder(INT order);
+    void readCurrentName(LPWSTR buf);
+    BOOL saveCurrentName(LPWSTR s);
+    void readPreviousName(LPWSTR s);
+    BOOL savePreviousName(LPWSTR s);
+    BOOL saveDefaultName(LPWSTR s);
     void readSesDlgSize(INT *w, INT *h);
     void saveSesDlgSize(INT w, INT h);
     void readCfgDlgSize(INT *w, INT *h);
     void saveCfgDlgSize(INT w, INT h);
+
+    LPCWSTR getFilter(INT index);
+    void addFilter(LPCWSTR filter);
 };
 
 // The global configuration/settings object.

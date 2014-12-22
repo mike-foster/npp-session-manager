@@ -14,8 +14,8 @@
 
     Session Manager API
 
-    Clients should send NPPM_MSGTOPLUGIN to NPP with wParam pointing
-    to L"SessionMgr.dll" and lParam pointing to a SessionMgrApiData object.
+    Clients should send NPPM_MSGTOPLUGIN to NPP with wParam pointing to
+    L"SessionMgr.dll" and lParam pointing to a SessionMgrApiData object.
 */
 
 #ifndef NPP_PLUGIN_SESSIONMGRAPI_H
@@ -26,10 +26,14 @@
 #define SESMGR_ERROR -2
 #define SESMGR_BUSY  -3
 
+/** This is compatible with casting to NPP's CommunicationInfo struct.
+    @since v1.1
+    @see   npp\Notepad_plus_msgs.h */
 typedef struct SessionMgrApiData_tag {
-    UINT  message;
-    INT   iData;
-    WCHAR wData[MAX_PATH];
+    long    message;         ///< one of the SESMGRM_ message codes
+    LPCWSTR caller;          ///< for NPP but not used as of v6.6.9
+    INT     iData;           ///< input and output API usage
+    WCHAR   wData[MAX_PATH]; ///< input or output API usage
 } SessionMgrApiData;
 
 /** Loads a session from the current sessions list.

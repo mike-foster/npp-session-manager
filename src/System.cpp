@@ -39,6 +39,7 @@ HINSTANCE _hDll;
 //UINT _nppVersion;
 LPWSTR _cfgDir;    ///< SessionMgr's config directory, includes trailing slash
 LPWSTR _iniFile;   ///< pathname of settings.ini
+LPWSTR _ctxFile;   ///< pathname of NPP's contextMenu.xml file
 LPWSTR _propsFile; ///< pathname of global.xml
 
 } // end namespace
@@ -56,6 +57,7 @@ void sys_onUnload()
 {
     sys_free(_cfgDir);
     sys_free(_iniFile);
+    sys_free(_ctxFile);
     sys_free(_propsFile);
 }
 
@@ -70,12 +72,17 @@ void sys_init(NppData nppd)
     // Allocate buffers
     _cfgDir = (LPWSTR)sys_alloc(MAX_PATH);
     _iniFile = (LPWSTR)sys_alloc(MAX_PATH);
+    _ctxFile = (LPWSTR)sys_alloc(MAX_PATH);
     _propsFile = (LPWSTR)sys_alloc(MAX_PATH);
 
     // Get Npp version to verify plugin compatibility
     //_nppVersion = ::SendMessage(_hNpp, NPPM_GETNPPVERSION, 0, 0);
     //if () // TODO?
 
+    // Get NPP's contextMenu.xml pathname.
+    ::SendMessage(_hNpp, NPPM_GETNPPDIRECTORY, MAX_PATH, (LPARAM)_ctxFile);
+    pth::appendSlash(_ctxFile, MAX_PATH);
+    ::StringCchCatW(_ctxFile, MAX_PATH, L"contextMenu.xml");
     // Get plugin config directory from NPP.
     ::SendMessage(_hNpp, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)_cfgDir);
     // Get SessionMgr config directory and create it if not present.
@@ -91,13 +98,11 @@ void sys_init(NppData nppd)
     gCfg.load();
     // Create sessions directory if it doesn't exist.
     ::CreateDirectoryW(gCfg.getSesDir(), NULL);
-
-    /* XXX experimental. NPP doesn't support a command-line option dedicated
-    to plugins, but it would be useful if it did.
-    LOG("cmdLine = '%S'", ::GetCommandLine()); */
+    // Create default session if it doesn't exist.
+    app_confirmDefaultSession();
 }
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 
@@ -119,6 +124,11 @@ LPWSTR sys_getPropsFile()
         pth::createFileIfMissing(_propsFile, PROPS_DEFAULT_CONTENT);
     }
     return _propsFile;
+}
+
+LPCWSTR sys_getContextMenuFile()
+{
+    return _ctxFile;
 }
 
 HINSTANCE sys_getDllHandle()

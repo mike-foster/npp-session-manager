@@ -45,9 +45,30 @@ extern "C" {
     void cbLoadPrevious();
     void cbHelp();
     void cbAbout();
+    void cbFav1();
+    void cbFav2();
+    void cbFav3();
+    void cbFav4();
+    void cbFav5();
+    void cbFav6();
+    void cbFav7();
+    void cbFav8();
+    void cbFav9();
+    void cbFav10();
+    void cbFav11();
+    void cbFav12();
+    void cbFav13();
+    void cbFav14();
+    void cbFav15();
+    void cbFav16();
+    void cbFav17();
+    void cbFav18();
+    void cbFav19();
+    void cbFav20();
 };
 
 /// Menu config
+INT _menuItemsCount = MNU_BASE_MAX_ITEMS;
 WCHAR _menuMainLabel[MNU_MAX_NAME_LEN + 1];
 FuncItem _menuItems[] = {
     { L"&Sessions...",   cbSessions,     0, false, NULL },
@@ -56,7 +77,28 @@ FuncItem _menuItems[] = {
     { L"Load &previous", cbLoadPrevious, 0, false, NULL },
     { EMPTY_STR,         NULL,           0, false, NULL },
     { L"&Help",          cbHelp,         0, false, NULL },
-    { L"&About...",      cbAbout,        0, false, NULL }
+    { L"&About...",      cbAbout,        0, false, NULL },
+    { EMPTY_STR,         NULL,           0, false, NULL },
+    { EMPTY_STR,         cbFav1,         0, false, NULL },
+    { EMPTY_STR,         cbFav2,         0, false, NULL },
+    { EMPTY_STR,         cbFav3,         0, false, NULL },
+    { EMPTY_STR,         cbFav4,         0, false, NULL },
+    { EMPTY_STR,         cbFav5,         0, false, NULL },
+    { EMPTY_STR,         cbFav6,         0, false, NULL },
+    { EMPTY_STR,         cbFav7,         0, false, NULL },
+    { EMPTY_STR,         cbFav8,         0, false, NULL },
+    { EMPTY_STR,         cbFav9,         0, false, NULL },
+    { EMPTY_STR,         cbFav10,        0, false, NULL },
+    { EMPTY_STR,         cbFav11,        0, false, NULL },
+    { EMPTY_STR,         cbFav12,        0, false, NULL },
+    { EMPTY_STR,         cbFav13,        0, false, NULL },
+    { EMPTY_STR,         cbFav14,        0, false, NULL },
+    { EMPTY_STR,         cbFav15,        0, false, NULL },
+    { EMPTY_STR,         cbFav16,        0, false, NULL },
+    { EMPTY_STR,         cbFav17,        0, false, NULL },
+    { EMPTY_STR,         cbFav18,        0, false, NULL },
+    { EMPTY_STR,         cbFav19,        0, false, NULL },
+    { EMPTY_STR,         cbFav20,        0, false, NULL }
 };
 
 } // end namespace
@@ -75,26 +117,90 @@ void mnu_onUnload()
 
 void mnu_init()
 {
+    INT mnuIdx, cfgIdx = 1;
+
+    // main
     ::StringCchCopyW(_menuMainLabel, MNU_MAX_NAME_LEN, PLUGIN_MENU_NAME);
     gCfg.getMenuLabel(-1, _menuMainLabel);
-    for (int i = 0; i < MNU_MAX_ITEMS; ++i) {
-        gCfg.getMenuLabel(i, _menuItems[i]._itemName);
+    // sub
+    for (mnuIdx = 0; mnuIdx <= 3; ++mnuIdx) {
+        gCfg.getMenuLabel(cfgIdx, _menuItems[mnuIdx]._itemName);
+        ++cfgIdx;
+    }
+    for (mnuIdx = 5; mnuIdx <= 6; ++mnuIdx) {
+        gCfg.getMenuLabel(cfgIdx, _menuItems[mnuIdx]._itemName);
+        ++cfgIdx;
+    }
+    // fav
+    cfgIdx = 1;
+    for (mnuIdx = MNU_FIRST_FAV_IDX; mnuIdx <= MNU_LAST_FAV_IDX; ++mnuIdx) {
+        if (!gCfg.getFavMenuLabel(cfgIdx, _menuItems[mnuIdx]._itemName)) {
+            break;
+        }
+        ++cfgIdx;
+        ++_menuItemsCount;
+    }
+    if (cfgIdx > 1) {
+        ++_menuItemsCount; // for the 2nd separator if any fav was added
     }
 }
 
 FuncItem* mnu_getItems(INT *pNum)
 {
-    *pNum = MNU_MAX_ITEMS;
+    *pNum = _menuItemsCount;
     return _menuItems;
 }
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 
-LPWSTR mnu_getMainMenuLabel()
+/** @return a pointer to the main or the 0-based mnuIdx'th sub label. */
+LPCWSTR mnu_getMenuLabel(INT mnuIdx)
 {
-    return _menuMainLabel;
+    LPCWSTR lbl = NULL;
+
+    if (mnuIdx == -1) {
+        lbl = _menuMainLabel;
+    }
+    else if (mnuIdx >= 0 && mnuIdx < MNU_BASE_MAX_ITEMS) {
+        lbl = _menuItems[mnuIdx]._itemName;
+    }
+    return lbl;
+}
+
+/** @return true if sesName is in the favorites part of the _menuItems array. */
+bool mnu_isFavorite(LPCWSTR sesName)
+{
+    INT mnuIdx;
+    WCHAR fav[MNU_MAX_NAME_LEN];
+
+    for (mnuIdx = MNU_FIRST_FAV_IDX; mnuIdx <= MNU_LAST_FAV_IDX; ++mnuIdx) {
+        if (_menuItems[mnuIdx]._itemName[0] == 0) {
+            break;
+        }
+        pth::removeAmp(_menuItems[mnuIdx]._itemName, fav);
+        if (::lstrcmpW(sesName, fav) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Assigns an empty string to all items in the favorites part of the _menuItems array. */
+void mnu_clearFavorites()
+{
+    for (INT mnuIdx = MNU_FIRST_FAV_IDX; mnuIdx <= MNU_LAST_FAV_IDX; ++mnuIdx) {
+        _menuItems[mnuIdx]._itemName[0] = 0;
+    }
+}
+
+/** Copies favName to the prpIdx'th (1-based) item in the favorites part of the
+    _menuItems array. */
+void mnu_addFavorite(INT prpIdx, LPCWSTR favName)
+{
+    INT mnuIdx = MNU_FIRST_FAV_IDX + prpIdx - 1;
+    ::StringCchCopyW(_menuItems[mnuIdx]._itemName, MNU_MAX_NAME_LEN, favName);
 }
 
 //------------------------------------------------------------------------------
@@ -148,6 +254,37 @@ extern "C" void cbAbout()
     ::StringCchCatW(m, s, L"\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You, for using Session Manager");
     msg::show(m);
 }
+
+void loadFavorite(INT mnuIdx)
+{
+    INT sesIdx;
+    WCHAR sesName[MNU_MAX_NAME_LEN];
+
+    pth::removeAmp(_menuItems[mnuIdx]._itemName, sesName);
+    sesIdx = app_getSessionIndex(sesName);
+    app_loadSession(sesIdx);
+}
+
+extern "C" void cbFav1() { loadFavorite(1 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav2() { loadFavorite(2 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav3() { loadFavorite(3 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav4() { loadFavorite(4 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav5() { loadFavorite(5 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav6() { loadFavorite(6 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav7() { loadFavorite(7 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav8() { loadFavorite(8 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav9() { loadFavorite(9 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav10() { loadFavorite(10 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav11() { loadFavorite(11 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav12() { loadFavorite(12 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav13() { loadFavorite(13 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav14() { loadFavorite(14 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav15() { loadFavorite(15 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav16() { loadFavorite(16 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav17() { loadFavorite(17 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav18() { loadFavorite(18 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav19() { loadFavorite(19 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav20() { loadFavorite(20 + MNU_BASE_MAX_ITEMS); }
 
 } // end namespace
 

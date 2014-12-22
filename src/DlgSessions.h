@@ -22,8 +22,12 @@
 
 namespace NppPlugin {
 
+typedef struct ChildDialogData_tag {
+    INT selectedSessionIndex;               ///< passed to child
+    WCHAR newSessionName[SES_NAME_BUF_LEN]; ///< returned from child
+} ChildDialogData;
+
 INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam);
-INT dlgSes_getLbSelectedData();
 
 } // end namespace NppPlugin
 

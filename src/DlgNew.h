@@ -23,7 +23,6 @@
 namespace NppPlugin {
 
 INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam);
-LPWSTR dlgNew_getLbNewName();
 
 } // end namespace NppPlugin
 

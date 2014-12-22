@@ -22,11 +22,14 @@
 
 namespace NppPlugin {
 
-const int MNU_MAX_ITEMS    = 7;  ///< see _mnuItems
-const int MNU_MAX_NAME_LEN = 63; ///< see nbChar in npp\PluginInterface.h
+const int MNU_BASE_MAX_ITEMS = 7;  ///< see _menuItemsCount
+const int MNU_MAX_FAVS       = 20;
+const int MNU_FIRST_FAV_IDX  = MNU_BASE_MAX_ITEMS + 1;
+const int MNU_LAST_FAV_IDX   = MNU_BASE_MAX_ITEMS + MNU_MAX_FAVS;
+const int MNU_MAX_NAME_LEN   = 63; ///< see nbChar in npp\PluginInterface.h
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.api Contains functions called only from DllMain.
+/// @namespace NppPlugin::api Contains functions called only from DllMain.
 
 namespace api {
 
@@ -35,11 +38,14 @@ void mnu_onUnload();
 void mnu_init();
 FuncItem* mnu_getItems(INT *pNum);
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 
-LPWSTR mnu_getMainMenuLabel();
+LPCWSTR mnu_getMenuLabel(INT mnuIdx = -1);
+bool mnu_isFavorite(LPCWSTR ses);
+void mnu_clearFavorites();
+void mnu_addFavorite(INT prpIdx, LPCWSTR favName);
 
 } // end namespace NppPlugin
 

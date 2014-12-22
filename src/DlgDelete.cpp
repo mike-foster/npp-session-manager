@@ -32,7 +32,9 @@ namespace NppPlugin {
 
 namespace {
 
-bool onInit(HWND hDlg);
+ChildDialogData *_dialogData;
+
+void onInit(HWND hDlg);
 bool onOk(HWND hDlg);
 
 } // end namespace
@@ -41,48 +43,48 @@ bool onOk(HWND hDlg);
 
 INT_PTR CALLBACK dlgDel_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam)
 {
+    INT_PTR status = FALSE;
+
     if (uMessage == WM_COMMAND) {
         switch (LOWORD(wParam)) {
 
             case IDOK:
                 if (onOk(hDlg)) {
                     ::EndDialog(hDlg, 1);
-                    return TRUE;
+                    status = TRUE;
                 }
                 break;
 
             case IDCANCEL:
                 ::EndDialog(hDlg, 0);
-                return TRUE;
+                status = TRUE;
+                break;
         }
     }
     else if (uMessage == WM_INITDIALOG) {
-        if (onInit(hDlg)) {
-            return TRUE;
-        }
+        _dialogData = (ChildDialogData*)lParam;
+        onInit(hDlg);
     }
 
-    return FALSE;
+    return status;
 }
 
 //------------------------------------------------------------------------------
 
 namespace {
 
-bool onInit(HWND hDlg)
+void onInit(HWND hDlg)
 {
     dlg::focus(hDlg, IDOK);
     dlg::centerWnd(hDlg, NULL, 150, -5);
     ::ShowWindow(hDlg, SW_SHOW);
-    return true;
 }
 
 bool onOk(HWND hDlg)
 {
     WCHAR sesPth[MAX_PATH];
-    INT sesSelIdx = dlgSes_getLbSelectedData();
-    if (app_isValidSessionIndex(sesSelIdx)) {
-        app_getSessionFile(sesSelIdx, sesPth);
+    if (app_isValidSessionIndex(_dialogData->selectedSessionIndex)) {
+        app_getSessionFile(_dialogData->selectedSessionIndex, sesPth);
         if (::DeleteFileW(sesPth)) {
             return true;
         }

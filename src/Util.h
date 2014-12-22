@@ -51,7 +51,7 @@ inline LPCWSTR boolToStr(const bool b) { return b ? L"true" : L"false"; }
 inline const bool uintToBool(UINT n) { return n == 0 ? false : true; }
 
 //------------------------------------------------------------------------------
-/** @namespace NppPlugin.msg Contains functions for displaying error and
+/** @namespace NppPlugin::msg Contains functions for displaying error and
     informational messages to the user and for logging to the debug log file. */
 
 namespace msg {
@@ -60,11 +60,11 @@ INT show(LPCWSTR msg, LPWSTR title = NULL, UINT options = MB_OK);
 void error(DWORD lastError, LPCWSTR format, ...);
 void log(const char *format, ...);
 
-} // end namespace msg
+} // end namespace NppPlugin::msg
 
 //------------------------------------------------------------------------------
-/** @namespace NppPlugin.pth Contains functions for manipulating file paths and
-    creating new files. */
+/** @namespace NppPlugin::pth Contains functions for manipulating file paths,
+    checking the existence of directories and files, and creating new files. */
 
 namespace pth {
 
@@ -75,31 +75,30 @@ void appendSlash(LPWSTR buf, size_t bufLen);
 bool dirExists(LPCWSTR path);
 bool fileExists(LPCWSTR pathname);
 void createFileIfMissing(LPCWSTR pathname, const char *contents);
+void removeAmp(LPCWSTR src, LPWSTR dst);
+void removeAmp(LPCSTR src, LPSTR dst);
 
-} // end namespace pth
+} // end namespace NppPlugin::pth
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.dlg Contains functions for managing dialog controls.
+/// @namespace NppPlugin::dlg Contains functions for managing dialog controls.
 
 namespace dlg {
 
-bool setText(HWND hDlg, UINT idCtrl, LPCWSTR text);
-bool getText(HWND hDlg, UINT idCtrl, LPWSTR buf, INT bufLen);
+void setText(HWND hDlg, UINT idCtrl, LPCWSTR text);
+void getText(HWND hDlg, UINT idCtrl, LPWSTR buf, INT bufLen);
 bool edtModified(HWND hDlg, UINT idCtrl);
-bool setCheck(HWND hDlg, UINT idCtrl, bool bChecked);
+void setCheck(HWND hDlg, UINT idCtrl, bool bChecked);
 bool getCheck(HWND hDlg, UINT idCtrl);
-bool focus(HWND hDlg, UINT idCtrl);
-INT getLbSelData(HWND hDlg, UINT idCtrl);
-INT getLbIdxByData(HWND hDlg, UINT idCtrl, INT data);
+void focus(HWND hDlg, UINT idCtrl, bool inInit = true);
+void lbReplaceSelItem(HWND hDlg, UINT idCtrl, LPCWSTR text, LPARAM data);
+LRESULT getLbSelData(HWND hDlg, UINT idCtrl);
+void getCbSelText(HWND hDlg, UINT idCtrl, LPWSTR buf);
 void redrawControl(HWND hDlg, HWND hCtrl);
-bool centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset = 0, INT yOffset = 0, INT width = 0, INT height = 0, bool bRepaint = FALSE);
+void centerWnd(HWND hWnd, HWND hParentWnd, INT xOffset = 0, INT yOffset = 0, INT width = 0, INT height = 0, bool bRepaint = FALSE);
 void adjToEdge(HWND hDlg, INT idCtrl, INT dlgW, INT dlgH, INT toChange, INT duoRight, INT duoBottom, bool redraw = false);
-//bool setSbText(HWND hDlg, UINT idCtrl, INT nPart, LPCWSTR text);
-//bool setSbtText(HWND hDlg, UINT idCtrl, INT nPart, LPCWSTR text);
-//HWND createStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts);
-//HWND createTooltip(int toolID, HWND hDlg, PTSTR text);
 
-} // end namespace dlg
+} // end namespace NppPlugin::dlg
 
 } // end namespace NppPlugin
 

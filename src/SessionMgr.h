@@ -22,19 +22,31 @@
 
 namespace NppPlugin {
 
-#define PLUGIN_DLL_NAME     L"SessionMgr"
-#define PLUGIN_FULL_NAME    L"Session Manager"
-#define SES_NAME_NONE       L"none"
-#define SES_NAME_DEFAULT    L"default"
-#define SES_NAME_BUF_LEN    100
+#define PLUGIN_DLL_NAME  L"SessionMgr"
+#define PLUGIN_FULL_NAME L"Session Manager"
+#define SES_NAME_NONE    L"none"
+#define SES_NAME_DEFAULT L"Default"
+#define SES_NAME_BUF_LEN 100
 /// Used as virtual session indexes
 #define SI_NONE     -1
 #define SI_CURRENT  -2
 #define SI_PREVIOUS -3
 #define SI_DEFAULT  -4
 
+/// @class Session
+class Session
+{
+  public:
+    INT index;
+    bool isVisible;
+    bool isFavorite;
+    FILETIME modified;
+    WCHAR name[SES_NAME_BUF_LEN];
+    Session(LPCWSTR sesName, FILETIME modTime);
+};
+
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin.api Contains functions called only from DllMain.
+/// @namespace NppPlugin::api Contains functions called only from DllMain.
 
 namespace api {
 
@@ -45,24 +57,29 @@ LPCWSTR app_getName();
 void app_onNotify(SCNotification *pscn);
 LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 
 void app_readSessionDirectory();
 void app_loadSession(INT si);
-void app_loadSession(INT si, bool lic, bool lwc);
+void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad = false);
 void app_saveSession(INT si = SI_CURRENT);
 bool app_isValidSessionIndex(INT si);
 INT app_getSessionCount();
-INT app_getSessionIndex(LPWSTR name = NULL);
+INT app_getSessionIndex(LPCWSTR name);
 INT app_getCurrentIndex();
 INT app_getPreviousIndex();
+INT app_getDefaultIndex();
 void app_resetPreviousIndex();
-bool app_renameSession(INT si, LPWSTR newName);
+void app_renameSession(INT si, LPWSTR newName);
 LPCWSTR app_getSessionName(INT si = SI_CURRENT);
 void app_getSessionFile(INT si, LPWSTR buf);
+Session* app_getSessionObject(INT si);
+void app_confirmDefaultSession();
 void app_showSessionInNppBars();
+void app_updateFavorites();
+INT app_getLbIdxStartingWith(WCHAR targetChar);
 
 } // end namespace NppPlugin
 

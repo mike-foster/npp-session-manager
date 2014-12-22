@@ -32,9 +32,9 @@ namespace NppPlugin {
 
 namespace {
 
-WCHAR _lbNewName[SES_NAME_BUF_LEN];
+ChildDialogData *_dialogData;
 
-bool onInit(HWND hDlg);
+void onInit(HWND hDlg);
 bool onOk(HWND hDlg);
 bool newAsEmpty(LPWSTR dstPathname);
 bool newFromOpen(LPWSTR dstPathname);
@@ -46,19 +46,22 @@ bool newByCopy(LPWSTR dstPathname);
 
 INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam)
 {
+    INT_PTR status = FALSE;
+
     if (uMessage == WM_COMMAND) {
         switch (LOWORD(wParam)) {
 
             case IDOK:
                 if (onOk(hDlg)) {
                     ::EndDialog(hDlg, 1);
-                    return TRUE;
+                    status = TRUE;
                 }
                 break;
 
             case IDCANCEL:
                 ::EndDialog(hDlg, 0);
-                return TRUE;
+                status = TRUE;
+                break;
 
             case IDC_NEW_RAD_EMPTY:
             case IDC_NEW_RAD_OPEN:
@@ -68,40 +71,32 @@ INT_PTR CALLBACK dlgNew_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                     buf[0] = 0;
                     dlg::getText(hDlg, IDC_NEW_ETX_NAME, buf, SES_NAME_BUF_LEN);
                     if (buf[0] == 0) {
-                        dlg::setText(hDlg, IDC_NEW_ETX_NAME, app_getSessionName(dlgSes_getLbSelectedData()));
+                        dlg::setText(hDlg, IDC_NEW_ETX_NAME, app_getSessionName(_dialogData->selectedSessionIndex));
                     }
-                    dlg::focus(hDlg, IDC_NEW_ETX_NAME);
-                    return TRUE;
+                    dlg::focus(hDlg, IDC_NEW_ETX_NAME, false);
+                    status = TRUE;
                 }
                 break;
         }
     }
     else if (uMessage == WM_INITDIALOG) {
-        if (onInit(hDlg)) {
-            return TRUE;
-        }
+        _dialogData = (ChildDialogData*)lParam;
+        onInit(hDlg);
     }
 
-    return FALSE;
-}
-
-/** DlgSessions uses this to get the new name. */
-LPWSTR dlgNew_getLbNewName()
-{
-    return _lbNewName;
+    return status;
 }
 
 //------------------------------------------------------------------------------
 
 namespace {
 
-bool onInit(HWND hDlg)
+void onInit(HWND hDlg)
 {
     dlg::setCheck(hDlg, IDC_NEW_RAD_EMPTY, true);
     dlg::focus(hDlg, IDC_NEW_ETX_NAME);
     dlg::centerWnd(hDlg, NULL, 150, -40);
     ::ShowWindow(hDlg, SW_SHOW);
-    return true;
 }
 
 bool onOk(HWND hDlg)
@@ -131,7 +126,7 @@ bool onOk(HWND hDlg)
         succ = newByCopy(dstPathname);
     }
     if (succ) {
-        ::StringCchCopyW(_lbNewName, SES_NAME_BUF_LEN, newName);
+        ::StringCchCopyW(_dialogData->newSessionName, SES_NAME_BUF_LEN, newName);
     }
     return succ;
 }
@@ -157,10 +152,9 @@ bool newByCopy(LPWSTR dstPathname)
     WCHAR srcPathname[MAX_PATH];
 
     // Set the source file pathname.
-    INT sesSelIdx = dlgSes_getLbSelectedData();
-    app_getSessionFile(sesSelIdx, srcPathname);
+    app_getSessionFile(_dialogData->selectedSessionIndex, srcPathname);
     // Copy the file.
-    _lbNewName[0] = 0;
+    _dialogData->newSessionName[0] = 0;
     if (::CopyFileW(srcPathname, dstPathname, TRUE)) {
         status = true;
     }

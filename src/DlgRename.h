@@ -23,7 +23,6 @@
 namespace NppPlugin {
 
 INT_PTR CALLBACK dlgRen_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam);
-LPWSTR dlgRen_getLbNewName();
 
 } // end namespace NppPlugin
 

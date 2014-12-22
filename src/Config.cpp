@@ -39,12 +39,14 @@ namespace {
 #define INI_SES_ALD_DV 0
 #define INI_SES_GBM L"globalBookmarks"
 #define INI_SES_GBM_DV 1
+#define INI_SES_CTX L"useContextMenu"
+#define INI_SES_CTX_DV 1
 #define INI_SES_LIC L"loadIntoCurrent"
 #define INI_SES_LIC_DV 0
 #define INI_SES_LWC L"loadWithoutClosing"
 #define INI_SES_LWC_DV 0
 #define INI_SES_SORT L"sortOrder"
-#define INI_SES_SORT_DV 0
+#define INI_SES_SORT_DV 1
 #define INI_SES_SISB L"showInStatusbar"
 #define INI_SES_SISB_DV 0
 #define INI_SES_SITB L"showInTitlebar"
@@ -56,18 +58,17 @@ namespace {
 #define INI_SES_EXT L"extension"
 #define INI_SES_EXT_DV EMPTY_STR
 #define INI_SES_CUR L"current"
-#define INI_SES_CUR_DV EMPTY_STR
 #define INI_SES_PRV L"previous"
-#define INI_SES_PRV_DV EMPTY_STR
+#define INI_SES_DEF L"default"
+#define INI_SES_DEF_DV SES_NAME_DEFAULT
+
+#define INI_FILTER L"filter"
+#define INI_FIL_EXP_PFX L"fil"
 
 #define INI_MENU L"menu"
 #define INI_MNU_MAIN L"main"
-#define INI_MNU_SUB1 L"sub1"
-#define INI_MNU_SUB2 L"sub2"
-#define INI_MNU_SUB3 L"sub3"
-#define INI_MNU_SUB4 L"sub4"
-#define INI_MNU_SUB5 L"sub5"
-#define INI_MNU_SUB6 L"sub6"
+#define INI_MNU_SUB_PFX L"sub"
+#define INI_MNU_FAV_PFX L"fav"
 
 #define INI_DIALOG L"dialog"
 #define INI_DLG_SES_W L"sessionsW"
@@ -87,7 +88,7 @@ namespace {
 #define TMP_BUF_LEN 30
 #define DEFAULT_SES_DIR L"sessions\\"
 #define DEFAULT_SES_EXT L".npp-session"
-#define DEFAULT_INI_CONTENTS "[session]\nautoSave=1\nautoLoad=0\nglobalBookmarks=1\nloadIntoCurrent=0\nloadWithoutClosing=0\nsortOrder=1\nshowInTitlebar=0\nshowInStatusbar=0\nsaveDelay=3\ndirectory=\nextension=\ncurrent=\nprevious=\n\n[menu]\nitem1=\nitem2=\nitem3=\nitem4=\nitem5=\nitem6=\n\n[dialog]\nsessionsW=0\nsessionsH=0\nsettingsW=0\nsettingsH=0\n\n[debug]\ndebug=0\nlogFile=\n"
+#define DEFAULT_INI_CONTENTS "[session]\nautoSave=1\nautoLoad=0\nglobalBookmarks=1\nloadIntoCurrent=0\nloadWithoutClosing=0\nsortOrder=1\nshowInTitlebar=0\nshowInStatusbar=0\nsaveDelay=3\ndirectory=\nextension=\ncurrent=\nprevious=\ndefault=\n\n[menu]\n\n[filter]\n\n[dialog]\nsessionsW=0\nsessionsH=0\nsettingsW=0\nsettingsH=0\n\n[debug]\ndebug=0\nlogFile=\n"
 
 } // end namespace
 
@@ -115,20 +116,20 @@ void Config::load()
         ::StringCchCopyW(_extension, MAX_PATH, DEFAULT_SES_EXT);
     }
 
-    // menu item names
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_MAIN, EMPTY_STR, _menuMainLabel, MNU_MAX_NAME_LEN, iniFile);
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_SUB1, EMPTY_STR, _menuSubLabels[0], MNU_MAX_NAME_LEN, iniFile);
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_SUB2, EMPTY_STR, _menuSubLabels[1], MNU_MAX_NAME_LEN, iniFile);
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_SUB3, EMPTY_STR, _menuSubLabels[2], MNU_MAX_NAME_LEN, iniFile);
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_SUB4, EMPTY_STR, _menuSubLabels[3], MNU_MAX_NAME_LEN, iniFile);
-    _menuSubLabels[4][0] = 0;
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_SUB5, EMPTY_STR, _menuSubLabels[5], MNU_MAX_NAME_LEN, iniFile);
-    ::GetPrivateProfileStringW(INI_MENU, INI_MNU_SUB6, EMPTY_STR, _menuSubLabels[6], MNU_MAX_NAME_LEN, iniFile);
+    // session filters
+    loadFilters();
+
+    // default session name
+    ::GetPrivateProfileStringW(INI_SESSION, INI_SES_DEF, INI_SES_DEF_DV, _defaultName, SES_NAME_BUF_LEN, iniFile);
+
+    // session marks
+    loadMarks();
 
     // boolean properties
     _autoSave = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_ASV, INI_SES_ASV_DV, iniFile));
     _autoLoad = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_ALD, INI_SES_ALD_DV, iniFile));
     _globalBookmarks = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_GBM, INI_SES_GBM_DV, iniFile));
+    _useContextMenu = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_CTX, INI_SES_CTX_DV, iniFile));
     _loadIntoCurrent = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_LIC, INI_SES_LIC_DV, iniFile));
     _loadWithoutClosing = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_LWC, INI_SES_LWC_DV, iniFile));
     _showInStatusbar = uintToBool(::GetPrivateProfileIntW(INI_SESSION, INI_SES_SISB, INI_SES_SISB_DV, iniFile));
@@ -151,25 +152,30 @@ bool Config::save()
     WCHAR buf[TMP_BUF_LEN + 1];
     LPWSTR iniFile = sys_getIniFile();
 
-    ::_itow_s((INT)_autoSave, buf, TMP_BUF_LEN, 10);
-    if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_ASV, buf, iniFile)) {
-        ::_itow_s((INT)_autoLoad, buf, TMP_BUF_LEN, 10);
-        if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_ALD, buf, iniFile)) {
-            ::_itow_s((INT)_globalBookmarks, buf, TMP_BUF_LEN, 10);
-            if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_GBM, buf, iniFile)) {
-                ::_itow_s((INT)_loadIntoCurrent, buf, TMP_BUF_LEN, 10);
-                if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_LIC, buf, iniFile)) {
-                    ::_itow_s((INT)_loadWithoutClosing, buf, TMP_BUF_LEN, 10);
-                    if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_LWC, buf, iniFile)) {
-                        ::_itow_s((INT)_sortOrder, buf, TMP_BUF_LEN, 10);
-                        if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_SORT, buf, iniFile)) {
-                            ::_itow_s((INT)_showInStatusbar, buf, TMP_BUF_LEN, 10);
-                            if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_SISB, buf, iniFile)) {
-                                ::_itow_s((INT)_showInTitlebar, buf, TMP_BUF_LEN, 10);
-                                if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
-                                    if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
-                                        if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
-                                            return true;
+    if (saveFilters()) {
+        ::_itow_s((INT)_autoSave, buf, TMP_BUF_LEN, 10);
+        if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_ASV, buf, iniFile)) {
+            ::_itow_s((INT)_autoLoad, buf, TMP_BUF_LEN, 10);
+            if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_ALD, buf, iniFile)) {
+                ::_itow_s((INT)_globalBookmarks, buf, TMP_BUF_LEN, 10);
+                if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_GBM, buf, iniFile)) {
+                    ::_itow_s((INT)_useContextMenu, buf, TMP_BUF_LEN, 10);
+                    if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_CTX, buf, iniFile)) {
+                        ::_itow_s((INT)_loadIntoCurrent, buf, TMP_BUF_LEN, 10);
+                        if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_LIC, buf, iniFile)) {
+                            ::_itow_s((INT)_loadWithoutClosing, buf, TMP_BUF_LEN, 10);
+                            if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_LWC, buf, iniFile)) {
+                                ::_itow_s((INT)_sortOrder, buf, TMP_BUF_LEN, 10);
+                                if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_SORT, buf, iniFile)) {
+                                    ::_itow_s((INT)_showInStatusbar, buf, TMP_BUF_LEN, 10);
+                                    if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_SISB, buf, iniFile)) {
+                                        ::_itow_s((INT)_showInTitlebar, buf, TMP_BUF_LEN, 10);
+                                        if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_SITB, buf, iniFile)) {
+                                            if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_DIR, _directory, iniFile)) {
+                                                if (::WritePrivateProfileStringW(INI_SESSION, INI_SES_EXT, _extension, iniFile)) {
+                                                    return true;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -188,35 +194,47 @@ bool Config::save()
 //------------------------------------------------------------------------------
 
 /** Reads current session name from ini file into s. */
-void Config::readCurrent(LPWSTR s)
+void Config::readCurrentName(LPWSTR s)
 {
-    ::GetPrivateProfileStringW(INI_SESSION, INI_SES_CUR, INI_SES_CUR_DV, s, MAX_PATH, sys_getIniFile());
+    ::GetPrivateProfileStringW(INI_SESSION, INI_SES_CUR, _defaultName, s, MAX_PATH, sys_getIniFile());
 }
 
 /** Writes current session name s to ini file. */
-BOOL Config::saveCurrent(LPWSTR s)
+BOOL Config::saveCurrentName(LPWSTR s)
 {
     BOOL status = ::WritePrivateProfileStringW(INI_SESSION, INI_SES_CUR, s, sys_getIniFile());
     if (status == 0) {
         DWORD le = ::GetLastError();
-        msg::error(le, L"%s: Error writing to settings file.", _W(__FUNCTION__));
+        msg::error(le, L"%s: Error writing current to settings file.", _W(__FUNCTION__));
     }
     return status;
 }
 
 /** Reads previous session name from ini file into s. */
-void Config::readPrevious(LPWSTR s)
+void Config::readPreviousName(LPWSTR s)
 {
-    ::GetPrivateProfileStringW(INI_SESSION, INI_SES_PRV, INI_SES_PRV_DV, s, MAX_PATH, sys_getIniFile());
+    ::GetPrivateProfileStringW(INI_SESSION, INI_SES_PRV, _defaultName, s, MAX_PATH, sys_getIniFile());
 }
 
 /** Writes previous session name s to ini file. */
-BOOL Config::savePrevious(LPWSTR s)
+BOOL Config::savePreviousName(LPWSTR s)
 {
     BOOL status = ::WritePrivateProfileStringW(INI_SESSION, INI_SES_PRV, s, sys_getIniFile());
     if (status == 0) {
         DWORD le = ::GetLastError();
-        msg::error(le, L"%s: Error writing to settings file.", _W(__FUNCTION__));
+        msg::error(le, L"%s: Error writing previous to settings file.", _W(__FUNCTION__));
+    }
+    return status;
+}
+
+/** Writes default session name s to ini file. */
+BOOL Config::saveDefaultName(LPWSTR s)
+{
+    ::StringCchCopyW(_defaultName, SES_NAME_BUF_LEN, s);
+    BOOL status = ::WritePrivateProfileStringW(INI_SESSION, INI_SES_DEF, _defaultName, sys_getIniFile());
+    if (status == 0) {
+        DWORD le = ::GetLastError();
+        msg::error(le, L"%s: Error writing default to settings file.", _W(__FUNCTION__));
     }
     return status;
 }
@@ -277,6 +295,14 @@ BOOL Config::saveDlgSize(bool ses, INT w, INT h)
     return status;
 }
 
+BOOL Config::saveSortOrder(INT order)
+{
+    WCHAR buf[TMP_BUF_LEN + 1];
+    _sortOrder = order;
+    ::_itow_s((INT)_sortOrder, buf, TMP_BUF_LEN, 10);
+    return ::WritePrivateProfileStringW(INI_SESSION, INI_SES_SORT, buf, sys_getIniFile());
+}
+
 //------------------------------------------------------------------------------
 
 void Config::setShowInStatusbar(bool v)
@@ -314,6 +340,7 @@ bool Config::setSesDir(LPWSTR p)
         }
     }
     ::StringCchCopyW(_directory, MAX_PATH, buf);
+    app_confirmDefaultSession();
     return true;
 }
 
@@ -330,30 +357,189 @@ void Config::setSesExt(LPWSTR p)
         }
         ::StringCchCatW(_extension, MAX_PATH, p);
     }
+    app_confirmDefaultSession();
 }
 
-void Config::setSaveDelay(LPWSTR p)
-{
-    _saveDelay = ::_wtoi(p);
-    if (_saveDelay == 0) {
-        _saveDelay = INI_SES_SVD_DV;
-    }
-}
+//------------------------------------------------------------------------------
 
-void Config::getSaveDelay(LPWSTR buf, INT len)
+/** Gets the main or the 1-based prpIdx'th sub value from the settings file and
+    copies it to buf. */
+void Config::getMenuLabel(INT prpIdx, LPWSTR buf)
 {
-    ::_itow_s(_saveDelay, buf, len, 10);
-}
+    WCHAR lblBuf[MNU_MAX_NAME_LEN], prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
 
-void Config::getMenuLabel(int idx, LPWSTR buf)
-{
-    if (idx == -1) {
-        if (_menuMainLabel[0] != 0) {
-            ::StringCchCopyW(buf, MNU_MAX_NAME_LEN, _menuMainLabel);
+    if (prpIdx == -1) {
+        ::GetPrivateProfileStringW(INI_MENU, INI_MNU_MAIN, NULL, lblBuf, MNU_MAX_NAME_LEN, iniFile);
+        if (lblBuf[0] != 0) {
+            ::StringCchCopyW(buf, MNU_MAX_NAME_LEN, lblBuf);
         }
     }
-    else if (idx >= 0 && idx < MNU_MAX_ITEMS && _menuSubLabels[idx][0] != 0) {
-        ::StringCchCopyW(buf, MNU_MAX_NAME_LEN, _menuSubLabels[idx]);
+    else if (prpIdx > 0 && prpIdx < MNU_BASE_MAX_ITEMS) {
+        ::StringCchCopyW(prpBuf, 6, INI_MNU_SUB_PFX);
+        ::_itow_s(prpIdx, numBuf, 3, 10);
+        ::StringCchCatW(prpBuf, 6, numBuf);
+        ::GetPrivateProfileStringW(INI_MENU, prpBuf, NULL, lblBuf, MNU_MAX_NAME_LEN, iniFile);
+        if (lblBuf[0] != 0) {
+            ::StringCchCopyW(buf, MNU_MAX_NAME_LEN, lblBuf);
+        }
+    }
+}
+
+/** Gets the 1-based prpIdx'th fav value from the settings file and copies it to buf. */
+bool Config::getFavMenuLabel(INT prpIdx, LPWSTR buf)
+{
+    bool status = false;
+    WCHAR lblBuf[MNU_MAX_NAME_LEN], prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
+
+    if (prpIdx >= 1 && prpIdx <= MNU_MAX_FAVS) {
+        ::StringCchCopyW(prpBuf, 6, INI_MNU_FAV_PFX);
+        ::_itow_s(prpIdx, numBuf, 3, 10);
+        ::StringCchCatW(prpBuf, 6, numBuf);
+        ::GetPrivateProfileStringW(INI_MENU, prpBuf, NULL, lblBuf, MNU_MAX_NAME_LEN, iniFile);
+        if (lblBuf[0] != 0) {
+            ::StringCchCopyW(buf, MNU_MAX_NAME_LEN, lblBuf);
+            status = true;
+        }
+    }
+    return status;
+}
+
+/** Deletes all favorites from the settings file. */
+void Config::deleteFavorites()
+{
+    WCHAR prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
+
+    mnu_clearFavorites();
+    for (INT prpIdx = 1; prpIdx <= MNU_MAX_FAVS; ++prpIdx) {
+        ::StringCchCopyW(prpBuf, 6, INI_MNU_FAV_PFX);
+        ::_itow_s(prpIdx, numBuf, 3, 10);
+        ::StringCchCatW(prpBuf, 6, numBuf);
+        ::WritePrivateProfileStringW(INI_MENU, prpBuf, NULL, iniFile);
+    }
+}
+
+/** Writes favName to the 1-based prpIdx'th fav property in the settings file. */
+void Config::addFavorite(INT prpIdx, LPCWSTR favName)
+{
+    WCHAR prpBuf[6], numBuf[3];
+
+    mnu_addFavorite(prpIdx, favName);
+    ::StringCchCopyW(prpBuf, 6, INI_MNU_FAV_PFX);
+    ::_itow_s(prpIdx, numBuf, 3, 10);
+    ::StringCchCatW(prpBuf, 6, numBuf);
+    ::WritePrivateProfileStringW(INI_MENU, prpBuf, favName, sys_getIniFile());
+}
+
+/** Reads the session mark characters from the settings file or uses defaults. */
+void Config::loadMarks()
+{
+    WCHAR *iniFile = sys_getIniFile();
+    WCHAR *props[] = {L"currentMark", L"currentFavMark", L"previousMark", L"previousFavMark", L"defaultMark", L"defaultFavMark", L"favoriteMark"};
+    WCHAR numStr[7], *defaults[] = {
+        L"9674", // white diamond
+        L"9830", // black diamond
+        L"9702", // white bullet
+        L"8226", // black bullet
+        L"9653", // white triangle
+        L"9652", // black triangle
+        L"183"   // middle dot
+    };
+    for (INT i = 0; i < 7; ++i) {
+        ::GetPrivateProfileStringW(INI_SESSION, props[i], NULL, numStr, 7, iniFile);
+        if (numStr[0] == 0) {
+            ::StringCchCopyW(numStr, 7, defaults[i]);
+        }
+        markChars[i][0] = _wtoi(numStr);
+        markChars[i][1] = L'\t';
+        markChars[i][2] = 0;
+    }
+}
+
+//------------------------------------------------------------------------------
+
+/** SessionFilter constructor. */
+SessionFilter::SessionFilter(LPCWSTR filter)
+{
+    ::StringCchCopyW(exp, FIL_EXP_BUF_LEN, filter);
+}
+
+/** Reads filters from the settings file. */
+void Config::loadFilters()
+{
+    INT i;
+    WCHAR expBuf[FIL_EXP_BUF_LEN], prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
+
+    for (i = 1; i < FIL_EXP_MAX; ++i) {
+        ::StringCchCopyW(prpBuf, 6, INI_FIL_EXP_PFX);
+        ::_itow_s(i, numBuf, 3, 10);
+        ::StringCchCatW(prpBuf, 6, numBuf);
+        ::GetPrivateProfileStringW(INI_FILTER, prpBuf, NULL, expBuf, FIL_EXP_BUF_LEN, iniFile);
+        if (expBuf[0] == 0) {
+            break;
+        }
+        SessionFilter fil(expBuf);
+        _filters.push_back(fil);
+    }
+    if (_filters.empty()) {
+        SessionFilter fil(L"*");
+        _filters.push_back(fil);
+    }
+}
+
+/** Writes filters to the settings file.
+    @return TRUE on success else FALSE */
+BOOL Config::saveFilters()
+{
+    INT i = 1;
+    BOOL status = TRUE;
+    WCHAR prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
+
+    for (list<SessionFilter>::const_iterator it = _filters.begin(); it != _filters.end(); ++it) {
+        ::StringCchCopyW(prpBuf, FIL_EXP_BUF_LEN, INI_FIL_EXP_PFX);
+        ::_itow_s(i, numBuf, 3, 10);
+        ::StringCchCatW(prpBuf, FIL_EXP_BUF_LEN, numBuf);
+        status = ::WritePrivateProfileStringW(INI_FILTER, prpBuf, it->exp, iniFile);
+        if (status == FALSE) {
+            break;
+        }
+        ++i;
+    }
+    return status;
+}
+
+/** @return the filter string at the 1-based index position in the list */
+LPCWSTR Config::getFilter(INT index)
+{
+    INT i = 1;
+    for (list<SessionFilter>::const_iterator it = _filters.begin(); it != _filters.end(); ++it) {
+        if (i == index) {
+            return it->exp;
+        }
+        ++i;
+    }
+    return NULL;
+}
+
+/** Adds a filter to the list then saves the list to the settings file. If
+    filter is already in the list it is removed, unless it is at the top of
+    the list, and the new filter is added at the top. */
+void Config::addFilter(LPCWSTR filter)
+{
+    INT i = 1;
+    if (filter && *filter) {
+        for (list<SessionFilter>::iterator it = _filters.begin(); it != _filters.end(); ++it) {
+            if (::lstrcmpW(it->exp, filter) == 0) {
+                if (i == 1) {
+                    return; // filter is already at the top of the list
+                }
+                _filters.erase(it);
+                break;
+            }
+            ++i;
+        }
+        SessionFilter fil(filter);
+        _filters.push_front(fil);
+        saveFilters();
     }
 }
 

@@ -31,19 +31,19 @@ namespace NppPlugin {
 namespace {
 
 /// XML nodes
-#define XN_NOTEPADPLUS "NotepadPlus" ///< root node
-#define XN_SESSION "Session"
-#define XN_MAINVIEW "mainView"
-#define XN_SUBVIEW "subView"
-#define XN_FILE "File"
-#define XN_MARK "Mark"
+#define XN_NOTEPADPLUS    "NotepadPlus" ///< root node
+#define XN_SESSION        "Session"
+#define XN_MAINVIEW       "mainView"
+#define XN_SUBVIEW        "subView"
+#define XN_FILE           "File"
+#define XN_MARK           "Mark"
 #define XN_FILEPROPERTIES "FileProperties"
 
 /// XML attributes
-#define XA_FILENAME "filename"
-#define XA_LANG "lang"
+#define XA_FILENAME         "filename"
+#define XA_LANG             "lang"
 #define XA_FIRSTVISIBLELINE "firstVisibleLine"
-#define XA_LINE "line"
+#define XA_LINE             "line"
 
 INT utf8ToAscii(const char *str, char *buf = NULL);
 void removeMissingFilesFromGlobal();
@@ -59,7 +59,7 @@ void prp_init()
     removeMissingFilesFromGlobal();
 }
 
-} // end namespace api
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 
@@ -356,7 +356,7 @@ void updateDocumentFromGlobal(INT bufferId)
     LOGG(20, "firstVisibleLine = %i", line);
 }
 
-} // end namespace prp
+} // end namespace NppPlugin::prp
 
 //------------------------------------------------------------------------------
 

@@ -20,6 +20,7 @@
 #include "Config.h"
 #include "DlgSettings.h"
 #include "Util.h"
+#include "ContextMenu.h"
 #include "res\resource.h"
 #include <commdlg.h>
 #include <shlobj.h>
@@ -39,7 +40,7 @@ INT _minWidth = 0, _minHeight = 0;
 bool _inInit, _opChanged, _dirChanged;
 
 INT onOk(HWND hDlg);
-bool onInit(HWND hDlg);
+void onInit(HWND hDlg);
 void onResize(HWND hDlg, INT w = 0, INT h = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 bool getFolderName(HWND parent, LPWSTR buf);
@@ -50,26 +51,28 @@ bool getFolderName(HWND parent, LPWSTR buf);
 
 INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam)
 {
-    INT okStat;
+    INT okStatus;
+    INT_PTR status = FALSE;
 
     if (uMessage == WM_COMMAND) {
         WORD ctrl = LOWORD(wParam);
         WORD ntfy = HIWORD(wParam);
         switch (ctrl) {
             case IDOK:
-                okStat = onOk(hDlg);
-                ::EndDialog(hDlg, 1);
-                if (okStat == 1) {
+                okStatus = onOk(hDlg);
+                if (okStatus == 1) {
                     msg::show(MSG_NO_CHANGES, M_INFO);
                 }
-                else if (okStat == 2) {
+                else if (okStatus == 2) {
                     msg::show(MSG_DIR_ERROR, M_WARN);
                 }
-                return TRUE;
+                ::EndDialog(hDlg, 1);
+                status = TRUE;
                 break;
             case IDCANCEL:
                 ::EndDialog(hDlg, 0);
-                return TRUE;
+                status = TRUE;
+                break;
             case IDC_CFG_CHK_ASV:
             case IDC_CFG_CHK_ALD:
             case IDC_CFG_CHK_LIC:
@@ -80,13 +83,24 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 if (!_inInit && ntfy == BN_CLICKED) {
                     _opChanged = true;
                 }
-                return TRUE;
+                status = TRUE;
+                break;
+            case IDC_CFG_CHK_CTXM:
+                if (!_inInit && ntfy == BN_CLICKED) {
+                    _opChanged = true;
+                    if (gCfg.useContextMenuEnabled() && !dlg::getCheck(hDlg, IDC_CFG_CHK_CTXM)) {
+                        ctx::unload();
+                    }
+                }
+                status = TRUE;
+                break;
             case IDC_CFG_ETX_DIR:
             case IDC_CFG_ETX_EXT:
                 if (!_inInit && ntfy == EN_CHANGE) {
                     _dirChanged = true;
                 }
-                return TRUE;
+                status = TRUE;
+                break;
             case IDC_CFG_BTN_BRW:
                 if (!_inInit && ntfy == BN_CLICKED) {
                     WCHAR pthBuf[MAX_PATH];
@@ -95,7 +109,8 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                         dlg::setText(hDlg, IDC_CFG_ETX_DIR, pthBuf);
                     }
                 }
-                return TRUE;
+                status = TRUE;
+                break;
         } // end switch
     }
     else if (uMessage == WM_WINDOWPOSCHANGED) {
@@ -108,11 +123,10 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
         onGetMinSize(hDlg, (LPMINMAXINFO)lParam);
     }
     else if (uMessage == WM_INITDIALOG) {
-        if (onInit(hDlg)) {
-            return TRUE;
-        }
+        onInit(hDlg);
     }
-    return FALSE;
+
+    return status;
 }
 
 //------------------------------------------------------------------------------
@@ -121,7 +135,7 @@ namespace {
 
 /** Determines minimum dialog size. Populates controls with current values from
     gCfg. Resizes, centers and displays the dialog window. */
-bool onInit(HWND hDlg)
+void onInit(HWND hDlg)
 {
     RECT r;
 
@@ -141,6 +155,7 @@ bool onInit(HWND hDlg)
     dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, gCfg.showInTitlebarEnabled());
     dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, gCfg.showInStatusbarEnabled());
     dlg::setCheck(hDlg, IDC_CFG_CHK_GBKM, gCfg.globalBookmarksEnabled());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_CTXM, gCfg.useContextMenuEnabled());
     dlg::setText(hDlg, IDC_CFG_ETX_DIR, gCfg.getSesDir());
     dlg::setText(hDlg, IDC_CFG_ETX_EXT, gCfg.getSesExt());
     // focus the first edit control
@@ -155,9 +170,7 @@ bool onInit(HWND hDlg)
     dlg::centerWnd(hDlg, sys_getNppHandle(), 0, 0, w, h, true);
     onResize(hDlg);
     ::ShowWindow(hDlg, SW_SHOW);
-
     _inInit = false;
-    return true;
 }
 
 /** Gets values, if changed, from dialog box controls. Updates the global
@@ -177,6 +190,7 @@ INT onOk(HWND hDlg)
         gCfg.setShowInTitlebar(dlg::getCheck(hDlg, IDC_CFG_CHK_SITB));
         gCfg.setShowInStatusbar(dlg::getCheck(hDlg, IDC_CFG_CHK_SISB));
         gCfg.setGlobalBookmarks(dlg::getCheck(hDlg, IDC_CFG_CHK_GBKM));
+        gCfg.setUseContextMenu(dlg::getCheck(hDlg, IDC_CFG_CHK_CTXM));
     }
     if (_dirChanged) {
         change = true;

@@ -26,20 +26,19 @@
 
 // Control IDs
 #define IDC_SES_LST_SES         1000
-#define IDC_SES_CTX_CUR         1001
-#define IDC_SES_CTX_PRV         1002
-#define IDC_SES_BTN_LOAD        1003
-#define IDC_SES_BTN_PRV         1004
-#define IDC_SES_BTN_DEF         1005
-#define IDC_SES_BTN_SAVE        1006
-#define IDC_SES_BTN_NEW         1007
-#define IDC_SES_BTN_REN         1008
-#define IDC_SES_BTN_DEL         1009
-#define IDC_SES_BTN_CANCEL      1010
-#define IDC_SES_RAD_ALPHA       1011
-#define IDC_SES_RAD_DATE        1012
-#define IDC_SES_CHK_LIC         1013
-#define IDC_SES_CHK_LWC         1014
+#define IDC_SES_CMB_FIL         1001
+#define IDC_SES_BTN_LOAD        1002
+#define IDC_SES_BTN_PRV         1003
+#define IDC_SES_BTN_SAVE        1004
+#define IDC_SES_BTN_NEW         1005
+#define IDC_SES_BTN_REN         1006
+#define IDC_SES_BTN_DEL         1007
+#define IDC_SES_BTN_FAV         1008
+#define IDC_SES_BTN_CANCEL      1009
+#define IDC_SES_RAD_ALPHA       1010
+#define IDC_SES_RAD_DATE        1011
+#define IDC_SES_CHK_LIC         1012
+#define IDC_SES_CHK_LWC         1013
 #define IDC_NEW_ETX_NAME        1100
 #define IDC_NEW_RAD_EMPTY       1101
 #define IDC_NEW_RAD_COPY        1102
@@ -52,9 +51,10 @@
 #define IDC_CFG_CHK_SITB        1404
 #define IDC_CFG_CHK_SISB        1405
 #define IDC_CFG_CHK_GBKM        1406
-#define IDC_CFG_BTN_BRW         1407
-#define IDC_CFG_ETX_DIR         1408
-#define IDC_CFG_ETX_EXT         1409
+#define IDC_CFG_CHK_CTXM        1407
+#define IDC_CFG_BTN_BRW         1408
+#define IDC_CFG_ETX_DIR         1409
+#define IDC_CFG_ETX_EXT         1410
 
 // Common sizes
 #define IDC_MAR_1               6
@@ -66,31 +66,28 @@
 #define IDC_LTX_H               8
 #define IDC_CHK_H               8
 
-/* The Sessions dialog */
+/*
+    The Sessions dialog
+*/
 
 #define IDD_SES_W               187
 #define IDD_SES_H               230
 
 // Right and bottom offsets (for moving/resizing)
-#define IDC_SES_CTX_WRO         IDC_MAR_1
-#define IDC_SES_LST_WRO         (IDC_MAR_1 + IDC_BTN_W + IDC_MAR_1)
+#define IDC_SES_CMB_WRO         (IDC_MAR_1 + IDC_BTN_W + IDC_MAR_1)
+#define IDC_SES_LST_WRO         IDC_SES_CMB_WRO
 #define IDC_SES_LST_HBO         (IDC_MAR_1 + IDC_CHK_H + IDC_MAR_2 + IDC_CHK_H + IDC_MAR_1)
 #define IDC_SES_BTN_XRO         (IDC_MAR_1 + IDC_BTN_W)
 #define IDC_SES_OPT_R1_YBO      (IDC_MAR_1 + IDC_CHK_H + IDC_MAR_3 + IDC_CHK_H)
 #define IDC_SES_OPT_R2_YBO      (IDC_MAR_1 + IDC_CHK_H)
 
-#define IDC_SES_CTX_CUR_X       40
-#define IDC_SES_CTX_CUR_Y       IDC_MAR_3
-#define IDC_SES_CTX_CUR_W       (IDD_SES_W - IDC_SES_CTX_CUR_X - IDC_SES_CTX_WRO)
-#define IDC_SES_CTX_CUR_H       IDC_LTX_H
-
-#define IDC_SES_CTX_PRV_X       IDC_SES_CTX_CUR_X
-#define IDC_SES_CTX_PRV_Y       (IDC_SES_CTX_CUR_Y + IDC_MAR_2 + IDC_SES_CTX_CUR_H)
-#define IDC_SES_CTX_PRV_W       IDC_SES_CTX_CUR_W
-#define IDC_SES_CTX_PRV_H       IDC_SES_CTX_CUR_H
+#define IDC_SES_CMB_FIL_X       IDC_MAR_1
+#define IDC_SES_CMB_FIL_Y       IDC_MAR_1
+#define IDC_SES_CMB_FIL_W       (IDD_SES_W - IDC_SES_CMB_FIL_X - IDC_SES_CMB_WRO)
+#define IDC_SES_CMB_FIL_H       IDC_ETX_H
 
 #define IDC_SES_LST_SES_X       IDC_MAR_1
-#define IDC_SES_LST_SES_Y       (IDC_SES_CTX_PRV_Y + IDC_SES_CTX_PRV_H + IDC_MAR_3)
+#define IDC_SES_LST_SES_Y       (IDC_SES_CMB_FIL_Y + IDC_SES_CMB_FIL_H + IDC_MAR_3)
 #define IDC_SES_LST_SES_W       (IDD_SES_W - IDC_SES_LST_SES_X - IDC_SES_LST_WRO)
 #define IDC_SES_LST_SES_H       (IDD_SES_H - IDC_SES_LST_SES_Y - IDC_SES_LST_HBO)
 
@@ -100,21 +97,23 @@
 #define IDC_SES_BTN_X           (IDD_SES_W - IDC_SES_BTN_XRO)
 #define IDC_SES_BTN_LOAD_Y      IDC_SES_LST_SES_Y
 #define IDC_SES_BTN_PRV_Y       (IDC_SES_BTN_LOAD_Y + IDC_MAR_1 + IDC_BTN_H)
-#define IDC_SES_BTN_DEF_Y       (IDC_SES_BTN_PRV_Y + IDC_MAR_1 + IDC_BTN_H)
-#define IDC_SES_BTN_SAVE_Y      (IDC_SES_BTN_DEF_Y + IDC_MAR_1 + IDC_BTN_H)
+#define IDC_SES_BTN_SAVE_Y      (IDC_SES_BTN_PRV_Y + IDC_MAR_1 + IDC_BTN_H)
 #define IDC_SES_BTN_NEW_Y       (IDC_SES_BTN_SAVE_Y + IDC_MAR_1 + IDC_BTN_H)
 #define IDC_SES_BTN_REN_Y       (IDC_SES_BTN_NEW_Y + IDC_MAR_1 + IDC_BTN_H)
 #define IDC_SES_BTN_DEL_Y       (IDC_SES_BTN_REN_Y + IDC_MAR_1 + IDC_BTN_H)
-#define IDC_SES_BTN_CANCEL_Y    (IDC_SES_BTN_DEL_Y + IDC_MAR_1 + IDC_BTN_H)
+#define IDC_SES_BTN_FAV_Y       (IDC_SES_BTN_DEL_Y + IDC_MAR_1 + IDC_BTN_H)
+#define IDC_SES_BTN_CANCEL_Y    (IDC_SES_BTN_FAV_Y + IDC_MAR_1 + IDC_BTN_H)
 
 // Child dialogs of the Sessions dialog
 #define IDD_CDLG_W              164
 #define IDC_CDLG_TXT_W          150
 #define IDC_CDLG_RAD_W          120
 
-/* The Settings dialog */
+/*
+    The Settings dialog
+*/
 
-#define IDD_CFG_W               311
+#define IDD_CFG_W               315
 #define IDD_CFG_H               120
 
 // Right and bottom offsets (for moving/resizing)
