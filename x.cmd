@@ -1,7 +1,7 @@
 @echo off
 
-set sesmgr_old_ver=1.0.2
-set sesmgr_new_ver=1.1
+set sesmgr_old_ver=1.1
+set sesmgr_new_ver=1.1.1
 set release_dir=c:\prj\npp-session-manager\dist\%sesmgr_new_ver%
 set zip_exe="c:\Program Files\7-Zip\7z.exe"
 set md5_exe=c:\bin\md5sums\md5sums.exe
@@ -76,7 +76,7 @@ if exist %npp_plugin_dir%\SessionMgr-%sesmgr_old_ver%.dll (
         goto error_exit
     )
 )
-xcopy /y obj\SessionMgr.dll %npp_plugin_dir%\SessionMgr-%sesmgr_new_ver%.dll
+xcopy /y /q obj\SessionMgr.dll %npp_plugin_dir%\SessionMgr-%sesmgr_new_ver%.dll
 if errorlevel 1 (
     echo Deploy ERROR
     goto error_exit
@@ -96,17 +96,25 @@ if errorlevel 1 (
     echo Release ERROR 1
     goto error_exit
 )
-xcopy /q obj\SessionMgr.dll %release_dir%\plugin
-xcopy /q doc\* %release_dir%\plugin\doc
+xcopy /q obj\SessionMgr.dll %release_dir%\plugin\
+xcopy /q doc\* %release_dir%\plugin\doc\
 %zip_exe% a -r -tzip %release_dir%\SessionMgr-%sesmgr_new_ver%-plugin.zip %release_dir%\plugin\*
-xcopy /q license.txt %release_dir%\source\npp-session-manager
-xcopy /q Makefile %release_dir%\source\npp-session-manager
-xcopy /q README %release_dir%\source\npp-session-manager
-xcopy /q setenv.cmd %release_dir%\source\npp-session-manager
-xcopy /q x.cmd %release_dir%\source\npp-session-manager
-xcopy /s /y /q src\* %release_dir%\source\npp-session-manager\src
-xcopy /q doc\* %release_dir%\source\npp-session-manager\doc
+if errorlevel 1 (
+    echo Release ERROR 2
+    goto error_exit
+)
+xcopy /q license.txt %release_dir%\source\npp-session-manager\
+xcopy /q Makefile %release_dir%\source\npp-session-manager\
+xcopy /q README %release_dir%\source\npp-session-manager\
+xcopy /q setenv.cmd %release_dir%\source\npp-session-manager\
+xcopy /q x.cmd %release_dir%\source\npp-session-manager\
+xcopy /s /q src\* %release_dir%\source\npp-session-manager\src\
+xcopy /q doc\* %release_dir%\source\npp-session-manager\doc\
 %zip_exe% a -r -tzip %release_dir%\SessionMgr-%sesmgr_new_ver%-source.zip %release_dir%\source\*
+if errorlevel 1 (
+    echo Release ERROR 3
+    goto error_exit
+)
 %md5_exe% %release_dir%\*.zip > %release_dir%\md5sums.txt
 
 ::------------------------------------------------------------------------------

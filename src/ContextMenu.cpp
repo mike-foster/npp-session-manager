@@ -79,7 +79,7 @@ void deleteFavorites()
         if (sepEle) {
             sciCtxMnuEle = sepEle->Parent()->ToElement();
             favEle = sepEle->NextSiblingElement(XN_ITEM);
-            while (favEle && favEle->Attribute(XA_FOLDERNAME, mbMain) && favEle->Attribute(XA_ID, "0")) {
+            while (favEle && favEle->Attribute(XA_FOLDERNAME, mbMain)) {
                 ele = favEle;
                 favEle = favEle->NextSiblingElement(XN_ITEM);
                 sciCtxMnuEle->DeleteChild(ele);
