@@ -10,12 +10,11 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Util.cpp
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
 
@@ -77,17 +76,20 @@ void error(DWORD lastError, LPCWSTR format, ...)
     for ASCII strings and "%S" for wide strings. */
 void log(const char *format, ...)
 {
-    if (gCfg.debug && gCfg.logFile[0]) {
-        FILE *fp;
-        ::_wfopen_s(&fp, gCfg.logFile, L"a+");
-        if (fp) {
-            va_list argptr;
-            va_start(argptr, format);
-            ::vfprintf(fp, format, argptr); // Expects 'format' to be UTF-8, vfwprintf would write UTF-16
-            va_end(argptr);
-            ::fputwc(L'\n', fp);
-            ::fflush(fp);
-            ::fclose(fp);
+    if (gDbgLvl) {
+        LPCWSTR logFile = cfg::getStr(kDebugLogFile);
+        if (logFile && *logFile) {
+            FILE *fp;
+            ::_wfopen_s(&fp, logFile, L"a+");
+            if (fp) {
+                va_list argptr;
+                va_start(argptr, format);
+                ::vfprintf(fp, format, argptr); // Expects 'format' to be UTF-8, vfwprintf would write UTF-16
+                va_end(argptr);
+                ::fputwc(L'\n', fp);
+                ::fflush(fp);
+                ::fclose(fp);
+            }
         }
     }
 }

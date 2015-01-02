@@ -10,12 +10,11 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      SessionMgr.cpp
-    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2013-2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "Menu.h"
 #include "Util.h"
 #include "Properties.h"
@@ -44,12 +43,12 @@ INT _sesPrvIdx;            ///< previous session index
 INT _sesDefIdx;            ///< default session index
 INT _bidFileOpened;        ///< bufferId from most recent NPPN_FILEOPENED
 INT _bidBufferActivated;   ///< XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
-bool _sesIsDirty;          ///< XXX experimental. if true, current session needs to be saved. this should only be set true in cases where saving the session is deferred
 bool _appReady;            ///< if false, plugin should do nothing
 bool _sesLoading;          ///< if true, a session is loading
 time_t _shutdownTimer;     ///< for determining if files are closing due to a shutdown
 time_t _titlebarTimer;     ///< for updating the titlebar text
 time_t _bookmarkTimer;     ///< for saving the session on a click in the bookmark margin
+time_t _settingsTimer;     ///< for checking if settings need to be saved
 
 void onNppReady();
 void removeBracketedPrefix(LPWSTR s);
@@ -75,10 +74,10 @@ void app_onLoad()
     _sesDefIdx = SI_NONE;
     _bidFileOpened = 0;
     _bidBufferActivated = 0;
-    _sesIsDirty = false;
     _shutdownTimer = 0;
     _titlebarTimer = 0;
     _bookmarkTimer = 0;
+    _settingsTimer = ::time(NULL);
 }
 
 void app_onUnload()
@@ -90,7 +89,7 @@ void app_onUnload()
 
 void app_init()
 {
-    LOG("-------------- START %S %s with debug level %i", PLUGIN_FULL_NAME, RES_VERSION_S, gCfg.debug);
+    LOG("-------------- START %S %s with debug level %i", PLUGIN_FULL_NAME, RES_VERSION_S, cfg::getInt(kDebugLogLevel));
     app_readSessionDirectory();
 }
 
@@ -107,7 +106,7 @@ void app_onNotify(SCNotification *pscn)
 
     // Notepad++
     if (pscn->nmhdr.hwndFrom == sys_getNppHandle()) {
-        if (gCfg.debug >= 10) {
+        if (cfg::getInt(kDebugLogLevel) >= 10) {
             switch (notificationCode) {
                 case NPPN_READY:           LOG("NPPN_READY"); break;
                 case NPPN_SHUTDOWN:        LOG("NPPN_SHUTDOWN"); break;
@@ -132,7 +131,6 @@ void app_onNotify(SCNotification *pscn)
                 _appReady = false;
                 break;
             case NPPN_FILEOPENED:
-                _sesIsDirty = true;
                 _bidFileOpened = bufferId;
                 break;
             case NPPN_FILESAVED:
@@ -140,7 +138,7 @@ void app_onNotify(SCNotification *pscn)
                 // intentional fall-thru
             case NPPN_LANGCHANGED:
             //case NPPN_DOCORDERCHANGED:
-                if (_appReady && !_sesLoading && gCfg.autoSaveEnabled()) {
+                if (_appReady && !_sesLoading && cfg::getBool(kAutomaticSave)) {
                     app_saveSession(_sesCurIdx);
                 }
                 break;
@@ -148,10 +146,9 @@ void app_onNotify(SCNotification *pscn)
             //    LOGG(10, "Shutdown %s be in progress", (bufferId != _bidBufferActivated) ? "MAY" : "may NOT");
             //    break;
             case NPPN_FILECLOSED:
-                _sesIsDirty = true;
-                if (_appReady && !_sesLoading && gCfg.autoSaveEnabled()) {
+                if (_appReady && !_sesLoading && cfg::getBool(kAutomaticSave)) {
                     _shutdownTimer = ::time(NULL);
-                    LOGG(10, "Save session in %i seconds if no shutdown", gCfg.getSaveDelay());
+                    LOGG(10, "Save session in %i seconds if no shutdown", cfg::getInt(kSessionSaveDelay));
                 }
                 break;
             case NPPN_BUFFERACTIVATED:
@@ -159,10 +156,10 @@ void app_onNotify(SCNotification *pscn)
                 if (_appReady && !_sesLoading) {
                     app_showSessionInNppBars();
                     if (_bidFileOpened == bufferId) { // buffer activated immediately after NPPN_FILEOPENED
-                        if (gCfg.globalBookmarksEnabled()) {
+                        if (cfg::getBool(kUseGlobalProperties)) {
                             prp::updateDocumentFromGlobal(_bidFileOpened);
                         }
-                        if (gCfg.autoSaveEnabled()) {
+                        if (cfg::getBool(kAutomaticSave)) {
                             app_saveSession(_sesCurIdx);
                         }
                     }
@@ -174,7 +171,7 @@ void app_onNotify(SCNotification *pscn)
 
     // Scintilla
     else if (pscn->nmhdr.hwndFrom == sys_getSciHandle(1) || pscn->nmhdr.hwndFrom == sys_getSciHandle(2)) {
-        if (gCfg.debug >= 10) {
+        if (cfg::getInt(kDebugLogLevel) >= 10) {
             switch (notificationCode) {
                 case SCN_SAVEPOINTREACHED: LOGSN("SCN_SAVEPOINTREACHED"); break;
                 case SCN_SAVEPOINTLEFT:    LOGSN("SCN_SAVEPOINTLEFT"); break;
@@ -183,13 +180,12 @@ void app_onNotify(SCNotification *pscn)
         }
         switch (notificationCode) {
             case SCN_SAVEPOINTLEFT:
-                _sesIsDirty = true;
-                if (gCfg.showInTitlebarEnabled()) {
+                if (cfg::getBool(kShowInTitlebar)) {
                     _titlebarTimer = ::time(NULL);
                 }
                 break;
             case SCN_MARGINCLICK:
-                if (_appReady && !_sesLoading && gCfg.autoSaveEnabled() && pscn->margin == NPP_BOOKMARK_MARGIN_ID) {
+                if (_appReady && !_sesLoading && cfg::getBool(kAutomaticSave) && pscn->margin == NPP_BOOKMARK_MARGIN_ID) {
                     _bookmarkTimer = ::time(NULL);
                 }
                 break;
@@ -199,7 +195,7 @@ void app_onNotify(SCNotification *pscn)
     // Timers
     if (_shutdownTimer > 0) {
         if (_appReady && !_sesLoading) {
-            if (::time(NULL) - _shutdownTimer > gCfg.getSaveDelay()) {
+            if (::time(NULL) - _shutdownTimer > cfg::getInt(kSessionSaveDelay)) {
                 _shutdownTimer = 0;
                 app_saveSession(_sesCurIdx);
             }
@@ -225,6 +221,14 @@ void app_onNotify(SCNotification *pscn)
             _bookmarkTimer = 0;
         }
     }
+    if (_settingsTimer > 0) {
+        if (::time(NULL) - _settingsTimer > cfg::getInt(kSettingsSavePoll)) {
+            if (cfg::isDirty()) {
+                cfg::saveSettings();
+            }
+            _settingsTimer = ::time(NULL);
+        }
+    }
 }
 
 /** Session Manager API. Handles messages from NPP or a plugin.
@@ -235,7 +239,7 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
     if (Message == NPPM_MSGTOPLUGIN) {
         INT si;
         SessionMgrApiData *api = (SessionMgrApiData*)lParam;
-        if (gCfg.debug >= 10) {
+        if (cfg::getInt(kDebugLogLevel) >= 10) {
             switch (api->message) {
                 case SESMGRM_SES_LOAD:     LOG("SESMGRM_SES_LOAD"); break;
                 case SESMGRM_SES_LOAD_PRV: LOG("SESMGRM_SES_LOAD_PRV"); break;
@@ -280,23 +284,23 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
                 app_getSessionFile(SI_CURRENT, (LPWSTR)api->wData);
                 break;
             case SESMGRM_CFG_GET_DIR:
-                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, gCfg.getSesDir());
+                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, cfg::getStr(kSessionDirectory));
                 break;
             case SESMGRM_CFG_SET_DIR:
-                if (!gCfg.setSesDir((LPWSTR)api->wData)) {
+                if (!cfg::setSessionDirectory((LPWSTR)api->wData)) {
                     api->iData = SESMGR_ERROR; // error creating directory
                 }
                 else {
-                    gCfg.save();
+                    cfg::saveSettings();
                     app_readSessionDirectory();
                 }
                 break;
             case SESMGRM_CFG_GET_EXT:
-                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, gCfg.getSesExt());
+                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, cfg::getStr(kSessionExtension));
                 break;
             case SESMGRM_CFG_SET_EXT:
-                gCfg.setSesExt((LPWSTR)api->wData);
-                gCfg.save();
+                cfg::setSessionExtension((LPWSTR)api->wData);
+                cfg::saveSettings();
                 app_readSessionDirectory();
                 break;
         }
@@ -326,6 +330,7 @@ Session::Session(LPCWSTR sesName, FILETIME modTime)
 void app_readSessionDirectory()
 {
     HANDLE hFind;
+    bool appReadyPrv;
     WIN32_FIND_DATAW ffd;
     WCHAR sesFileSpec[MAX_PATH];
     WCHAR sesName[SES_NAME_BUF_LEN];
@@ -347,19 +352,20 @@ void app_readSessionDirectory()
         resetSessions();
     }
     else { // on startup
-        gCfg.readCurrentName(sesCur);
-        gCfg.readPreviousName(sesPrv);
+        cfg::getStr(kCurrentSession, sesCur, SES_NAME_BUF_LEN);
+        cfg::getStr(kPreviousSession, sesPrv, SES_NAME_BUF_LEN);
     }
     // Create the file spec.
-    ::StringCchCopyW(sesFileSpec, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCopyW(sesFileSpec, MAX_PATH, cfg::getStr(kSessionDirectory));
     ::StringCchCatW(sesFileSpec, MAX_PATH, L"*");
-    ::StringCchCatW(sesFileSpec, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCatW(sesFileSpec, MAX_PATH, cfg::getStr(kSessionExtension));
     // Loop over files in the session directory, save each in the vector.
     hFind = ::FindFirstFileW(sesFileSpec, &ffd);
     if (hFind == INVALID_HANDLE_VALUE) {
         _sesCurIdx = SI_DEFAULT;
         return;
     }
+    appReadyPrv = _appReady;
     _appReady = false;
     do {
         ::StringCchCopyW(sesName, SES_NAME_BUF_LEN, ffd.cFileName);
@@ -372,7 +378,7 @@ void app_readSessionDirectory()
     DWORD lastError = ::GetLastError();
     ::FindClose(hFind);
     // Sort before indexing.
-    if (gCfg.sortAlphaEnabled()) {
+    if (cfg::isSortAlpha()) {
         std::sort(_sessions.begin(), _sessions.end(), sortByAlpha);
     }
     else {
@@ -381,14 +387,14 @@ void app_readSessionDirectory()
     // Assign session indexes. If a session was current/previous try to make it
     // current/previous again else use the default session.
     indexSessions();
-    _sesDefIdx = app_getSessionIndex(gCfg.getDefaultName());
+    _sesDefIdx = app_getSessionIndex(cfg::getStr(kDefaultSession));
     _sesCurIdx = app_getSessionIndex(sesCur);
     _sesPrvIdx = app_getSessionIndex(sesPrv);
 
     if (lastError != ERROR_NO_MORE_FILES) {
         msg::error(lastError, L"%s: Error reading session files \"%s\".", _W(__FUNCTION__), sesFileSpec);
     }
-    _appReady = true;
+    _appReady = appReadyPrv;
 }
 
 /** Sorts the _sessions vector ascending alphabetically. */
@@ -415,18 +421,18 @@ bool sortByDate(const Session s1, const Session s2)
     true. Closes the previous session before loading si, unless lwc is true. */
 void app_loadSession(INT si)
 {
-    app_loadSession(si, gCfg.loadIntoCurrentEnabled(), gCfg.loadWithoutClosingEnabled());
+    app_loadSession(si, cfg::getBool(kLoadIntoCurrent), cfg::getBool(kLoadWithoutClosing));
 }
 void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad)
 {
     WCHAR sesFile[MAX_PATH];
     HWND hNpp = sys_getNppHandle();
 
-    LOGF("%i, %i, %i, %i", si, lic, lwc, firstLoad);
-
     if (!_appReady || _sesLoading) {
         return;
     }
+
+    LOGF("%i, %i, %i, %i", si, lic, lwc, firstLoad);
 
     si = normalizeSessionIndex(si);
     if (si <= SI_NONE) {
@@ -434,17 +440,17 @@ void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad)
     }
 
     if (!lic && _sesCurIdx > SI_NONE && !firstLoad) {
-        if (gCfg.autoSaveEnabled()) {
+        if (cfg::getBool(kAutomaticSave)) {
             app_saveSession(_sesCurIdx); // Save the current session before closing it
         }
         _sesPrvIdx = _sesCurIdx;
-        gCfg.savePreviousName(_sessions[_sesPrvIdx].name); // Write new previous session name to ini file
+        cfg::putStr(kPreviousSession, _sessions[_sesPrvIdx].name); // save new previous session name
     }
 
     _sesLoading = true;
 
     app_getSessionFile(si, sesFile);
-    if (gCfg.globalBookmarksEnabled()) {
+    if (cfg::getBool(kUseGlobalProperties)) {
         prp::updateSessionFromGlobal(sesFile);
     }
 
@@ -459,7 +465,7 @@ void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad)
     _sesLoading = false;
     if (!lic) {
         _sesCurIdx = si;
-        gCfg.saveCurrentName(_sessions[si].name); // Write new current session name to ini file
+        cfg::putStr(kCurrentSession, _sessions[si].name); // save new current session name
         app_showSessionInNppBars();
     }
 }
@@ -467,12 +473,10 @@ void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad)
 /** Saves the session at index si. Makes it the current index. */
 void app_saveSession(INT si)
 {
-    LOGF("%i", si);
-
     if (!_appReady || _sesLoading) {
         return;
     }
-    LOGG(10, "Session %s dirty", _sesIsDirty ? "IS" : "is NOT"); // XXX experimental
+    LOGF("%i", si);
     si = normalizeSessionIndex(si);
     if (si <= SI_NONE) {
         return;
@@ -481,10 +485,9 @@ void app_saveSession(INT si)
     app_getSessionFile(si, sesFile);
     ::SendMessageW(sys_getNppHandle(), NPPM_SAVECURRENTSESSION, 0, (LPARAM)sesFile); // Save session
     _sesCurIdx = si;
-    if (gCfg.globalBookmarksEnabled()) {
+    if (cfg::getBool(kUseGlobalProperties)) {
         prp::updateGlobalFromSession(sesFile);
     }
-    _sesIsDirty = false;
 }
 
 /** @return true if session index si is valid, else false */
@@ -507,7 +510,7 @@ INT app_getSessionIndex(LPCWSTR name)
     }
     INT i = 0;
     for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
-        if (::lstrcmpW(it->name, name) == 0) {
+        if (::wcscmp(it->name, name) == 0) {
             return i;
         }
         ++i;
@@ -538,7 +541,7 @@ INT app_getDefaultIndex()
 void app_resetPreviousIndex()
 {
     _sesPrvIdx = _sesDefIdx;
-    gCfg.savePreviousName(gCfg.getDefaultName());
+    cfg::putStr(kPreviousSession, cfg::getStr(kDefaultSession));
     app_showSessionInNppBars();
 }
 
@@ -551,14 +554,14 @@ void app_renameSession(INT si, LPWSTR newName)
         ::StringCchCopyW(_sessions[si].name, SES_NAME_BUF_LEN, newName);
         if (si == _sesCurIdx) {
             curOrPrv = true;
-            gCfg.saveCurrentName(newName);
+            cfg::putStr(kCurrentSession, newName);
         }
         if (si == _sesPrvIdx) {
             curOrPrv = true;
-            gCfg.savePreviousName(newName);
+            cfg::putStr(kPreviousSession, newName);
         }
         if (si == _sesDefIdx) {
-            gCfg.saveDefaultName(newName);
+            cfg::putStr(kDefaultSession, newName);
         }
         if (curOrPrv) {
             app_showSessionInNppBars();
@@ -577,9 +580,9 @@ LPCWSTR app_getSessionName(INT si)
 /** Copies into buf the full pathname of the session at index si. */
 void app_getSessionFile(INT si, LPWSTR buf)
 {
-    ::StringCchCopyW(buf, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCopyW(buf, MAX_PATH, cfg::getStr(kSessionDirectory));
     ::StringCchCatW(buf, MAX_PATH, app_getSessionName(si));
-    ::StringCchCatW(buf, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCatW(buf, MAX_PATH, cfg::getStr(kSessionExtension));
 }
 
 /** @return a pointer to the Session object at index si */
@@ -599,10 +602,10 @@ void app_confirmDefaultSession()
 
     ::StringCchCopyW(oldFile, MAX_PATH, sys_getCfgDir());
     ::StringCchCatW(oldFile, MAX_PATH, L"default");
-    ::StringCchCatW(oldFile, MAX_PATH, gCfg.getSesExt());
-    ::StringCchCopyW(newFile, MAX_PATH, gCfg.getSesDir());
-    ::StringCchCatW(newFile, MAX_PATH, gCfg.getDefaultName());
-    ::StringCchCatW(newFile, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCatW(oldFile, MAX_PATH, cfg::getStr(kSessionExtension));
+    ::StringCchCopyW(newFile, MAX_PATH, cfg::getStr(kSessionDirectory));
+    ::StringCchCatW(newFile, MAX_PATH, cfg::getStr(kDefaultSession));
+    ::StringCchCatW(newFile, MAX_PATH, cfg::getStr(kSessionExtension));
     if (pth::fileExists(oldFile)) {
         if (!::CopyFileW(oldFile, newFile, TRUE)) {
             pth::createFileIfMissing(newFile, SES_DEFAULT_CONTENTS);
@@ -625,8 +628,8 @@ void app_showSessionInNppBars()
 
     WCHAR buf1[MAX_PATH];
     WCHAR buf2[MAX_PATH];
-    bool sbar = gCfg.showInStatusbarEnabled();
-    bool tbar = gCfg.showInTitlebarEnabled();
+    bool sbar = cfg::getBool(kShowInStatusbar);
+    bool tbar = cfg::getBool(kShowInTitlebar);
 
     if (sbar || tbar) {
         LOGF("");
@@ -649,17 +652,18 @@ void app_showSessionInNppBars()
     }
 }
 
-/** Removes all favorites from the settings file then adds all the currently
-    marked favorite sessions. */
+/** Removes all favorites from settings then adds all the currently marked
+    favorite sessions. */
 void app_updateFavorites()
 {
-    INT favIdx = 1;
-
-    gCfg.deleteFavorites();
+    INT i = 0;
+    mnu_clearFavorites();
+    cfg::deleteChildren(kFavorites);
     ctx::deleteFavorites();
     for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
         if (it->isFavorite) {
-            gCfg.addFavorite(favIdx++, it->name);
+            mnu_addFavorite(i++, it->name);
+            cfg::addChild(kFavorites, it->name);
             ctx::addFavorite(it->name);
         }
     }
@@ -692,10 +696,10 @@ void onNppReady()
     WCHAR name[MAX_PATH];
     name[0] = 0;
     _appReady = true;
-    if (gCfg.autoLoadEnabled()) {
-        gCfg.readPreviousName(name);
+    if (cfg::getBool(kAutomaticLoad)) {
+        cfg::getStr(kPreviousSession, name, MAX_PATH);
         _sesPrvIdx = app_getSessionIndex(name);
-        gCfg.readCurrentName(name);
+        cfg::getStr(kCurrentSession, name, MAX_PATH);
         if (name[0] != 0) {
             /* On startup, pass lic=false because there is no current session here,
             and pass lwc=true so we don't close files opened via the NPP command line. */

@@ -10,9 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgDelete.h
-    @copyright Copyright 2011,2014 Michael Foster <http://mfoster.com/npp/>
-
-    The "Delete Session" dialog.
+    @copyright Copyright 2011,2014,2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_DLGDELETE_H

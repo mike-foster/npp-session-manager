@@ -10,14 +10,13 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgSettings.cpp
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 
     The "Settings" dialog.
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "DlgSettings.h"
 #include "Util.h"
 #include "ContextMenu.h"
@@ -88,7 +87,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             case IDC_CFG_CHK_CTXM:
                 if (!_inInit && ntfy == BN_CLICKED) {
                     _opChanged = true;
-                    if (gCfg.useContextMenuEnabled() && !dlg::getCheck(hDlg, IDC_CFG_CHK_CTXM)) {
+                    if (cfg::getBool(kUseContextMenu) && !dlg::getCheck(hDlg, IDC_CFG_CHK_CTXM)) {
                         ctx::unload();
                     }
                 }
@@ -134,7 +133,7 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
 namespace {
 
 /** Determines minimum dialog size. Populates controls with current values from
-    gCfg. Resizes, centers and displays the dialog window. */
+    settings. Resizes, centers and displays the dialog window. */
 void onInit(HWND hDlg)
 {
     RECT r;
@@ -148,21 +147,20 @@ void onInit(HWND hDlg)
         _minHeight = r.bottom - r.top;
     }
     // init control values
-    dlg::setCheck(hDlg, IDC_CFG_CHK_ASV, gCfg.autoSaveEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_ALD, gCfg.autoLoadEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_LIC, gCfg.loadIntoCurrentEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_LWC, gCfg.loadWithoutClosingEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, gCfg.showInTitlebarEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, gCfg.showInStatusbarEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_GBKM, gCfg.globalBookmarksEnabled());
-    dlg::setCheck(hDlg, IDC_CFG_CHK_CTXM, gCfg.useContextMenuEnabled());
-    dlg::setText(hDlg, IDC_CFG_ETX_DIR, gCfg.getSesDir());
-    dlg::setText(hDlg, IDC_CFG_ETX_EXT, gCfg.getSesExt());
+    dlg::setCheck(hDlg, IDC_CFG_CHK_ASV,  cfg::getBool(kAutomaticSave));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_ALD,  cfg::getBool(kAutomaticLoad));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_LIC,  cfg::getBool(kLoadIntoCurrent));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_LWC,  cfg::getBool(kLoadWithoutClosing));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_SITB, cfg::getBool(kShowInTitlebar));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_SISB, cfg::getBool(kShowInStatusbar));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_GBKM, cfg::getBool(kUseGlobalProperties));
+    dlg::setCheck(hDlg, IDC_CFG_CHK_CTXM, cfg::getBool(kUseContextMenu));
+    dlg::setText(hDlg, IDC_CFG_ETX_DIR, cfg::getStr(kSessionDirectory));
+    dlg::setText(hDlg, IDC_CFG_ETX_EXT, cfg::getStr(kSessionExtension));
     // focus the first edit control
     dlg::focus(hDlg, IDC_CFG_ETX_DIR);
     // resize, center and show the window
-    INT w, h;
-    gCfg.readCfgDlgSize(&w, &h);
+    INT w = cfg::getInt(kSettingsDialogWidth), h = cfg::getInt(kSettingsDialogHeight);
     if (w <= 0 || h <= 0) {
         w = 0;
         h = 0;
@@ -183,30 +181,29 @@ INT onOk(HWND hDlg)
 
     if (_opChanged) {
         change = true;
-        gCfg.setAutoSave(dlg::getCheck(hDlg, IDC_CFG_CHK_ASV));
-        gCfg.setAutoLoad(dlg::getCheck(hDlg, IDC_CFG_CHK_ALD));
-        gCfg.setLoadIntoCurrent(dlg::getCheck(hDlg, IDC_CFG_CHK_LIC));
-        gCfg.setLoadWithoutClosing(dlg::getCheck(hDlg, IDC_CFG_CHK_LWC));
-        gCfg.setShowInTitlebar(dlg::getCheck(hDlg, IDC_CFG_CHK_SITB));
-        gCfg.setShowInStatusbar(dlg::getCheck(hDlg, IDC_CFG_CHK_SISB));
-        gCfg.setGlobalBookmarks(dlg::getCheck(hDlg, IDC_CFG_CHK_GBKM));
-        gCfg.setUseContextMenu(dlg::getCheck(hDlg, IDC_CFG_CHK_CTXM));
+        cfg::putBool(kAutomaticSave, dlg::getCheck(hDlg, IDC_CFG_CHK_ASV));
+        cfg::putBool(kAutomaticLoad, dlg::getCheck(hDlg, IDC_CFG_CHK_ALD));
+        cfg::putBool(kLoadIntoCurrent, dlg::getCheck(hDlg, IDC_CFG_CHK_LIC));
+        cfg::putBool(kLoadWithoutClosing, dlg::getCheck(hDlg, IDC_CFG_CHK_LWC));
+        cfg::putBool(kShowInTitlebar, dlg::getCheck(hDlg, IDC_CFG_CHK_SITB));
+        cfg::putBool(kShowInStatusbar, dlg::getCheck(hDlg, IDC_CFG_CHK_SISB));
+        cfg::putBool(kUseGlobalProperties, dlg::getCheck(hDlg, IDC_CFG_CHK_GBKM));
+        cfg::putBool(kUseContextMenu, dlg::getCheck(hDlg, IDC_CFG_CHK_CTXM));
     }
     if (_dirChanged) {
         change = true;
         dlg::getText(hDlg, IDC_CFG_ETX_DIR, buf, MAX_PATH);
-        if (!gCfg.setSesDir(buf)) {
+        if (!cfg::setSessionDirectory(buf)) {
             stat = 2; // error creating ses dir
         }
         dlg::getText(hDlg, IDC_CFG_ETX_EXT, buf, MAX_PATH);
-        gCfg.setSesExt(buf);
+        cfg::setSessionExtension(buf);
     }
 
     if (change) {
-        if (gCfg.save()) {
-            if (_dirChanged) {
-                app_readSessionDirectory();
-            }
+        cfg::saveSettings();
+        if (_dirChanged) {
+            app_readSessionDirectory();
         }
     }
     else {
@@ -221,7 +218,6 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
 {
     RECT r;
 
-    //LOGE(31, "Settings: w=%d, h=%d", dlgW, dlgH);
     if (dlgW == 0) {
         ::GetClientRect(hDlg, &r);
         dlgW = r.right;
@@ -235,7 +231,8 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     dlg::adjToEdge(hDlg, IDCANCEL, dlgW, dlgH, 1|2, IDC_CFG_BTN_CAN_XRO, IDC_CFG_BTN_YBO, true);
     // Save new dialog size
     ::GetWindowRect(hDlg, &r);
-    gCfg.saveCfgDlgSize(r.right - r.left, r.bottom - r.top);
+    cfg::putInt(kSettingsDialogWidth, r.right - r.left);
+    cfg::putInt(kSettingsDialogHeight, r.bottom - r.top);
 }
 
 /** Sets the minimum size the user can resize to. */

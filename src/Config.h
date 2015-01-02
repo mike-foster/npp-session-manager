@@ -10,9 +10,9 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Config.h
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 
-    The configuration (settings) object.
+    This is deprecated as of v1.2.
 */
 
 #ifndef NPP_PLUGIN_CONFIG_H
@@ -30,9 +30,8 @@ namespace NppPlugin {
 
 #define SORT_ORDER_ALPHA 1
 #define SORT_ORDER_DATE  2
-
-#define FIL_EXP_BUF_LEN 50
-#define FIL_EXP_MAX     100
+#define FILTER_BUF_LEN 50
+#define FILTERS_MAX    100
 
 #define CURRENT_MARK      0
 #define CURRENT_FAV_MARK  1
@@ -45,7 +44,7 @@ namespace NppPlugin {
 class SessionFilter
 {
   public:
-    WCHAR exp[FIL_EXP_BUF_LEN];
+    WCHAR exp[FILTER_BUF_LEN];
     SessionFilter(LPCWSTR filter);
 };
 
@@ -79,6 +78,7 @@ class Config
 
     // public properties
     INT debug;
+    bool iniFileLoaded; ///< for upgrading to xml
     WCHAR logFile[MAX_PATH];
     WCHAR markChars[7][3];
 
@@ -103,6 +103,7 @@ class Config
     bool loadIntoCurrentEnabled() { return _loadIntoCurrent; }
     void setLoadWithoutClosing(bool v) { _loadWithoutClosing = v; }
     bool loadWithoutClosingEnabled() { return _loadWithoutClosing; }
+    UINT getSortOrder() { return _sortOrder; }
     bool sortAlphaEnabled() { return _sortOrder == SORT_ORDER_ALPHA; }
     void setShowInStatusbar(bool v);
     bool showInStatusbarEnabled() { return _showInStatusbar; }

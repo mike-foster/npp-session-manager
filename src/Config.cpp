@@ -10,9 +10,9 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Config.cpp
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 
-    The configuration (settings) object.
+    This is deprecated as of v1.2.
 */
 
 #include "System.h"
@@ -98,7 +98,15 @@ namespace {
 void Config::load()
 {
     LPWSTR iniFile = sys_getIniFile();
-    pth::createFileIfMissing(iniFile, DEFAULT_INI_CONTENTS);
+
+    if (pth::fileExists(iniFile)) {
+        iniFileLoaded = true;
+    }
+    else {
+        // we must have already upgraded to xml
+        iniFileLoaded = false;
+        return;
+    }
 
     // session directory property
     _directory[0] = 0;
@@ -449,7 +457,7 @@ void Config::loadMarks()
         if (numStr[0] == 0) {
             ::StringCchCopyW(numStr, 7, defaults[i]);
         }
-        markChars[i][0] = _wtoi(numStr);
+        markChars[i][0] = ::_wtoi(numStr);
         markChars[i][1] = L'\t';
         markChars[i][2] = 0;
     }
@@ -460,20 +468,20 @@ void Config::loadMarks()
 /** SessionFilter constructor. */
 SessionFilter::SessionFilter(LPCWSTR filter)
 {
-    ::StringCchCopyW(exp, FIL_EXP_BUF_LEN, filter);
+    ::StringCchCopyW(exp, FILTER_BUF_LEN, filter);
 }
 
 /** Reads filters from the settings file. */
 void Config::loadFilters()
 {
     INT i;
-    WCHAR expBuf[FIL_EXP_BUF_LEN], prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
+    WCHAR expBuf[FILTER_BUF_LEN], prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
 
-    for (i = 1; i < FIL_EXP_MAX; ++i) {
+    for (i = 1; i < FILTERS_MAX; ++i) {
         ::StringCchCopyW(prpBuf, 6, INI_FIL_EXP_PFX);
         ::_itow_s(i, numBuf, 3, 10);
         ::StringCchCatW(prpBuf, 6, numBuf);
-        ::GetPrivateProfileStringW(INI_FILTER, prpBuf, NULL, expBuf, FIL_EXP_BUF_LEN, iniFile);
+        ::GetPrivateProfileStringW(INI_FILTER, prpBuf, NULL, expBuf, FILTER_BUF_LEN, iniFile);
         if (expBuf[0] == 0) {
             break;
         }
@@ -495,9 +503,9 @@ BOOL Config::saveFilters()
     WCHAR prpBuf[6], numBuf[3], *iniFile = sys_getIniFile();
 
     for (list<SessionFilter>::const_iterator it = _filters.begin(); it != _filters.end(); ++it) {
-        ::StringCchCopyW(prpBuf, FIL_EXP_BUF_LEN, INI_FIL_EXP_PFX);
+        ::StringCchCopyW(prpBuf, FILTER_BUF_LEN, INI_FIL_EXP_PFX);
         ::_itow_s(i, numBuf, 3, 10);
-        ::StringCchCatW(prpBuf, FIL_EXP_BUF_LEN, numBuf);
+        ::StringCchCatW(prpBuf, FILTER_BUF_LEN, numBuf);
         status = ::WritePrivateProfileStringW(INI_FILTER, prpBuf, it->exp, iniFile);
         if (status == FALSE) {
             break;
@@ -528,7 +536,7 @@ void Config::addFilter(LPCWSTR filter)
     INT i = 1;
     if (filter && *filter) {
         for (list<SessionFilter>::iterator it = _filters.begin(); it != _filters.end(); ++it) {
-            if (::lstrcmpW(it->exp, filter) == 0) {
+            if (::wcscmp(it->exp, filter) == 0) {
                 if (i == 1) {
                     return; // filter is already at the top of the list
                 }

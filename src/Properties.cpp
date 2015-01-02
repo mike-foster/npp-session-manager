@@ -10,17 +10,21 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Properties.cpp
-    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2014,2015 Michael Foster <http://mfoster.com/npp/>
 
-    Implements global file properties.
+    Notepad++ saves a file's bookmarks (and other properties) in the session
+    file, so the same file in different sessions will not have the same
+    bookmarks. Session Manager can keep files' bookmarks (and a little more)
+    synchronized across different sessions. These are referred to as "global
+    properties". The file "global.xml", in the Session Manager configuration
+    directory, stores bookmarks, firstVisibleLine and language for each unique
+    pathname in all sessions.
 */
 
 #include "System.h"
 #include "Properties.h"
-#include "Config.h"
 #include "Util.h"
 #include "utf8\unchecked.h"
-#include "xml\tinyxml2.h"
 
 //------------------------------------------------------------------------------
 
@@ -56,7 +60,9 @@ namespace api {
 
 void prp_init()
 {
-    removeMissingFilesFromGlobal();
+    if (cfg::getBool(kCleanGlobalProperties)) {
+        removeMissingFilesFromGlobal();
+    }
 }
 
 } // end namespace NppPlugin::api
@@ -65,73 +71,39 @@ void prp_init()
 
 namespace prp {
 
-/*
-Example session file:
-
-<NotepadPlus>
-    <Session activeView="0">
-        <mainView activeIndex="0">
-            <File firstVisibleLine="444" xOffset="0" scrollWidth="1696" startPos="14583" endPos="14583" selMode="0" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\SessionMgr.cpp">
-                <Mark line="312" />
-                <Mark line="466" />
-            </File>
-        </mainView>
-        <subView activeIndex="0">
-            <File firstVisibleLine="451" xOffset="0" scrollWidth="1168" startPos="12528" endPos="12528" selMode="0" lang="C++" encoding="-1" filename="C:\prj\npp-session-manager_global-marks\src\xml\tinyxml2.h">
-                <Mark line="483" />
-            </File>
-        </subView>
-    </Session>
-</NotepadPlus>
-
-Example global.xml file:
-
-<NotepadPlus>
-    <FileProperties>
-        <File firstVisibleLine="444" lang="C++" filename="C:\prj\npp-session-manager_global-marks\src\SessionMgr.cpp">
-            <Mark line="312" />
-            <Mark line="466" />
-        </File>
-        <File firstVisibleLine="451" lang="C++" filename="C:\prj\npp-session-manager_global-marks\src\xml\tinyxml2.h">
-            <Mark line="483" />
-        </File>
-    </FileProperties>
-</NotepadPlus>
-*/
-
 /** Updates global file properties from local (session) file properties.
     After a session is saved, the global bookmarks, firstVisibleLine and
     language are updated from the session properties. */
 void updateGlobalFromSession(LPWSTR sesFile)
 {
     DWORD lastErr;
+    tXmlError xmlErr;
     const char *target;
-    tinyxml2::XMLError xmlErr;
 
     LOGF("%S", sesFile);
 
     // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
+    tXmlDoc globalDoc;
     xmlErr = globalDoc.LoadFile(sys_getPropsFile());
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
-    tinyxml2::XMLElement *globalPropsEle, *globalFileEle, *globalMarkEle;
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
+    tXmlEleP globalPropsEle, globalFileEle, globalMarkEle;
+    tXmlHnd globalDocHnd(&globalDoc);
     globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
 
     // Load the session file (file properties local to a session)
-    tinyxml2::XMLDocument localDoc;
+    tXmlDoc localDoc;
     xmlErr = localDoc.LoadFile(sesFile);
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
-    tinyxml2::XMLElement *localViewEle, *localFileEle, *localMarkEle;
-    tinyxml2::XMLHandle localDocHnd(&localDoc);
+    tXmlEleP localViewEle, localFileEle, localMarkEle;
+    tXmlHnd localDocHnd(&localDoc);
 
     // Iterate over the local View elements
     localViewEle = localDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_SESSION).FirstChildElement(XN_MAINVIEW).ToElement();
@@ -180,7 +152,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
     }
     // Save changes to the properties file
     xmlErr = globalDoc.SaveFile(sys_getPropsFile());
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
     }
@@ -193,34 +165,34 @@ void updateSessionFromGlobal(LPWSTR sesFile)
 {
     char *buf;
     DWORD lastErr;
-    const char *target;
+    tXmlError xmlErr;
     bool save = false;
-    tinyxml2::XMLError xmlErr;
+    const char *target;
 
     LOGF("%S", sesFile);
 
     // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
+    tXmlDoc globalDoc;
     xmlErr = globalDoc.LoadFile(sys_getPropsFile());
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
-    tinyxml2::XMLElement *globalPropsEle, *globalFileEle, *globalMarkEle;
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
+    tXmlEleP globalPropsEle, globalFileEle, globalMarkEle;
+    tXmlHnd globalDocHnd(&globalDoc);
     globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
 
     // Load the session file (file properties local to a session)
-    tinyxml2::XMLDocument localDoc;
+    tXmlDoc localDoc;
     xmlErr = localDoc.LoadFile(sesFile);
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
-    tinyxml2::XMLElement *localViewEle, *localFileEle, *localMarkEle;
-    tinyxml2::XMLHandle localDocHnd(&localDoc);
+    tXmlEleP localViewEle, localFileEle, localMarkEle;
+    tXmlHnd localDocHnd(&localDoc);
 
     // Iterate over the local View elements
     localViewEle = localDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_SESSION).FirstChildElement(XN_MAINVIEW).ToElement();
@@ -279,7 +251,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
         }
         // Save changes to the session file
         xmlErr = localDoc.SaveFile(sesFile);
-        if (xmlErr != tinyxml2::XML_SUCCESS) {
+        if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
             msg::error(lastErr, L"%s: Error %i saving session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         }
@@ -308,16 +280,16 @@ void updateDocumentFromGlobal(INT bufferId)
     ::WideCharToMultiByte(CP_UTF8, 0, pathname, -1, mbPathname, mbLen, NULL, NULL);
     LOGG(20, "File = %s", mbPathname);
     // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
-    tinyxml2::XMLError xmlErr = globalDoc.LoadFile(sys_getPropsFile());
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    tXmlDoc globalDoc;
+    tXmlError xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    if (xmlErr != kXmlSuccess) {
         DWORD lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         sys_free(mbPathname);
         return;
     }
-    tinyxml2::XMLElement *globalFileEle, *globalMarkEle;
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
+    tXmlEleP globalFileEle, globalMarkEle;
+    tXmlHnd globalDocHnd(&globalDoc);
     globalFileEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).FirstChildElement(XN_FILE).ToElement();
 
     // Find the global File element corresponding to mbPathname
@@ -398,23 +370,23 @@ void removeMissingFilesFromGlobal()
 {
     INT wLen;
     DWORD lastErr;
+    tXmlError xmlErr;
     bool save = false;
     LPWSTR wPathname;
     const char *mbPathname;
-    tinyxml2::XMLError xmlErr;
-    tinyxml2::XMLElement *propsEle, *fileEle, *currentFileEle;
+    tXmlEleP propsEle, fileEle, currentFileEle;
 
     LOGF("");
 
     // Load the properties file (global file properties)
-    tinyxml2::XMLDocument globalDoc;
+    tXmlDoc globalDoc;
     xmlErr = globalDoc.LoadFile(sys_getPropsFile());
-    if (xmlErr != tinyxml2::XML_SUCCESS) {
+    if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
-    tinyxml2::XMLHandle globalDocHnd(&globalDoc);
+    tXmlHnd globalDocHnd(&globalDoc);
     propsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
     fileEle = propsEle->FirstChildElement(XN_FILE);
 
@@ -444,7 +416,7 @@ void removeMissingFilesFromGlobal()
         }
         // Save changes to the properties file
         xmlErr = globalDoc.SaveFile(sys_getPropsFile());
-        if (xmlErr != tinyxml2::XML_SUCCESS) {
+        if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
             msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
         }

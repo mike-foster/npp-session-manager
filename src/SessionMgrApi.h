@@ -10,7 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      SessionMgrApi.h
-    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2014,2015 Michael Foster <http://mfoster.com/npp/>
 
     Session Manager API
 
@@ -94,5 +94,8 @@ typedef struct SessionMgrApiData_tag {
     @pre  iData = SESMGR_NULL
     @post iData = SESMGR_OK */
 #define SESMGRM_CFG_SET_EXT  (WM_APP + 10)
+
+/** TODO: Read/write access to favorites, filters and more settings.
+*/
 
 #endif // NPP_PLUGIN_SESSIONMGRAPI_H

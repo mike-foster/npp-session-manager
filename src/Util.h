@@ -10,31 +10,22 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Util.h
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_UTIL_H
 #define NPP_PLUGIN_UTIL_H
 
+#include "Settings.h"
+
 //------------------------------------------------------------------------------
 
 namespace NppPlugin {
 
-/* Debug log levels:
-  0     = no logging
-  >=1   = LOG and LOGF
-  1-9   = LOGE
-  10    = LOGG
-  11-19 = LOGE
-  20    = LOGG
-  21-29 = LOGE
-  30    = LOGG
-  31-39 = LOGE
-*/
 #define LOG(fmt, ...) msg::log(__FUNCTION__ ": " fmt, __VA_ARGS__)
 #define LOGF(fmt, ...) msg::log(__FUNCTION__ "(" fmt ")", __VA_ARGS__)
-#define LOGG(lvl, fmt, ...) if (gCfg.debug >= lvl) { LOG(fmt, __VA_ARGS__); }
-#define LOGE(lvl, fmt, ...) if (gCfg.debug == lvl) { LOG(fmt, __VA_ARGS__); }
+#define LOGG(lvl, fmt, ...) if (gDbgLvl >= lvl) { LOG(fmt, __VA_ARGS__); }
+#define LOGE(lvl, fmt, ...) if (gDbgLvl == lvl) { LOG(fmt, __VA_ARGS__); }
 #define LOGNN(ntf) LOG("%-20s\t%8i\t%i", ntf, bufferId, _bidBufferActivated)
 #define LOGSN(ntf) LOG("%-20s\t%8s\t%i", ntf, "", _bidBufferActivated)
 #define __W(x) L ## x

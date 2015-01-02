@@ -10,14 +10,13 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgDelete.cpp
-    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2013-2015 Michael Foster <http://mfoster.com/npp/>
 
     The "Delete Session" dialog.
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "DlgSessions.h"
 #include "DlgDelete.h"
 #include "Util.h"

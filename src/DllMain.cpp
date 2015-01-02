@@ -10,7 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DllMain.cpp
-    @copyright Copyright 2011,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2014,2015 Michael Foster <http://mfoster.com/npp/>
 
     The DLL entry point.
 */
@@ -18,6 +18,7 @@
 #include "System.h"
 #include "SessionMgr.h"
 #include "Menu.h"
+#include "Settings.h"
 #include "Properties.h"
 #include "ContextMenu.h"
 
@@ -48,6 +49,7 @@ BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
                 ctx_onUnload();
                 mnu_onUnload();
                 app_onUnload();
+                cfg_onUnload();
                 sys_onUnload();
             }
             break;

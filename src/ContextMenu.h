@@ -10,9 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      ContextMenu.h
-    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
-
-    Manages a Session Manager submenu in the context (right-click) menu.
+    @copyright Copyright 2014,2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_CONTEXTMENU_H

@@ -10,17 +10,20 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      ContextMenu.cpp
-    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2014,2015 Michael Foster <http://mfoster.com/npp/>
 
-    Manages a Session Manager submenu in the context (right-click) menu.
+    Session Manager creates a submenu in the context (right-click) menu if the
+    useContextMenu setting is enabled. The submenu is only created or updated
+    when a change is made to favorite sessions. Notepad++ must be restarted for
+    the changes to appear in the menus. The menu labels used in the context
+    submenu are the same as those used in the Plugins menu and favorite sessions
+    are listed after the About item.
 */
 
 #include "System.h"
 #include "ContextMenu.h"
-#include "Config.h"
 #include "Menu.h"
 #include "Util.h"
-#include "xml\tinyxml2.h"
 
 //------------------------------------------------------------------------------
 
@@ -42,12 +45,12 @@ namespace {
 #define XA_ITEMNAMEAS            "ItemNameAs"
 #define XA_ID                    "id"
 
-tinyxml2::XMLDocument *_pCtxXmlDoc = NULL;
-tinyxml2::XMLElement *_pCtxLastFav = NULL;
+tXmlDocP _pCtxXmlDoc = NULL;
+tXmlEleP _pCtxLastFav = NULL;
 
-tinyxml2::XMLElement* getFavSeparator();
-tinyxml2::XMLElement* createContextMenu(tinyxml2::XMLElement *sciCtxMnuEle);
-tinyxml2::XMLElement* newItemElement(LPCWSTR itemName = NULL);
+tXmlEleP getFavSeparator();
+tXmlEleP createContextMenu(tXmlEleP sciCtxMnuEle);
+tXmlEleP newItemElement(LPCWSTR itemName = NULL);
 
 } // end namespace
 
@@ -70,9 +73,9 @@ namespace ctx {
     @return a pointer to the separator element preceeding the favorite elements */
 void deleteFavorites()
 {
-    tinyxml2::XMLElement *ele, *sepEle, *favEle, *sciCtxMnuEle;
+    tXmlEleP ele, sepEle, favEle, sciCtxMnuEle;
 
-    if (gCfg.useContextMenuEnabled()) {
+    if (cfg::getBool(kUseContextMenu)) {
         CHAR mbMain[MNU_MAX_NAME_LEN];
         ::WideCharToMultiByte(CP_UTF8, 0, mnu_getMenuLabel(), -1, mbMain, MNU_MAX_NAME_LEN, NULL, NULL);
         sepEle = getFavSeparator();
@@ -89,13 +92,12 @@ void deleteFavorites()
     }
 }
 
-/** Writes favName to the 1-based idx'th fav element in NPP's contextMenu.xml
-    file. Does not save the file. */
+/** Adds a new favorite element in NPP's contextMenu.xml file. Does not save the file. */
 void addFavorite(LPCWSTR favName)
 {
-    tinyxml2::XMLElement *sepEle, *favEle, *sciCtxMnuEle;
+    tXmlEleP sepEle, favEle, sciCtxMnuEle;
 
-    if (gCfg.useContextMenuEnabled()) {
+    if (cfg::getBool(kUseContextMenu)) {
         if (!_pCtxLastFav) {
             sepEle = getFavSeparator();
             if (sepEle) {
@@ -117,12 +119,12 @@ void addFavorite(LPCWSTR favName)
 void saveContextMenu()
 {
     DWORD lastErr;
-    tinyxml2::XMLError xmlErr;
+    tXmlError xmlErr;
 
-    if (gCfg.useContextMenuEnabled()) {
+    if (cfg::getBool(kUseContextMenu)) {
         if (_pCtxXmlDoc) {
             xmlErr = _pCtxXmlDoc->SaveFile(sys_getContextMenuFile());
-            if (xmlErr != tinyxml2::XML_SUCCESS) {
+            if (xmlErr != kXmlSuccess) {
                 lastErr = ::GetLastError();
                 msg::error(lastErr, L"%s: Error %i saving the context menu file.", _W(__FUNCTION__), xmlErr);
             }
@@ -134,8 +136,8 @@ void unload()
 {
     if (_pCtxXmlDoc) {
         delete _pCtxXmlDoc;
+        _pCtxXmlDoc = NULL;
     }
-    _pCtxXmlDoc = NULL;
 }
 
 } // end namespace NppPlugin::ctx
@@ -147,26 +149,26 @@ namespace {
 /** Creates the entire context menu if it is not found. Saves the file if any
     changes are made.
     @return a pointer to the separator element preceeding the favorite elements */
-tinyxml2::XMLElement* getFavSeparator()
+tXmlEleP getFavSeparator()
 {
     DWORD lastErr;
+    tXmlError xmlErr;
     bool changed = false;
-    tinyxml2::XMLError xmlErr;
-    tinyxml2::XMLElement *sepEle;
+    tXmlEleP sepEle;
     CHAR mbMain[MNU_MAX_NAME_LEN], mbAbout[MNU_MAX_NAME_LEN];
 
     // Load the contextMenu file if not already loaded
     if (!_pCtxXmlDoc) {
         _pCtxXmlDoc = new tinyxml2::XMLDocument();
         xmlErr = _pCtxXmlDoc->LoadFile(sys_getContextMenuFile());
-        if (xmlErr != tinyxml2::XML_SUCCESS) {
+        if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
             msg::error(lastErr, L"%s: Error %i loading the context menu file.", _W(__FUNCTION__), xmlErr);
             return NULL;
         }
     }
-    tinyxml2::XMLElement *sciCtxMnuEle, *itemEle;
-    tinyxml2::XMLHandle ctxDocHnd(_pCtxXmlDoc);
+    tXmlEleP sciCtxMnuEle, itemEle;
+    tXmlHnd ctxDocHnd(_pCtxXmlDoc);
     sciCtxMnuEle = ctxDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_SCINTILLACONTEXTMENU).ToElement();
 
     // the main menu item label
@@ -204,9 +206,9 @@ tinyxml2::XMLElement* getFavSeparator()
 
 /** Creates our context menu. Does not save the file.
     @return a pointer to the separator element preceeding the favorite elements */
-tinyxml2::XMLElement* createContextMenu(tinyxml2::XMLElement *sciCtxMnuEle)
+tXmlEleP createContextMenu(tXmlEleP sciCtxMnuEle)
 {
-    tinyxml2::XMLElement *ele;
+    tXmlEleP ele;
 
     for (INT mnuIdx = 0; mnuIdx < MNU_BASE_MAX_ITEMS; ++mnuIdx) {
         ele = newItemElement(mnuIdx == 4 ? NULL : mnu_getMenuLabel(mnuIdx));
@@ -220,9 +222,9 @@ tinyxml2::XMLElement* createContextMenu(tinyxml2::XMLElement *sciCtxMnuEle)
 }
 
 /** @return a new Item element */
-tinyxml2::XMLElement* newItemElement(LPCWSTR itemName)
+tXmlEleP newItemElement(LPCWSTR itemName)
 {
-    tinyxml2::XMLElement *ele;
+    tXmlEleP ele;
     CHAR mbMain[MNU_MAX_NAME_LEN];
 
     ::WideCharToMultiByte(CP_UTF8, 0, mnu_getMenuLabel(), -1, mbMain, MNU_MAX_NAME_LEN, NULL, NULL);

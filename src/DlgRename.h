@@ -10,9 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgRename.h
-    @copyright Copyright 2011,2014 Michael Foster <http://mfoster.com/npp/>
-
-    The "Rename Session" dialog.
+    @copyright Copyright 2011,2014,2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_DLGRENAME_H

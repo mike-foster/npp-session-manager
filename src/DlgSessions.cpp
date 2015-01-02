@@ -10,13 +10,12 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgSessions.cpp
-    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2013-2015 Michael Foster <http://mfoster.com/npp/>
 
     The "Sessions" dialog.
 */
 
 #include "System.h"
-#include "Config.h"
 #include "SessionMgr.h"
 #include "DlgSessions.h"
 #include "DlgNew.h"
@@ -36,7 +35,7 @@ namespace {
 
 bool _inInit, _favoriteChanged;
 INT _minWidth = 0, _minHeight = 0;
-WCHAR _currentFilter[FIL_EXP_BUF_LEN];
+WCHAR _currentFilter[FILTER_BUF_LEN];
 
 void onInit(HWND hDlg);
 bool onOk(HWND hDlg);
@@ -134,7 +133,6 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             case IDCANCEL:
             case IDC_SES_BTN_CANCEL:
                 ::EndDialog(hDlg, 0);
-                gCfg.addFilter(_currentFilter);
                 if (_favoriteChanged) {
                     app_updateFavorites();
                 }
@@ -151,7 +149,7 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
             case IDC_SES_RAD_ALPHA:
             case IDC_SES_RAD_DATE:
                 if (!_inInit && ntfy == BN_CLICKED) {
-                    gCfg.saveSortOrder(dlg::getCheck(hDlg, IDC_SES_RAD_ALPHA) ? SORT_ORDER_ALPHA : SORT_ORDER_DATE);
+                    cfg::putInt(kSessionSortOrder, dlg::getCheck(hDlg, IDC_SES_RAD_ALPHA) ? SORT_ORDER_ALPHA : SORT_ORDER_DATE);
                     app_readSessionDirectory();
                     populateSessionsList(hDlg);
                 }
@@ -197,16 +195,14 @@ void onInit(HWND hDlg)
         _minWidth = r.right - r.left;
         _minHeight = r.bottom - r.top;
     }
-    dlg::setCheck(hDlg, IDC_SES_CHK_LIC, gCfg.loadIntoCurrentEnabled());
-    dlg::setCheck(hDlg, IDC_SES_CHK_LWC, gCfg.loadWithoutClosingEnabled());
-    alpha = gCfg.sortAlphaEnabled();
+    dlg::setCheck(hDlg, IDC_SES_CHK_LIC, cfg::getBool(kLoadIntoCurrent));
+    dlg::setCheck(hDlg, IDC_SES_CHK_LWC, cfg::getBool(kLoadWithoutClosing));
+    alpha = cfg::isSortAlpha();
     dlg::setCheck(hDlg, IDC_SES_RAD_ALPHA, alpha);
     dlg::setCheck(hDlg, IDC_SES_RAD_DATE, !alpha);
-
     populateFiltersList(hDlg);
     populateSessionsList(hDlg);
-    INT w, h;
-    gCfg.readSesDlgSize(&w, &h);
+    INT w = cfg::getInt(kSessionsDialogWidth), h = cfg::getInt(kSessionsDialogHeight);
     if (w <= 0 || h <= 0) {
         w = 0;
         h = 0;
@@ -222,7 +218,6 @@ void onInit(HWND hDlg)
 bool onOk(HWND hDlg)
 {
     ::EndDialog(hDlg, 1);
-    gCfg.addFilter(_currentFilter);
     if (_favoriteChanged) {
         app_updateFavorites();
     }
@@ -232,16 +227,18 @@ bool onOk(HWND hDlg)
 
 bool onFilterChange(HWND hDlg, WORD ntfy)
 {
-    WCHAR buf[FIL_EXP_BUF_LEN];
+    WCHAR buf[FILTER_BUF_LEN];
 
     if (ntfy == CBN_SELCHANGE) {
         dlg::getCbSelText(hDlg, IDC_SES_CMB_FIL, buf);
     }
     else {
-        dlg::getText(hDlg, IDC_SES_CMB_FIL, buf, FIL_EXP_BUF_LEN);
+        dlg::getText(hDlg, IDC_SES_CMB_FIL, buf, FILTER_BUF_LEN);
     }
-    if (buf[0] != 0 && ::lstrcmpW(_currentFilter, buf) != 0) {
-        ::StringCchCopyW(_currentFilter, FIL_EXP_BUF_LEN, buf);
+    if (buf[0] != 0 && ::wcscmp(_currentFilter, buf) != 0) {
+        ::StringCchCopyW(_currentFilter, FILTER_BUF_LEN, buf);
+        cfg::moveToTop(kFilters, _currentFilter);
+        populateFiltersList(hDlg);
         populateSessionsList(hDlg);
         if (ntfy == CBN_SELCHANGE) {
             _inInit = true;
@@ -256,7 +253,6 @@ bool onFilterChange(HWND hDlg, WORD ntfy)
 bool onPrevious(HWND hDlg)
 {
     ::EndDialog(hDlg, 1);
-    gCfg.addFilter(_currentFilter);
     if (_favoriteChanged) {
         app_updateFavorites();
     }
@@ -352,23 +348,29 @@ INT getSelSesIdx(HWND hDlg)
 void populateFiltersList(HWND hDlg)
 {
     HWND hCmb;
-    INT i = 1;
+    INT i = 0;
     LPCWSTR exp;
 
+    LOGF("");
     hCmb = ::GetDlgItem(hDlg, IDC_SES_CMB_FIL);
     if (hCmb) {
-        ::SendMessage(hCmb, CB_LIMITTEXT, FIL_EXP_BUF_LEN - 1, 0);
+        ::SendMessage(hCmb, CB_LIMITTEXT, FILTER_BUF_LEN - 1, 0);
         // XXX ::SendMessage(hCmb, CB_SETMINVISIBLE, 7, 0);
         ::SendMessage(hCmb, CB_RESETCONTENT, 0, 0);
         do {
-            exp = gCfg.getFilter(i);
+            exp = cfg::getStr(kFilters, i);
             if (exp) {
+                ++i;
                 ::SendMessage(hCmb, CB_ADDSTRING, 0, (LPARAM)exp);
             }
-            ++i;
         } while (exp != NULL);
-        ::SendMessage(hCmb, CB_SETCURSEL, 0, 0);
-        ::StringCchCopyW(_currentFilter, FIL_EXP_BUF_LEN, gCfg.getFilter(1));
+        if (i > 0) {
+            ::SendMessage(hCmb, CB_SETCURSEL, 0, 0);
+            ::StringCchCopyW(_currentFilter, FILTER_BUF_LEN, cfg::getStr(kFilters, 0));
+        }
+        else {
+            _currentFilter[0] = 0;
+        }
     }
 }
 
@@ -397,15 +399,15 @@ void getSessionMark(Session *ses, LPWSTR buf)
     sesPrvIdx = app_getPreviousIndex();
     sesDefIdx = app_getDefaultIndex();
     if (ses->isFavorite) {
-        if (ses->index == sesCurIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[CURRENT_FAV_MARK]);
-        else if (ses->index == sesPrvIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[PREVIOUS_FAV_MARK]);
-        else if (ses->index == sesDefIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[DEFAULT_FAV_MARK]);
-        else ::StringCchCopyW(buf, 3, gCfg.markChars[FAVORITE_MARK]);
+        if (ses->index == sesCurIdx) cfg::getMarkStr(kCurrentFavMark, buf);
+        else if (ses->index == sesPrvIdx) cfg::getMarkStr(kPreviousFavMark, buf);
+        else if (ses->index == sesDefIdx) cfg::getMarkStr(kDefaultFavMark, buf);
+        else cfg::getMarkStr(kFavoriteMark, buf);
     }
     else {
-        if (ses->index == sesCurIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[CURRENT_MARK]);
-        else if (ses->index == sesPrvIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[PREVIOUS_MARK]);
-        else if (ses->index == sesDefIdx) ::StringCchCopyW(buf, 3, gCfg.markChars[DEFAULT_MARK]);
+        if (ses->index == sesCurIdx) cfg::getMarkStr(kCurrentMark, buf);
+        else if (ses->index == sesPrvIdx) cfg::getMarkStr(kPreviousMark, buf);
+        else if (ses->index == sesDefIdx) cfg::getMarkStr(kDefaultMark, buf);
         else ::StringCchCopyW(buf, 3, L" \t");
     }
 }
@@ -419,7 +421,6 @@ bool populateSessionsList(HWND hDlg, INT sesSelIdx)
     INT tabStops[1] = {8};
 
     LOGF("%i", sesSelIdx);
-
     hLst = ::GetDlgItem(hDlg, IDC_SES_LST_SES);
     if (hLst) {
         ::SendMessage(hLst, WM_SETREDRAW, FALSE, 0);
@@ -463,7 +464,6 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     RECT r;
     int i, len;
 
-    //LOGE(31, "Sessions: w=%d, h=%d", dlgW, dlgH);
     if (dlgW == 0) {
         ::GetClientRect(hDlg, &r);
         dlgW = r.right;
@@ -474,7 +474,7 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     // Resize the session list
     dlg::adjToEdge(hDlg, IDC_SES_LST_SES, dlgW, dlgH, 4|8, IDC_SES_LST_WRO, IDC_SES_LST_HBO);
     // Move the buttons
-    INT btnCol[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_CANCEL};
+    INT btnCol[] = {IDC_SES_BTN_LOAD, IDC_SES_BTN_PRV, IDC_SES_BTN_SAVE, IDC_SES_BTN_NEW, IDC_SES_BTN_REN, IDC_SES_BTN_DEL, IDC_SES_BTN_FAV, IDC_SES_BTN_CANCEL};
     len = sizeof btnCol / sizeof INT;
     for (i = 0; i < len; ++i) {
         dlg::adjToEdge(hDlg, btnCol[i], dlgW, dlgH, 1, IDC_SES_BTN_XRO, 0);
@@ -491,10 +491,10 @@ void onResize(HWND hDlg, INT dlgW, INT dlgH)
     for (i = 0; i < len; ++i) {
         dlg::adjToEdge(hDlg, loadRow[i], dlgW, dlgH, 2, 0, IDC_SES_OPT_R2_YBO, true);
     }
-
     // Save new dialog size
     ::GetWindowRect(hDlg, &r);
-    gCfg.saveSesDlgSize(r.right - r.left, r.bottom - r.top);
+    cfg::putInt(kSessionsDialogWidth, r.right - r.left);
+    cfg::putInt(kSessionsDialogHeight, r.bottom - r.top);
 }
 
 /* Sets the minimum size the user can resize to. */

@@ -10,14 +10,13 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgRename.cpp
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 
     The "Rename Session" dialog.
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "DlgSessions.h"
 #include "DlgRename.h"
 #include "Util.h"
@@ -95,9 +94,9 @@ bool onOk(HWND hDlg)
         msg::show(L"Missing file name.", M_WARN);
         return false;
     }
-    ::StringCchCopyW(dstPathname, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCopyW(dstPathname, MAX_PATH, cfg::getStr(kSessionDirectory));
     ::StringCchCatW(dstPathname, MAX_PATH, newName);
-    ::StringCchCatW(dstPathname, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCatW(dstPathname, MAX_PATH, cfg::getStr(kSessionExtension));
 
     // Set the source file that will be renamed.
     app_getSessionFile(_dialogData->selectedSessionIndex, srcPathname);

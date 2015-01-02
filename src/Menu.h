@@ -10,9 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Menu.h
-    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
-
-    The NPP "Plugins" menu entries for Session Manager.
+    @copyright Copyright 2011,2013-2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_MENU_H
@@ -45,7 +43,7 @@ FuncItem* mnu_getItems(INT *pNum);
 LPCWSTR mnu_getMenuLabel(INT mnuIdx = -1);
 bool mnu_isFavorite(LPCWSTR ses);
 void mnu_clearFavorites();
-void mnu_addFavorite(INT prpIdx, LPCWSTR favName);
+void mnu_addFavorite(INT idx, LPCWSTR favName);
 
 } // end namespace NppPlugin
 

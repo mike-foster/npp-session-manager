@@ -10,14 +10,15 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Menu.cpp
-    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2013-2015 Michael Foster <http://mfoster.com/npp/>
 
-    The NPP "Plugins" menu entries for Session Manager.
+    Session Manager creates a submenu in the Notepad++ Plugins menu. Those items
+    can be customized via settings. Favorite sessions are listed after the About
+    item.
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "DlgSessions.h"
 #include "DlgSettings.h"
 #include "Menu.h"
@@ -33,7 +34,6 @@ namespace NppPlugin {
 
 namespace {
 
-#define PLUGIN_MENU_NAME L"&" PLUGIN_FULL_NAME
 #define PLUGIN_ABOUT PLUGIN_FULL_NAME SPACE_STR PLUGIN_VERSION L"\nA plugin for Notepad++\nhttp://mfoster.com/npp/"
 #define HELP_FILE_SUFFIX L"doc\\" PLUGIN_DLL_NAME L".html"
 
@@ -71,34 +71,34 @@ extern "C" {
 INT _menuItemsCount = MNU_BASE_MAX_ITEMS;
 WCHAR _menuMainLabel[MNU_MAX_NAME_LEN + 1];
 FuncItem _menuItems[] = {
-    { L"&Sessions...",   cbSessions,     0, false, NULL },
-    { L"Se&ttings...",   cbSettings,     0, false, NULL },
-    { L"Sa&ve current",  cbSaveCurrent,  0, false, NULL },
-    { L"Load &previous", cbLoadPrevious, 0, false, NULL },
-    { EMPTY_STR,         NULL,           0, false, NULL },
-    { L"&Help",          cbHelp,         0, false, NULL },
-    { L"&About...",      cbAbout,        0, false, NULL },
-    { EMPTY_STR,         NULL,           0, false, NULL },
-    { EMPTY_STR,         cbFav1,         0, false, NULL },
-    { EMPTY_STR,         cbFav2,         0, false, NULL },
-    { EMPTY_STR,         cbFav3,         0, false, NULL },
-    { EMPTY_STR,         cbFav4,         0, false, NULL },
-    { EMPTY_STR,         cbFav5,         0, false, NULL },
-    { EMPTY_STR,         cbFav6,         0, false, NULL },
-    { EMPTY_STR,         cbFav7,         0, false, NULL },
-    { EMPTY_STR,         cbFav8,         0, false, NULL },
-    { EMPTY_STR,         cbFav9,         0, false, NULL },
-    { EMPTY_STR,         cbFav10,        0, false, NULL },
-    { EMPTY_STR,         cbFav11,        0, false, NULL },
-    { EMPTY_STR,         cbFav12,        0, false, NULL },
-    { EMPTY_STR,         cbFav13,        0, false, NULL },
-    { EMPTY_STR,         cbFav14,        0, false, NULL },
-    { EMPTY_STR,         cbFav15,        0, false, NULL },
-    { EMPTY_STR,         cbFav16,        0, false, NULL },
-    { EMPTY_STR,         cbFav17,        0, false, NULL },
-    { EMPTY_STR,         cbFav18,        0, false, NULL },
-    { EMPTY_STR,         cbFav19,        0, false, NULL },
-    { EMPTY_STR,         cbFav20,        0, false, NULL }
+    { EMPTY_STR, cbSessions,     0, false, NULL },
+    { EMPTY_STR, cbSettings,     0, false, NULL },
+    { EMPTY_STR, cbSaveCurrent,  0, false, NULL },
+    { EMPTY_STR, cbLoadPrevious, 0, false, NULL },
+    { EMPTY_STR, NULL,           0, false, NULL },
+    { EMPTY_STR, cbHelp,         0, false, NULL },
+    { EMPTY_STR, cbAbout,        0, false, NULL },
+    { EMPTY_STR, NULL,           0, false, NULL },
+    { EMPTY_STR, cbFav1,         0, false, NULL },
+    { EMPTY_STR, cbFav2,         0, false, NULL },
+    { EMPTY_STR, cbFav3,         0, false, NULL },
+    { EMPTY_STR, cbFav4,         0, false, NULL },
+    { EMPTY_STR, cbFav5,         0, false, NULL },
+    { EMPTY_STR, cbFav6,         0, false, NULL },
+    { EMPTY_STR, cbFav7,         0, false, NULL },
+    { EMPTY_STR, cbFav8,         0, false, NULL },
+    { EMPTY_STR, cbFav9,         0, false, NULL },
+    { EMPTY_STR, cbFav10,        0, false, NULL },
+    { EMPTY_STR, cbFav11,        0, false, NULL },
+    { EMPTY_STR, cbFav12,        0, false, NULL },
+    { EMPTY_STR, cbFav13,        0, false, NULL },
+    { EMPTY_STR, cbFav14,        0, false, NULL },
+    { EMPTY_STR, cbFav15,        0, false, NULL },
+    { EMPTY_STR, cbFav16,        0, false, NULL },
+    { EMPTY_STR, cbFav17,        0, false, NULL },
+    { EMPTY_STR, cbFav18,        0, false, NULL },
+    { EMPTY_STR, cbFav19,        0, false, NULL },
+    { EMPTY_STR, cbFav20,        0, false, NULL }
 };
 
 } // end namespace
@@ -117,30 +117,25 @@ void mnu_onUnload()
 
 void mnu_init()
 {
-    INT mnuIdx, cfgIdx = 1;
+    INT mnuIdx, cfgIdx = 0;
 
-    // main
-    ::StringCchCopyW(_menuMainLabel, MNU_MAX_NAME_LEN, PLUGIN_MENU_NAME);
-    gCfg.getMenuLabel(-1, _menuMainLabel);
-    // sub
-    for (mnuIdx = 0; mnuIdx <= 3; ++mnuIdx) {
-        gCfg.getMenuLabel(cfgIdx, _menuItems[mnuIdx]._itemName);
-        ++cfgIdx;
-    }
-    for (mnuIdx = 5; mnuIdx <= 6; ++mnuIdx) {
-        gCfg.getMenuLabel(cfgIdx, _menuItems[mnuIdx]._itemName);
-        ++cfgIdx;
-    }
-    // fav
-    cfgIdx = 1;
+    // plugin menu
+    cfg::getStr(kMenuLabelMain, _menuMainLabel, MNU_MAX_NAME_LEN);
+    cfg::getStr(kMenuLabelSub1, _menuItems[0]._itemName, MNU_MAX_NAME_LEN);
+    cfg::getStr(kMenuLabelSub2, _menuItems[1]._itemName, MNU_MAX_NAME_LEN);
+    cfg::getStr(kMenuLabelSub3, _menuItems[2]._itemName, MNU_MAX_NAME_LEN);
+    cfg::getStr(kMenuLabelSub4, _menuItems[3]._itemName, MNU_MAX_NAME_LEN);
+    cfg::getStr(kMenuLabelSub5, _menuItems[5]._itemName, MNU_MAX_NAME_LEN);
+    cfg::getStr(kMenuLabelSub6, _menuItems[6]._itemName, MNU_MAX_NAME_LEN);
+    // favorites
+    cfgIdx = 0;
     for (mnuIdx = MNU_FIRST_FAV_IDX; mnuIdx <= MNU_LAST_FAV_IDX; ++mnuIdx) {
-        if (!gCfg.getFavMenuLabel(cfgIdx, _menuItems[mnuIdx]._itemName)) {
+        if (!cfg::getStr(kFavorites, cfgIdx++, _menuItems[mnuIdx]._itemName, MNU_MAX_NAME_LEN)) {
             break;
         }
-        ++cfgIdx;
         ++_menuItemsCount;
     }
-    if (cfgIdx > 1) {
+    if (cfgIdx > 0) {
         ++_menuItemsCount; // for the 2nd separator if any fav was added
     }
 }
@@ -180,7 +175,7 @@ bool mnu_isFavorite(LPCWSTR sesName)
             break;
         }
         pth::removeAmp(_menuItems[mnuIdx]._itemName, fav);
-        if (::lstrcmpW(sesName, fav) == 0) {
+        if (::wcscmp(sesName, fav) == 0) {
             return true;
         }
     }
@@ -195,11 +190,11 @@ void mnu_clearFavorites()
     }
 }
 
-/** Copies favName to the prpIdx'th (1-based) item in the favorites part of the
+/** Copies favName to the 0-based idx'th item in the favorites part of the
     _menuItems array. */
-void mnu_addFavorite(INT prpIdx, LPCWSTR favName)
+void mnu_addFavorite(INT idx, LPCWSTR favName)
 {
-    INT mnuIdx = MNU_FIRST_FAV_IDX + prpIdx - 1;
+    INT mnuIdx = MNU_FIRST_FAV_IDX + idx;
     ::StringCchCopyW(_menuItems[mnuIdx]._itemName, MNU_MAX_NAME_LEN, favName);
 }
 
@@ -251,8 +246,8 @@ extern "C" void cbAbout()
     ::StringCchCopyW(m, s, PLUGIN_ABOUT);
     ::StringCchCatW(m, s, L"\n\nConfiguration directory:\n");
     ::StringCchCatW(m, s, sys_getCfgDir());
-    ::StringCchCatW(m, s, L"\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You, for using Session Manager");
-    msg::show(m);
+    ::StringCchCatW(m, s, L"\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You! for using Session Manager");
+    msg::show(m, L"About Session Manager", MB_ICONINFORMATION);
 }
 
 void loadFavorite(INT mnuIdx)

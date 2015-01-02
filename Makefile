@@ -45,7 +45,7 @@ clean:
 #-------------------------------------------------------------------------------
 # Link obj files to make dll
 
-$(PRJ): $O\$(PRJ).obj $O\Config.obj $O\DlgDelete.obj $O\DlgNew.obj $O\DlgRename.obj \
+$(PRJ): $O\$(PRJ).obj $O\Config.obj $O\Settings.obj $O\DlgDelete.obj $O\DlgNew.obj $O\DlgRename.obj \
         $O\DlgSessions.obj $O\DlgSettings.obj $O\DllMain.obj $O\Menu.obj $O\Properties.obj \
         $O\ContextMenu.obj $O\System.obj $O\Util.obj $O\tinyxml2.obj $O\$(PRJ).res
     $(LD) $(LDFLAGS) $(LIBS) $?
@@ -57,6 +57,9 @@ $O\$(PRJ).obj: $S\$(@B).cpp $S\$(@B).h $(NPPDEPS)
     $(CXX) $(CXXFLAGS) %s
 
 $O\Config.obj: $S\$(@B).cpp $S\$(@B).h
+    $(CXX) $(CXXFLAGS) %s
+
+$O\Settings.obj: $S\$(@B).cpp $S\$(@B).h
     $(CXX) $(CXXFLAGS) %s
 
 $O\DlgDelete.obj: $S\$(@B).cpp $S\$(@B).h

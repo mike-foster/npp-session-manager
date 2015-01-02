@@ -10,9 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      Properties.h
-    @copyright Copyright 2014 Michael Foster <http://mfoster.com/npp/>
-
-    Implements global file properties.
+    @copyright Copyright 2014,2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_PROPERTIES_H

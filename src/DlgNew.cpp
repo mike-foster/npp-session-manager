@@ -10,14 +10,13 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      DlgNew.cpp
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 
     The "New Session" dialog.
 */
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "DlgSessions.h"
 #include "DlgNew.h"
 #include "Util.h"
@@ -112,9 +111,9 @@ bool onOk(HWND hDlg)
         msg::show(L"Missing file name.", M_WARN);
         return false;
     }
-    ::StringCchCopyW(dstPathname, MAX_PATH, gCfg.getSesDir());
+    ::StringCchCopyW(dstPathname, MAX_PATH, cfg::getStr(kSessionDirectory));
     ::StringCchCatW(dstPathname, MAX_PATH, newName);
-    ::StringCchCatW(dstPathname, MAX_PATH, gCfg.getSesExt());
+    ::StringCchCatW(dstPathname, MAX_PATH, cfg::getStr(kSessionExtension));
 
     if (dlg::getCheck(hDlg, IDC_NEW_RAD_EMPTY)) {
         succ = newAsEmpty(dstPathname);

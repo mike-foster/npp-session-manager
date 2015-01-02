@@ -10,7 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      System.h
-    @copyright Copyright 2011,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2014,2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_SYSTEM_H
@@ -40,6 +40,7 @@ void sys_init(NppData nppd);
 
 LPWSTR sys_getCfgDir();
 LPWSTR sys_getIniFile();
+LPWSTR sys_getSettingsFile();
 LPWSTR sys_getPropsFile();
 LPCWSTR sys_getContextMenuFile();
 HINSTANCE sys_getDllHandle();
