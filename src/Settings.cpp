@@ -18,7 +18,6 @@
 #include "System.h"
 #include "SessionMgr.h"
 #include "Menu.h"
-#include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
 #include <shlobj.h>
@@ -527,94 +526,8 @@ void afterLoad()
     if (!*cfg::getStr(kSessionDirectory)) { // If needed, set default session directory.
         cfg::setSessionDirectory(NULL, false);
     }
-    if (gCfg.iniFileLoaded) {
-        upgradeIniToXml();
-    }
     cfg::addChild(kFilters, L"*"); // Add "*" filter if it doesn't already exist.
     gDbgLvl = cfg::getInt(kDebugLogLevel); // Use a global for fastest access.
-}
-
-/** Upgrades from the old configuration (ini) to the new (xml) then deletes the
-    old file. */
-void upgradeIniToXml()
-{
-    INT i, w, h;
-    LPCWSTR ptr;
-    WCHAR buf[MAX_PATH];
-
-    // Settings
-    cfg::putBool(kAutomaticSave, gCfg.autoSaveEnabled());
-    cfg::putBool(kAutomaticLoad, gCfg.autoLoadEnabled());
-    cfg::putBool(kLoadIntoCurrent, gCfg.loadIntoCurrentEnabled());
-    cfg::putBool(kLoadWithoutClosing, gCfg.loadWithoutClosingEnabled());
-    cfg::putBool(kShowInTitlebar, gCfg.showInTitlebarEnabled());
-    cfg::putBool(kShowInStatusbar, gCfg.showInStatusbarEnabled());
-    cfg::putBool(kUseGlobalProperties, gCfg.globalBookmarksEnabled());
-    cfg::putBool(kUseContextMenu, gCfg.useContextMenuEnabled());
-    cfg::putInt(kSessionSaveDelay, (INT)gCfg.getSaveDelay());
-    cfg::setSessionDirectory(gCfg.getSesDir(), false);
-    cfg::setSessionExtension(gCfg.getSesExt(), false);
-    cfg::putInt(kCurrentMark, gCfg.markChars[CURRENT_MARK][0]);
-    cfg::putInt(kCurrentFavMark, gCfg.markChars[CURRENT_FAV_MARK][0]);
-    cfg::putInt(kPreviousMark, gCfg.markChars[PREVIOUS_MARK][0]);
-    cfg::putInt(kPreviousFavMark, gCfg.markChars[PREVIOUS_FAV_MARK][0]);
-    cfg::putInt(kDefaultMark, gCfg.markChars[DEFAULT_MARK][0]);
-    cfg::putInt(kDefaultFavMark, gCfg.markChars[DEFAULT_FAV_MARK][0]);
-    cfg::putInt(kFavoriteMark, gCfg.markChars[FAVORITE_MARK][0]);
-    cfg::putInt(kSessionSortOrder, gCfg.getSortOrder());
-    gCfg.readCurrentName(buf);
-    cfg::putStr(kCurrentSession, buf);
-    gCfg.readPreviousName(buf);
-    cfg::putStr(kPreviousSession, buf);
-    cfg::putStr(kDefaultSession, gCfg.getDefaultName());
-    gCfg.getMenuLabel(-1, buf);
-    cfg::putStr(kMenuLabelMain, buf);
-    gCfg.getMenuLabel(1, buf);
-    cfg::putStr(kMenuLabelSub1, buf);
-    gCfg.getMenuLabel(2, buf);
-    cfg::putStr(kMenuLabelSub2, buf);
-    gCfg.getMenuLabel(3, buf);
-    cfg::putStr(kMenuLabelSub3, buf);
-    gCfg.getMenuLabel(4, buf);
-    cfg::putStr(kMenuLabelSub4, buf);
-    gCfg.getMenuLabel(5, buf);
-    cfg::putStr(kMenuLabelSub5, buf);
-    gCfg.getMenuLabel(6, buf);
-    cfg::putStr(kMenuLabelSub6, buf);
-    gCfg.readSesDlgSize(&w, &h);
-    cfg::putInt(kSessionsDialogWidth, w);
-    cfg::putInt(kSessionsDialogHeight, h);
-    gCfg.readCfgDlgSize(&w, &h);
-    cfg::putInt(kSettingsDialogWidth, w);
-    cfg::putInt(kSettingsDialogHeight, h);
-    cfg::putInt(kDebugLogLevel, gCfg.debug);
-    gDbgLvl = gCfg.debug;
-    cfg::putStr(kDebugLogFile, gCfg.logFile);
-    // Favorites
-    i = 1;
-    cfg::deleteChildren(kFavorites);
-    do {
-        *buf = 0;
-        if (gCfg.getFavMenuLabel(i++, buf)) {
-            cfg::addChild(kFavorites, buf);
-        }
-    } while (*buf);
-    // Filters
-    i = 1;
-    cfg::deleteChildren(kFilters);
-    ptr = gCfg.getFilter(i++);
-    while (ptr) {
-        cfg::addChild(kFilters, ptr);
-        ptr = gCfg.getFilter(i++);
-    }
-    // Delete the settings.ini file
-    if (!::DeleteFileW(sys_getIniFile())) {
-        DWORD le = ::GetLastError();
-        msg::error(le, L"%s: Error deleting \"%s\" after upgrading to \"settings.xml\". Please delete the file manually.",
-            _W(__FUNCTION__), sys_getIniFile());
-    }
-    _isDirty = true;
-    LOG("Settings upgraded from ini to xml.");
 }
 
 } // end namespace

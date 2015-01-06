@@ -39,7 +39,6 @@ void sys_init(NppData nppd);
 //------------------------------------------------------------------------------
 
 LPWSTR sys_getCfgDir();
-LPWSTR sys_getIniFile();
 LPWSTR sys_getSettingsFile();
 LPWSTR sys_getPropsFile();
 LPCWSTR sys_getContextMenuFile();

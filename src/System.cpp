@@ -15,7 +15,6 @@
 
 #include "System.h"
 #include "SessionMgr.h"
-#include "Config.h"
 #include "Util.h"
 #include <strsafe.h>
 
@@ -39,7 +38,6 @@ HANDLE _hHeap;
 HINSTANCE _hDll;
 //UINT _nppVersion;
 LPWSTR _cfgDir;    ///< SessionMgr's config directory, includes trailing slash
-LPWSTR _iniFile;   ///< pathname of settings.ini
 LPWSTR _cfgFile;   ///< pathname of settings.xml
 LPWSTR _ctxFile;   ///< pathname of NPP's contextMenu.xml file
 LPWSTR _propsFile; ///< pathname of global.xml
@@ -58,7 +56,6 @@ void sys_onLoad(HINSTANCE hDLLInstance)
 void sys_onUnload()
 {
     sys_free(_cfgDir);
-    sys_free(_iniFile);
     sys_free(_cfgFile);
     sys_free(_ctxFile);
     sys_free(_propsFile);
@@ -74,7 +71,6 @@ void sys_init(NppData nppd)
 
     // Allocate buffers
     _cfgDir = (LPWSTR)sys_alloc(MAX_PATH);
-    _iniFile = (LPWSTR)sys_alloc(MAX_PATH);
     _cfgFile = (LPWSTR)sys_alloc(MAX_PATH);
     _ctxFile = (LPWSTR)sys_alloc(MAX_PATH);
     _propsFile = (LPWSTR)sys_alloc(MAX_PATH);
@@ -95,12 +91,6 @@ void sys_init(NppData nppd)
     ::StringCchCatW(_cfgDir, MAX_PATH, L"\\");
     ::CreateDirectoryW(_cfgDir, NULL);
 
-    // Get the settings.ini file pathname.
-    ::StringCchCopyW(_iniFile, MAX_PATH, _cfgDir);
-    ::StringCchCatW(_iniFile, MAX_PATH, INI_FILE_NAME);
-    // Load the ini config file if it hasn't yet been upgraded to xml.
-    gCfg.load();
-
     // Get the settings.xml file pathname.
     ::StringCchCopyW(_cfgFile, MAX_PATH, _cfgDir);
     ::StringCchCatW(_cfgFile, MAX_PATH, CFG_FILE_NAME);
@@ -119,11 +109,6 @@ void sys_init(NppData nppd)
 LPWSTR sys_getCfgDir()
 {
     return _cfgDir;
-}
-
-LPWSTR sys_getIniFile()
-{
-    return _iniFile;
 }
 
 LPWSTR sys_getSettingsFile()

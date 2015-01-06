@@ -17,10 +17,10 @@
 #define NPP_PLUGIN_VERSION_H
 
 
-#define RES_VERSION_B  1,2,0,0
-#define RES_VERSION_S  "1.2.0.0"
+#define RES_VERSION_B  1,2,1,0
+#define RES_VERSION_S  "1.2.1.0"
 #define PLUGIN_VERSION _W(RES_VERSION_S)
-#define RES_COPYRIGHT  "Copyright 2011-2014 Michael Foster. Distributed under the terms of the GNU GPL."
+#define RES_COPYRIGHT  "Copyright 2011-2015 Michael Foster. Distributed under the terms of the GNU GPL."
 
 
 #endif // NPP_PLUGIN_VERSION_H
