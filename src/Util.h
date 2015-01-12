@@ -26,6 +26,7 @@ namespace NppPlugin {
 #define LOGF(fmt, ...) msg::log(__FUNCTION__ "(" fmt ")", __VA_ARGS__)
 #define LOGG(lvl, fmt, ...) if (gDbgLvl >= lvl) { LOG(fmt, __VA_ARGS__); }
 #define LOGE(lvl, fmt, ...) if (gDbgLvl == lvl) { LOG(fmt, __VA_ARGS__); }
+#define LOGR(l1, l2, fmt, ...) if (gDbgLvl >= l1 && gDbgLvl <= l2) { LOG(fmt, __VA_ARGS__); }
 #define LOGNN(ntf) LOG("%-20s\t%8i\t%i", ntf, bufferId, _bidBufferActivated)
 #define LOGSN(ntf) LOG("%-20s\t%8s\t%i", ntf, "", _bidBufferActivated)
 #define __W(x) L ## x
@@ -66,10 +67,20 @@ void appendSlash(LPWSTR buf, size_t bufLen);
 bool dirExists(LPCWSTR path);
 bool fileExists(LPCWSTR pathname);
 void createFileIfMissing(LPCWSTR pathname, const char *contents);
-void removeAmp(LPCWSTR src, LPWSTR dst);
-void removeAmp(LPCSTR src, LPSTR dst);
 
 } // end namespace NppPlugin::pth
+
+//------------------------------------------------------------------------------
+/// @namespace NppPlugin::str Contains string utility functions.
+
+namespace str {
+
+void removeAmp(LPCWSTR src, LPWSTR dst);
+void removeAmp(LPCSTR src, LPSTR dst);
+bool wildcardMatchI(LPCWSTR wild, LPCWSTR str);
+bool wildcardMatch(LPCWSTR wild, LPCWSTR str);
+
+} // end namespace NppPlugin::str
 
 //------------------------------------------------------------------------------
 /// @namespace NppPlugin::dlg Contains functions for managing dialog controls.

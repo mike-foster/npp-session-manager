@@ -189,8 +189,13 @@ void createFileIfMissing(LPCWSTR pathname, const char *contents)
     }
 }
 
-/** Writes src to dst with ampersands removed.
-    TODO: possibly not unicode compatible */
+} // end namespace NppPlugin::pth
+
+//------------------------------------------------------------------------------
+
+namespace str {
+
+/** Writes src to dst with ampersands removed. */
 void removeAmp(LPCWSTR src, LPWSTR dst)
 {
     while (*src != 0) {
@@ -214,7 +219,57 @@ void removeAmp(LPCSTR src, LPSTR dst)
     *dst = 0;
 }
 
-} // end namespace NppPlugin::pth
+bool wildcardMatchI(LPCWSTR wild, LPCWSTR str)
+{
+    WCHAR lcWild[MAX_PATH], lcStr[MAX_PATH];
+
+    ::StringCchCopyW(lcWild, MAX_PATH, wild);
+    ::StringCchCopyW(lcStr, MAX_PATH, str);
+    ::CharLower(lcWild);
+    ::CharLower(lcStr);
+    return wildcardMatch(lcWild, lcStr);
+}
+
+// Originally written by Jack Handy and slightly modified by Mike Foster.
+// http://www.codeproject.com/Articles/1088/Wildcard-string-compare-globbing
+bool wildcardMatch(LPCWSTR wild, LPCWSTR str)
+{
+    LPCWSTR cp = NULL, mp = NULL;
+
+    while (*str && *wild != L'*') {
+        if (*wild != *str && *wild != L'?') {
+            return false;
+        }
+        wild++;
+        str++;
+    }
+
+    while (*str) {
+        if (*wild == L'*') {
+            if (!*++wild) {
+                return true;
+            }
+            mp = wild;
+            cp = str + 1;
+        }
+        else if (*wild == *str || *wild == L'?') {
+            wild++;
+            str++;
+        }
+        else {
+            wild = mp;
+            str = cp++;
+        }
+    }
+
+    while (*wild == L'*') {
+        wild++;
+    }
+
+    return !*wild;
+}
+
+} // end namespace NppPlugin::str
 
 //------------------------------------------------------------------------------
 

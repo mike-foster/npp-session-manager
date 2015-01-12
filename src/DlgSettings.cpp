@@ -32,9 +32,6 @@ namespace NppPlugin {
 
 namespace {
 
-LPCWSTR MSG_NO_CHANGES = L"There were no changes.";
-LPCWSTR MSG_DIR_ERROR = L"An error occurred while creating the new session directory.\nThis setting was not changed.";
-
 INT _minWidth = 0, _minHeight = 0;
 bool _inInit, _opChanged, _dirChanged;
 
@@ -59,11 +56,8 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
         switch (ctrl) {
             case IDOK:
                 okStatus = onOk(hDlg);
-                if (okStatus == 1) {
-                    msg::show(MSG_NO_CHANGES, M_INFO);
-                }
-                else if (okStatus == 2) {
-                    msg::show(MSG_DIR_ERROR, M_WARN);
+                if (okStatus == 2) {
+                    msg::show(L"An error occurred while creating the new session directory.\nThis setting was not changed.", M_WARN);
                 }
                 ::EndDialog(hDlg, 1);
                 status = TRUE;

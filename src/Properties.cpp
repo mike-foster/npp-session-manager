@@ -113,7 +113,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
         while (localFileEle) {
             // Find the global File element corresponding to the current local File element
             target = localFileEle->Attribute(XA_FILENAME);
-            LOGG(30, "File = %s", target);
+            LOGG(21, "File = %s", target);
             globalFileEle = globalPropsEle->FirstChildElement(XN_FILE);
             while (globalFileEle) {
                 if (globalFileEle->Attribute(XA_FILENAME, target)) {
@@ -130,7 +130,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
             globalFileEle->SetAttribute(XA_LANG, localFileEle->Attribute(XA_LANG));
             globalFileEle->SetAttribute(XA_FIRSTVISIBLELINE, localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             globalFileEle->DeleteChildren();
-            LOGG(30, "lang = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
+            LOGG(21, "lang = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             // Iterate over the local Mark elements for the current local File element
             localMarkEle = localFileEle->FirstChildElement(XN_MARK);
             while (localMarkEle) {
@@ -138,7 +138,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
                 globalFileEle->InsertEndChild(globalMarkEle);
                 // Update global Mark attributes with values from the current local Mark attributes
                 globalMarkEle->SetAttribute(XA_LINE, localMarkEle->Attribute(XA_LINE));
-                LOGG(30, "Mark = %s", localMarkEle->Attribute(XA_LINE));
+                LOGG(21, "Mark = %s", localMarkEle->Attribute(XA_LINE));
                 localMarkEle = localMarkEle->NextSiblingElement(XN_MARK);
             }
             localFileEle = localFileEle->NextSiblingElement(XN_FILE);
@@ -202,7 +202,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
         while (localFileEle) {
             // Find the global File element corresponding to the current local File element
             target = localFileEle->Attribute(XA_FILENAME);
-            LOGG(30, "File = %s", target);
+            LOGG(22, "File = %s", target);
             globalFileEle = globalPropsEle->FirstChildElement(XN_FILE);
             while (globalFileEle) {
                 if (globalFileEle->Attribute(XA_FILENAME, target)) {
@@ -222,7 +222,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                 sys_free(buf);
                 localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
                 localFileEle->DeleteChildren();
-                LOGG(30, "lang = '%s'", globalFileEle->Attribute(XA_LANG));
+                LOGG(22, "lang = '%s'", globalFileEle->Attribute(XA_LANG));
                 // Iterate over the global Mark elements for the current global File element
                 globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
                 while (globalMarkEle) {
@@ -230,7 +230,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                     localFileEle->InsertEndChild(localMarkEle);
                     // Update local Mark attributes with values from the current global Mark attributes
                     localMarkEle->SetAttribute(XA_LINE, globalMarkEle->Attribute(XA_LINE));
-                    LOGG(30, "Mark = %s", globalMarkEle->Attribute(XA_LINE));
+                    LOGG(22, "Mark = %s", globalMarkEle->Attribute(XA_LINE));
                     globalMarkEle = globalMarkEle->NextSiblingElement(XN_MARK);
                 }
             }

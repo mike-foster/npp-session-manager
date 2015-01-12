@@ -41,9 +41,6 @@ FuncItem* mnu_getItems(INT *pNum);
 //------------------------------------------------------------------------------
 
 LPCWSTR mnu_getMenuLabel(INT mnuIdx = -1);
-bool mnu_isFavorite(LPCWSTR ses);
-void mnu_clearFavorites();
-void mnu_addFavorite(INT idx, LPCWSTR favName);
 
 } // end namespace NppPlugin
 

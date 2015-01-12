@@ -52,6 +52,7 @@ enum SettingId {
     kDefaultMark,
     kDefaultFavMark,
     kFavoriteMark,
+    kUseFilterWildcards,
     kSessionSortOrder,
     kCurrentSession,
     kPreviousSession,
@@ -111,7 +112,7 @@ LPCWSTR getStr(ContainerId conId, INT childIndex);
 bool getStr(ContainerId conId, INT childIndex, LPWSTR buf, INT bufLen);
 tXmlEleP getChild(ContainerId conId, LPCSTR value);
 void addChild(ContainerId conId, LPCWSTR value, bool append = true);
-void moveToTop(ContainerId conId, LPCWSTR value);
+bool moveToTop(ContainerId conId, LPCWSTR value);
 void deleteChildren(ContainerId conId);
 
 // Application-specific functions built on top of the generic cfg functions.
@@ -121,6 +122,7 @@ void setShowInTitlebar(bool enable);
 void setShowInStatusbar(bool enable);
 void getMarkStr(SettingId cfgId, LPWSTR buf);
 bool isSortAlpha();
+bool isFavorite(LPCWSTR fav);
 
 } // end namespace NppPlugin::cfg
 

@@ -27,18 +27,19 @@
 // Control IDs
 #define IDC_SES_LST_SES         1000
 #define IDC_SES_CMB_FIL         1001
-#define IDC_SES_BTN_LOAD        1002
-#define IDC_SES_BTN_PRV         1003
-#define IDC_SES_BTN_SAVE        1004
-#define IDC_SES_BTN_NEW         1005
-#define IDC_SES_BTN_REN         1006
-#define IDC_SES_BTN_DEL         1007
-#define IDC_SES_BTN_FAV         1008
-#define IDC_SES_BTN_CANCEL      1009
-#define IDC_SES_RAD_ALPHA       1010
-#define IDC_SES_RAD_DATE        1011
-#define IDC_SES_CHK_LIC         1012
-#define IDC_SES_CHK_LWC         1013
+#define IDC_SES_CHK_WILD        1002
+#define IDC_SES_BTN_LOAD        1003
+#define IDC_SES_BTN_PRV         1004
+#define IDC_SES_BTN_SAVE        1005
+#define IDC_SES_BTN_NEW         1006
+#define IDC_SES_BTN_REN         1007
+#define IDC_SES_BTN_DEL         1008
+#define IDC_SES_BTN_FAV         1009
+#define IDC_SES_BTN_CANCEL      1010
+#define IDC_SES_RAD_ALPHA       1011
+#define IDC_SES_RAD_DATE        1012
+#define IDC_SES_CHK_LIC         1013
+#define IDC_SES_CHK_LWC         1014
 #define IDC_NEW_ETX_NAME        1100
 #define IDC_NEW_RAD_EMPTY       1101
 #define IDC_NEW_RAD_COPY        1102
@@ -93,6 +94,8 @@
 
 #define IDC_SES_OPT_R1_Y        (IDD_SES_H - IDC_SES_OPT_R1_YBO)
 #define IDC_SES_OPT_R2_Y        (IDD_SES_H - IDC_SES_OPT_R2_YBO)
+
+#define IDC_SES_CHK_WILD_Y      (IDC_MAR_1 + 2)
 
 #define IDC_SES_BTN_X           (IDD_SES_W - IDC_SES_BTN_XRO)
 #define IDC_SES_BTN_LOAD_Y      IDC_SES_LST_SES_Y

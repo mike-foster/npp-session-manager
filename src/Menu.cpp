@@ -164,40 +164,6 @@ LPCWSTR mnu_getMenuLabel(INT mnuIdx)
     return lbl;
 }
 
-/** @return true if sesName is in the favorites part of the _menuItems array. */
-bool mnu_isFavorite(LPCWSTR sesName)
-{
-    INT mnuIdx;
-    WCHAR fav[MNU_MAX_NAME_LEN];
-
-    for (mnuIdx = MNU_FIRST_FAV_IDX; mnuIdx <= MNU_LAST_FAV_IDX; ++mnuIdx) {
-        if (_menuItems[mnuIdx]._itemName[0] == 0) {
-            break;
-        }
-        pth::removeAmp(_menuItems[mnuIdx]._itemName, fav);
-        if (::wcscmp(sesName, fav) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/** Assigns an empty string to all items in the favorites part of the _menuItems array. */
-void mnu_clearFavorites()
-{
-    for (INT mnuIdx = MNU_FIRST_FAV_IDX; mnuIdx <= MNU_LAST_FAV_IDX; ++mnuIdx) {
-        _menuItems[mnuIdx]._itemName[0] = 0;
-    }
-}
-
-/** Copies favName to the 0-based idx'th item in the favorites part of the
-    _menuItems array. */
-void mnu_addFavorite(INT idx, LPCWSTR favName)
-{
-    INT mnuIdx = MNU_FIRST_FAV_IDX + idx;
-    ::StringCchCopyW(_menuItems[mnuIdx]._itemName, MNU_MAX_NAME_LEN, favName);
-}
-
 //------------------------------------------------------------------------------
 
 namespace {
@@ -246,40 +212,35 @@ extern "C" void cbAbout()
     ::StringCchCopyW(m, s, PLUGIN_ABOUT);
     ::StringCchCatW(m, s, L"\n\nConfiguration directory:\n");
     ::StringCchCatW(m, s, sys_getCfgDir());
-    ::StringCchCatW(m, s, L"\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You! for using Session Manager");
+    ::StringCchCatW(m, s, L"\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Jack Handy, for wildcardMatch\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You! for using Session Manager");
     msg::show(m, L"About Session Manager", MB_ICONINFORMATION);
 }
 
-void loadFavorite(INT mnuIdx)
+void loadFavorite(INT mnuOfs)
 {
-    INT sesIdx;
-    WCHAR sesName[MNU_MAX_NAME_LEN];
-
-    pth::removeAmp(_menuItems[mnuIdx]._itemName, sesName);
-    sesIdx = app_getSessionIndex(sesName);
-    app_loadSession(sesIdx);
+    app_loadSession(app_getSessionIndex(_menuItems[mnuOfs + MNU_BASE_MAX_ITEMS]._itemName));
 }
 
-extern "C" void cbFav1() { loadFavorite(1 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav2() { loadFavorite(2 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav3() { loadFavorite(3 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav4() { loadFavorite(4 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav5() { loadFavorite(5 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav6() { loadFavorite(6 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav7() { loadFavorite(7 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav8() { loadFavorite(8 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav9() { loadFavorite(9 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav10() { loadFavorite(10 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav11() { loadFavorite(11 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav12() { loadFavorite(12 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav13() { loadFavorite(13 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav14() { loadFavorite(14 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav15() { loadFavorite(15 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav16() { loadFavorite(16 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav17() { loadFavorite(17 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav18() { loadFavorite(18 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav19() { loadFavorite(19 + MNU_BASE_MAX_ITEMS); }
-extern "C" void cbFav20() { loadFavorite(20 + MNU_BASE_MAX_ITEMS); }
+extern "C" void cbFav1() { loadFavorite(1); }
+extern "C" void cbFav2() { loadFavorite(2); }
+extern "C" void cbFav3() { loadFavorite(3); }
+extern "C" void cbFav4() { loadFavorite(4); }
+extern "C" void cbFav5() { loadFavorite(5); }
+extern "C" void cbFav6() { loadFavorite(6); }
+extern "C" void cbFav7() { loadFavorite(7); }
+extern "C" void cbFav8() { loadFavorite(8); }
+extern "C" void cbFav9() { loadFavorite(9); }
+extern "C" void cbFav10() { loadFavorite(10); }
+extern "C" void cbFav11() { loadFavorite(11); }
+extern "C" void cbFav12() { loadFavorite(12); }
+extern "C" void cbFav13() { loadFavorite(13); }
+extern "C" void cbFav14() { loadFavorite(14); }
+extern "C" void cbFav15() { loadFavorite(15); }
+extern "C" void cbFav16() { loadFavorite(16); }
+extern "C" void cbFav17() { loadFavorite(17); }
+extern "C" void cbFav18() { loadFavorite(18); }
+extern "C" void cbFav19() { loadFavorite(19); }
+extern "C" void cbFav20() { loadFavorite(20); }
 
 } // end namespace
 

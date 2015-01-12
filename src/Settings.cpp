@@ -87,6 +87,7 @@ Setting _settings[] = {
     { "defaultMark",          "9653",             true,  0, 0, 0, 0 },
     { "defaultFavMark",       "9652",             true,  0, 0, 0, 0 },
     { "favoriteMark",         "183",              true,  0, 0, 0, 0 },
+    { "useFilterWildcards",   "0",                true,  0, 0, 0, 0 },
     { "sessionSortOrder",     "1",                true,  0, 0, 0, 0 },
     { "currentSession",       "Default",          false, 0, 0, 0, SES_NAME_BUF_LEN },
     { "previousSession",      "Default",          false, 0, 0, 0, SES_NAME_BUF_LEN },
@@ -323,8 +324,9 @@ void addChild(ContainerId conId, LPCWSTR value, bool append)
 
 /** If a child of conId with value exists, moves it to the top, else adds a new
     element at the top and copies value to it. If it already exists at the top,
-    does nothing. Does nothing if conId is kSettings or value is null or empty. */
-void moveToTop(ContainerId conId, LPCWSTR value)
+    does nothing. Does nothing if conId is kSettings or value is null or empty.
+    @return true if any change was made, else false */
+bool moveToTop(ContainerId conId, LPCWSTR value)
 {
     if (conId != kSettings && value && *value) {
         CHAR mbValue[MAX_PATH];
@@ -332,12 +334,15 @@ void moveToTop(ContainerId conId, LPCWSTR value)
         tXmlEleP childEle = getChild(conId, mbValue);
         if (!childEle) { // not found so add it at the top
             addChild(conId, value, false);
+            return true;
         }
-        else if (childEle->PreviousSiblingElement()) { // found and not at top so move it to the top
+        if (childEle->PreviousSiblingElement()) { // found and not at top so move it to the top
             _containerElements[conId]->InsertFirstChild(childEle);
             _isDirty = true;
+            return true;
         }
     }
+    return false;
 }
 
 /** Deletes all child elements of the conId container. Does nothing if conId
@@ -406,7 +411,7 @@ void setShowInTitlebar(bool enable)
 {
     putBool(kShowInTitlebar, enable);
     if (enable) {
-        app_showSessionInNppBars();
+        app_updateNppBars();
     }
 }
 
@@ -414,7 +419,7 @@ void setShowInStatusbar(bool enable)
 {
     putBool(kShowInStatusbar, enable);
     if (enable) {
-        app_showSessionInNppBars();
+        app_updateNppBars();
     }
 }
 
@@ -428,6 +433,13 @@ void getMarkStr(SettingId cfgId, LPWSTR buf)
 bool isSortAlpha()
 {
     return getInt(kSessionSortOrder) == SORT_ORDER_ALPHA;
+}
+
+bool isFavorite(LPCWSTR fav)
+{
+    CHAR mbFav[MAX_PATH];
+    ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, fav, -1, mbFav, SES_NAME_BUF_LEN, NULL, NULL);
+    return getChild(kFavorites, mbFav) != NULL;
 }
 
 } // end namespace NppPlugin::cfg
@@ -485,7 +497,7 @@ void initContainers()
 void initSettings()
 {
     INT cfgId;
-    tXmlEleP settingsEle, cfgEle;
+    tXmlEleP settingsEle, cfgEle, prvCfgEle = NULL;
 
     settingsEle = _containerElements[kSettings];
     for (cfgId = 0; cfgId < kSettingsCount; ++cfgId) {
@@ -493,13 +505,19 @@ void initSettings()
         if (!cfgEle) {
             cfgEle = _xmlDocument->NewElement(_settings[cfgId].cName);
             cfgEle->SetAttribute(XA_VALUE, _settings[cfgId].cDefault);
-            settingsEle->InsertEndChild(cfgEle);
+            if (prvCfgEle) {
+                settingsEle->InsertAfterChild(prvCfgEle, cfgEle);
+            }
+            else {
+                settingsEle->InsertEndChild(cfgEle);
+            }
             _isDirty = true;
         }
         if (!_settings[cfgId].isInt) {
             _settings[cfgId].wCache = (LPWSTR)sys_alloc(_settings[cfgId].wCacheSize * sizeof WCHAR);
             _settings[cfgId].wCache[0] = 0;
         }
+        prvCfgEle = cfgEle;
         _settings[cfgId].element = cfgEle;
         updateCache(&_settings[cfgId]);
     }

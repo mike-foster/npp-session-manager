@@ -235,9 +235,9 @@ tXmlEleP newItemElement(LPCWSTR itemName)
     }
     else {
         CHAR mbMainNoAmp[MNU_MAX_NAME_LEN], mbBuf[MNU_MAX_NAME_LEN], mbBufNoAmp[MNU_MAX_NAME_LEN];
-        pth::removeAmp(mbMain, mbMainNoAmp);
+        str::removeAmp(mbMain, mbMainNoAmp);
         ::WideCharToMultiByte(CP_UTF8, 0, itemName, -1, mbBuf, MNU_MAX_NAME_LEN, NULL, NULL);
-        pth::removeAmp(mbBuf, mbBufNoAmp);
+        str::removeAmp(mbBuf, mbBufNoAmp);
         ele->SetAttribute(XA_PLUGINENTRYNAME, mbMainNoAmp);
         ele->SetAttribute(XA_ITEMNAMEAS, mbBuf);
         ele->SetAttribute(XA_PLUGINCOMMANDITEMNAME, mbBufNoAmp);

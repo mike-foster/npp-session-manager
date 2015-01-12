@@ -10,15 +10,15 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      version.h
-    @copyright Copyright 2011-2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011-2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_VERSION_H
 #define NPP_PLUGIN_VERSION_H
 
 
-#define RES_VERSION_B  1,2,1,0
-#define RES_VERSION_S  "1.2.1.0"
+#define RES_VERSION_B  1,3,0,0
+#define RES_VERSION_S  "1.3.0.0"
 #define PLUGIN_VERSION _W(RES_VERSION_S)
 #define RES_COPYRIGHT  "Copyright 2011-2015 Michael Foster. Distributed under the terms of the GNU GPL."
 

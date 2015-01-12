@@ -45,6 +45,7 @@ INT _bidFileOpened;        ///< bufferId from most recent NPPN_FILEOPENED
 INT _bidBufferActivated;   ///< XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
 bool _appReady;            ///< if false, plugin should do nothing
 bool _sesLoading;          ///< if true, a session is loading
+bool _fileOpenedFromCmdLine;
 time_t _shutdownTimer;     ///< for determining if files are closing due to a shutdown
 time_t _titlebarTimer;     ///< for updating the titlebar text
 time_t _bookmarkTimer;     ///< for saving the session on a click in the bookmark margin
@@ -69,6 +70,7 @@ void app_onLoad()
 {
     _appReady = false;
     _sesLoading = false;
+    _fileOpenedFromCmdLine = false;
     _sesCurIdx = SI_NONE;
     _sesPrvIdx = SI_NONE;
     _sesDefIdx = SI_NONE;
@@ -106,7 +108,7 @@ void app_onNotify(SCNotification *pscn)
 
     // Notepad++
     if (pscn->nmhdr.hwndFrom == sys_getNppHandle()) {
-        if (cfg::getInt(kDebugLogLevel) >= 10) {
+        if (gDbgLvl >= 10) {
             switch (notificationCode) {
                 case NPPN_READY:           LOG("NPPN_READY"); break;
                 case NPPN_SHUTDOWN:        LOG("NPPN_SHUTDOWN"); break;
@@ -132,9 +134,12 @@ void app_onNotify(SCNotification *pscn)
                 break;
             case NPPN_FILEOPENED:
                 _bidFileOpened = bufferId;
+                if (!_appReady) {
+                    _fileOpenedFromCmdLine = true;
+                }
                 break;
             case NPPN_FILESAVED:
-                app_showSessionInNppBars();
+                app_updateNppBars();
                 // intentional fall-thru
             case NPPN_LANGCHANGED:
             //case NPPN_DOCORDERCHANGED:
@@ -154,7 +159,7 @@ void app_onNotify(SCNotification *pscn)
             case NPPN_BUFFERACTIVATED:
                 _bidBufferActivated = bufferId;
                 if (_appReady && !_sesLoading) {
-                    app_showSessionInNppBars();
+                    app_updateNppBars();
                     if (_bidFileOpened == bufferId) { // buffer activated immediately after NPPN_FILEOPENED
                         if (cfg::getBool(kUseGlobalProperties)) {
                             prp::updateDocumentFromGlobal(_bidFileOpened);
@@ -171,7 +176,7 @@ void app_onNotify(SCNotification *pscn)
 
     // Scintilla
     else if (pscn->nmhdr.hwndFrom == sys_getSciHandle(1) || pscn->nmhdr.hwndFrom == sys_getSciHandle(2)) {
-        if (cfg::getInt(kDebugLogLevel) >= 10) {
+        if (gDbgLvl >= 10) {
             switch (notificationCode) {
                 case SCN_SAVEPOINTREACHED: LOGSN("SCN_SAVEPOINTREACHED"); break;
                 case SCN_SAVEPOINTLEFT:    LOGSN("SCN_SAVEPOINTLEFT"); break;
@@ -207,7 +212,7 @@ void app_onNotify(SCNotification *pscn)
     if (_titlebarTimer > 0) {
         if (::time(NULL) - _titlebarTimer > 1) {
             _titlebarTimer = 0;
-            app_showSessionInNppBars();
+            app_updateNppBars();
         }
     }
     if (_bookmarkTimer > 0) {
@@ -239,7 +244,7 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
     if (Message == NPPM_MSGTOPLUGIN) {
         INT si;
         SessionMgrApiData *api = (SessionMgrApiData*)lParam;
-        if (cfg::getInt(kDebugLogLevel) >= 10) {
+        if (gDbgLvl >= 10) {
             switch (api->message) {
                 case SESMGRM_SES_LOAD:     LOG("SESMGRM_SES_LOAD"); break;
                 case SESMGRM_SES_LOAD_PRV: LOG("SESMGRM_SES_LOAD_PRV"); break;
@@ -371,7 +376,7 @@ void app_readSessionDirectory()
         ::StringCchCopyW(sesName, SES_NAME_BUF_LEN, ffd.cFileName);
         pth::removeExt(sesName, SES_NAME_BUF_LEN);
         Session ses(sesName, ffd.ftLastWriteTime);
-        ses.isFavorite = mnu_isFavorite(sesName);
+        ses.isFavorite = cfg::isFavorite(sesName);
         _sessions.push_back(ses);
     }
     while (::FindNextFileW(hFind, &ffd) != 0);
@@ -466,7 +471,12 @@ void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad)
     if (!lic) {
         _sesCurIdx = si;
         cfg::putStr(kCurrentSession, _sessions[si].name); // save new current session name
-        app_showSessionInNppBars();
+        app_updateNppBars();
+    }
+
+    if (firstLoad && _fileOpenedFromCmdLine) {
+        LOGG(10, "File opened from command line. Selecting first tab.");
+        ::SendMessageW(hNpp, NPPM_ACTIVATEDOC, 0, 0);
     }
 }
 
@@ -542,7 +552,7 @@ void app_resetPreviousIndex()
 {
     _sesPrvIdx = _sesDefIdx;
     cfg::putStr(kPreviousSession, cfg::getStr(kDefaultSession));
-    app_showSessionInNppBars();
+    app_updateNppBars();
 }
 
 /** Assigns newName to the session at index si. If si is current, previous
@@ -564,7 +574,7 @@ void app_renameSession(INT si, LPWSTR newName)
             cfg::putStr(kDefaultSession, newName);
         }
         if (curOrPrv) {
-            app_showSessionInNppBars();
+            app_updateNppBars();
         }
     }
 }
@@ -620,7 +630,7 @@ void app_confirmDefaultSession()
 /** Displays the current and previous session names in the status bar if that
     setting is enabled. Displays the current session name in the title bar if
     that setting is enabled. */
-void app_showSessionInNppBars()
+void app_updateNppBars()
 {
     if (!_appReady) {
         return;
@@ -657,12 +667,11 @@ void app_showSessionInNppBars()
 void app_updateFavorites()
 {
     INT i = 0;
-    mnu_clearFavorites();
+
     cfg::deleteChildren(kFavorites);
     ctx::deleteFavorites();
     for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
         if (it->isFavorite) {
-            mnu_addFavorite(i++, it->name);
             cfg::addChild(kFavorites, it->name);
             ctx::addFavorite(it->name);
         }

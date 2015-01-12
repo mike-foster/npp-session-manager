@@ -77,7 +77,6 @@ void sys_init(NppData nppd)
 
     // Get Npp version to verify plugin compatibility
     //_nppVersion = ::SendMessage(_hNpp, NPPM_GETNPPVERSION, 0, 0);
-    //if () // TODO?
 
     // Get NPP's contextMenu.xml pathname.
     ::SendMessage(_hNpp, NPPM_GETNPPDIRECTORY, MAX_PATH, (LPARAM)_ctxFile);
