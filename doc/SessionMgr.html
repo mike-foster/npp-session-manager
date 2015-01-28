@@ -10,7 +10,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 1.3</h1>
+  <h1>Session Manager 1.3.1</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -51,6 +51,9 @@
 </div>
 
 <h2 id="Installation">Installation</h2>
+<div>
+  <p><b>Please note</b>: If you are upgrading from a version older than v1.2 you must configure your settings again after the upgrade.</p>
+</div>
 <div>
   <p>Use the Notepad++ <a href="http://www.brotherstone.co.uk/npp/pm/">Plugin Manager</a> for easy installation or upgrade of Session Manager. New releases of Session Manager may be available <a href="http://mfoster.com/npp/download.html">here</a> before they are available in the Plugin Manager. In that case use the following manual installation/upgrade procedure.</p>
   <ol>
@@ -178,8 +181,8 @@
   <h3>Usage Scenarios</h3>
   <p>Here are two basic usage scenarios.
     <ul>
-      <li>Open the Settings dialog. Disable <tt>Load into current</tt> and <tt>Load without closing</tt>. Now loaded sessions become current and change to always reflect the latest changes to their files. This scenario does not use the default session.</li>
-      <li>Open the Sessions dialog and load the default session. Open the Settings dialog. Enable <tt>Load into current</tt> and disable <tt>Load without closing</tt>. Now the default session is always current. When other sessions are loaded they are loaded into the default session. Other sessions do not change but always contain the same files and the default session always contains the most recently edited files.</li>
+      <li>Open the Settings dialog. Disable <tt>Load into current</tt> and <tt>Load without closing</tt>. Now loaded sessions become current and change to always reflect the latest changes to their files.</li>
+      <li>Open the Sessions dialog and load a "main" session. Open the Settings dialog. Enable <tt>Load into current</tt> and disable <tt>Load without closing</tt>. Now the main session is always current. When other sessions are loaded they are loaded into the main session. Other sessions do not change but always contain the same files and the main session always contains the most recently edited files.</li>
     </ul>
   </p>
   <h3>Combining Sessions</h3>
@@ -268,6 +271,11 @@
 
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
+  <p><b>If you are upgrading from a version older than v1.2 you must configure your settings again after the upgrade.</b></p>
+  <h3>1.3.1, 27Jan2015</h3>
+  <ul>
+    <li>Bug-fix: If auto-save is enabled and auto-load is disabled, on startup current would point to the session last loaded even tho it was not loaded on this startup, so it would get saved while no files were open. Now, if on startup and auto-load is disabled then set new previous to old current and new current to default. Thanks very much for bug reports from Doug Henderson, MrBig Ouzo and light2some!</li>
+  </ul>
   <h3>1.3, 11Jan2015</h3>
   <ul>
     <li>Thanks very much to Pavel Nedev, Bernd G, Leandro and CarlitoGil for suggestions and bug reports!</li>

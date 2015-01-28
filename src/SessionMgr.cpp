@@ -92,7 +92,7 @@ void app_onUnload()
 void app_init()
 {
     LOG("-------------- START %S %s with debug level %i", PLUGIN_FULL_NAME, RES_VERSION_S, cfg::getInt(kDebugLogLevel));
-    app_readSessionDirectory();
+    app_readSessionDirectory(true);
 }
 
 LPCWSTR app_getName()
@@ -332,7 +332,7 @@ Session::Session(LPCWSTR sesName, FILETIME modTime)
 /** Reads all session names from the session directory. If there is a current
     and/or previous session it is made current and/or previous again if it is
     in the new list. */
-void app_readSessionDirectory()
+void app_readSessionDirectory(bool firstLoad)
 {
     HANDLE hFind;
     bool appReadyPrv;
@@ -389,12 +389,22 @@ void app_readSessionDirectory()
     else {
         std::sort(_sessions.begin(), _sessions.end(), sortByDate);
     }
-    // Assign session indexes. If a session was current/previous try to make it
-    // current/previous again else use the default session.
     indexSessions();
     _sesDefIdx = app_getSessionIndex(cfg::getStr(kDefaultSession));
-    _sesCurIdx = app_getSessionIndex(sesCur);
-    _sesPrvIdx = app_getSessionIndex(sesPrv);
+    if (firstLoad && !cfg::getBool(kAutomaticLoad)) {
+        // Set new previous to old current and new current to default.
+        cfg::getStr(kCurrentSession, sesCur, SES_NAME_BUF_LEN);
+        _sesPrvIdx = app_getSessionIndex(sesCur);
+        cfg::putStr(kPreviousSession, app_getSessionName(_sesPrvIdx));
+        _sesCurIdx = _sesDefIdx;
+        cfg::putStr(kCurrentSession, cfg::getStr(kDefaultSession));
+    }
+    else {
+        // If a session was current/previous try to make it current/previous
+        // again else use the default session.
+        _sesCurIdx = app_getSessionIndex(sesCur);
+        _sesPrvIdx = app_getSessionIndex(sesPrv);
+    }
 
     if (lastError != ERROR_NO_MORE_FILES) {
         msg::error(lastError, L"%s: Error reading session files \"%s\".", _W(__FUNCTION__), sesFileSpec);
@@ -579,8 +589,7 @@ void app_renameSession(INT si, LPWSTR newName)
     }
 }
 
-/** @return a pointer to the session name at index si
-    TODO: return default name instead of SES_NAME_NONE? or return NULL? */
+/** @return a pointer to the session name at index si */
 LPCWSTR app_getSessionName(INT si)
 {
     si = normalizeSessionIndex(si);

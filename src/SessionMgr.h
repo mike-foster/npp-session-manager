@@ -10,7 +10,7 @@
     License along with this program. If not, see <http://www.gnu.org/licenses/>.
 *//**
     @file      SessionMgr.h
-    @copyright Copyright 2011,2013,2014 Michael Foster <http://mfoster.com/npp/>
+    @copyright Copyright 2011,2013-2015 Michael Foster <http://mfoster.com/npp/>
 */
 
 #ifndef NPP_PLUGIN_APPLICATION_H
@@ -24,7 +24,7 @@ namespace NppPlugin {
 
 #define PLUGIN_DLL_NAME  L"SessionMgr"
 #define PLUGIN_FULL_NAME L"Session Manager"
-#define SES_NAME_NONE    L"none"
+#define SES_NAME_NONE    L"None"
 #define SES_NAME_DEFAULT L"Default"
 #define SES_NAME_BUF_LEN 100
 /// Used as virtual session indexes
@@ -61,7 +61,7 @@ LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam);
 
 //------------------------------------------------------------------------------
 
-void app_readSessionDirectory();
+void app_readSessionDirectory(bool firstLoad = false);
 void app_loadSession(INT si);
 void app_loadSession(INT si, bool lic, bool lwc, bool firstLoad = false);
 void app_saveSession(INT si = SI_CURRENT);
