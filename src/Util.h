@@ -50,7 +50,7 @@ namespace msg {
 
 INT show(LPCWSTR msg, LPWSTR title = NULL, UINT options = MB_OK);
 void error(DWORD lastError, LPCWSTR format, ...);
-void log(const char *format, ...);
+void log(LPCSTR format, ...);
 
 } // end namespace NppPlugin::msg
 
@@ -66,7 +66,7 @@ errno_t removePath(LPWSTR buf, size_t bufLen);
 void appendSlash(LPWSTR buf, size_t bufLen);
 bool dirExists(LPCWSTR path);
 bool fileExists(LPCWSTR pathname);
-void createFileIfMissing(LPCWSTR pathname, const char *contents);
+void createFileIfMissing(LPCWSTR pathname, LPCSTR contents);
 
 } // end namespace NppPlugin::pth
 
@@ -79,6 +79,10 @@ void removeAmp(LPCWSTR src, LPWSTR dst);
 void removeAmp(LPCSTR src, LPSTR dst);
 bool wildcardMatchI(LPCWSTR wild, LPCWSTR str);
 bool wildcardMatch(LPCWSTR wild, LPCWSTR str);
+LPWSTR utf8ToUtf16(LPCSTR cStr);
+LPWSTR utf8ToUtf16(LPCSTR cStr, LPWSTR buf, size_t bufLen);
+LPSTR utf16ToUtf8(LPCWSTR wStr);
+LPSTR utf16ToUtf8(LPCWSTR wStr, LPSTR buf, size_t bufLen);
 
 } // end namespace NppPlugin::str
 
@@ -88,7 +92,7 @@ bool wildcardMatch(LPCWSTR wild, LPCWSTR str);
 namespace dlg {
 
 void setText(HWND hDlg, UINT idCtrl, LPCWSTR text);
-void getText(HWND hDlg, UINT idCtrl, LPWSTR buf, INT bufLen);
+void getText(HWND hDlg, UINT idCtrl, LPWSTR buf, size_t bufLen);
 bool edtModified(HWND hDlg, UINT idCtrl);
 void setCheck(HWND hDlg, UINT idCtrl, bool bChecked);
 bool getCheck(HWND hDlg, UINT idCtrl);

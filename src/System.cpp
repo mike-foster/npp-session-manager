@@ -42,6 +42,10 @@ LPWSTR _cfgFile;   ///< pathname of settings.xml
 LPWSTR _ctxFile;   ///< pathname of NPP's contextMenu.xml file
 LPWSTR _propsFile; ///< pathname of global.xml
 
+void backupFiles();
+void backupConfigFiles(LPCWSTR backupDir);
+void backupSessionFiles(LPCWSTR backupDir);
+
 } // end namespace
 
 //------------------------------------------------------------------------------
@@ -70,10 +74,10 @@ void sys_init(NppData nppd)
     _hHeap = ::GetProcessHeap();
 
     // Allocate buffers
-    _cfgDir = (LPWSTR)sys_alloc(MAX_PATH);
-    _cfgFile = (LPWSTR)sys_alloc(MAX_PATH);
-    _ctxFile = (LPWSTR)sys_alloc(MAX_PATH);
-    _propsFile = (LPWSTR)sys_alloc(MAX_PATH);
+    _cfgDir = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
+    _cfgFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
+    _ctxFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
+    _propsFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
 
     // Get Npp version to verify plugin compatibility
     //_nppVersion = ::SendMessage(_hNpp, NPPM_GETNPPVERSION, 0, 0);
@@ -90,15 +94,18 @@ void sys_init(NppData nppd)
     ::StringCchCatW(_cfgDir, MAX_PATH, L"\\");
     ::CreateDirectoryW(_cfgDir, NULL);
 
-    // Get the settings.xml file pathname.
+    // Get the settings.xml file pathname and load the configuration.
     ::StringCchCopyW(_cfgFile, MAX_PATH, _cfgDir);
     ::StringCchCatW(_cfgFile, MAX_PATH, CFG_FILE_NAME);
-    // Load the xml config file.
     cfg::loadSettings();
     // Create sessions directory if it doesn't exist.
     ::CreateDirectoryW(cfg::getStr(kSessionDirectory), NULL);
     // Create default session file if it doesn't exist.
     app_confirmDefaultSession();
+    // Backup existing config and session files.
+    if (cfg::getBool(kBackupOnStartup)) {
+        backupFiles();
+    }
 }
 
 } // end namespace NppPlugin::api
@@ -161,6 +168,88 @@ void sys_free(LPVOID p)
 {
     if (p) ::HeapFree(_hHeap, 0, p);
 }
+
+//------------------------------------------------------------------------------
+
+namespace {
+
+void backupFiles()
+{
+    WCHAR backupDir[MAX_PATH];
+
+    // Create main backup directory if it doesn't exist and copy config files.
+    ::StringCchCopyW(backupDir, MAX_PATH, _cfgDir);
+    ::StringCchCatW(backupDir, MAX_PATH, L"backup");
+    if (!pth::dirExists(backupDir)) {
+        ::CreateDirectoryW(backupDir, NULL);
+    }
+    if (pth::dirExists(backupDir)) {
+        ::StringCchCatW(backupDir, MAX_PATH, L"\\");
+        backupConfigFiles(backupDir);
+        // Create backup directory for session files if it doesn't exist and copy session files.
+        ::StringCchCatW(backupDir, MAX_PATH, L"sessions");
+        if (!pth::dirExists(backupDir)) {
+            ::CreateDirectoryW(backupDir, NULL);
+        }
+        if (pth::dirExists(backupDir)) {
+            ::StringCchCatW(backupDir, MAX_PATH, L"\\");
+            backupSessionFiles(backupDir);
+        }
+    }
+}
+
+void backupConfigFiles(LPCWSTR backupDir)
+{
+    WCHAR dstFile[MAX_PATH];
+
+    // Copy settings.xml
+    if (pth::fileExists(_cfgFile)) {
+        ::StringCchCopyW(dstFile, MAX_PATH, backupDir);
+        ::StringCchCatW(dstFile, MAX_PATH, CFG_FILE_NAME);
+        ::CopyFileW(_cfgFile, dstFile, FALSE);
+    }
+    // Copy global.xml
+    if (pth::fileExists(sys_getPropsFile())) {
+        ::StringCchCopyW(dstFile, MAX_PATH, backupDir);
+        ::StringCchCatW(dstFile, MAX_PATH, PROPS_FILE_NAME);
+        ::CopyFileW(_propsFile, dstFile, FALSE);
+    }
+    // Copy NPP's contextMenu.xml
+    if (pth::fileExists(_ctxFile)) {
+        ::StringCchCopyW(dstFile, MAX_PATH, backupDir);
+        ::StringCchCatW(dstFile, MAX_PATH, L"contextMenu.xml");
+        ::CopyFileW(_ctxFile, dstFile, FALSE);
+    }
+}
+
+void backupSessionFiles(LPCWSTR backupDir)
+{
+    HANDLE hFind;
+    WIN32_FIND_DATAW ffd;
+    WCHAR fileSpec[MAX_PATH];
+    WCHAR srcFile[MAX_PATH];
+    WCHAR dstFile[MAX_PATH];
+
+    // Create the file spec.
+    ::StringCchCopyW(fileSpec, MAX_PATH, cfg::getStr(kSessionDirectory));
+    ::StringCchCatW(fileSpec, MAX_PATH, L"*.*");
+    // Loop over files in the session directory and copy them to the backup directory.
+    hFind = ::FindFirstFileW(fileSpec, &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    do {
+        ::StringCchCopyW(srcFile, MAX_PATH, cfg::getStr(kSessionDirectory));
+        ::StringCchCatW(srcFile, MAX_PATH, ffd.cFileName);
+        ::StringCchCopyW(dstFile, MAX_PATH, backupDir);
+        ::StringCchCatW(dstFile, MAX_PATH, ffd.cFileName);
+        ::CopyFileW(srcFile, dstFile, FALSE);
+    }
+    while (::FindNextFileW(hFind, &ffd) != 0);
+    ::FindClose(hFind);
+}
+
+} // end namespace
 
 } // end namespace NppPlugin
 

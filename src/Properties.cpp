@@ -41,6 +41,7 @@ namespace {
 #define XN_SUBVIEW        "subView"
 #define XN_FILE           "File"
 #define XN_MARK           "Mark"
+#define XN_FOLD           "Fold"
 #define XN_FILEPROPERTIES "FileProperties"
 
 /// XML attributes
@@ -49,8 +50,9 @@ namespace {
 #define XA_FIRSTVISIBLELINE "firstVisibleLine"
 #define XA_LINE             "line"
 
-INT utf8ToAscii(const char *str, char *buf = NULL);
+INT utf8ToAscii(LPCSTR str, LPSTR buf = NULL);
 void removeMissingFilesFromGlobal();
+void deleteChildren(tXmlEleP parent, LPCSTR eleName);
 
 } // end namespace
 
@@ -78,7 +80,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
 {
     DWORD lastErr;
     tXmlError xmlErr;
-    const char *target;
+    LPCSTR target;
 
     LOGF("%S", sesFile);
 
@@ -90,7 +92,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
         msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
-    tXmlEleP globalPropsEle, globalFileEle, globalMarkEle;
+    tXmlEleP globalPropsEle, globalFileEle, globalMarkEle, globalFoldEle;
     tXmlHnd globalDocHnd(&globalDoc);
     globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
 
@@ -102,7 +104,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
         msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
-    tXmlEleP localViewEle, localFileEle, localMarkEle;
+    tXmlEleP localViewEle, localFileEle, localMarkEle, localFoldEle;
     tXmlHnd localDocHnd(&localDoc);
 
     // Iterate over the local View elements
@@ -129,9 +131,9 @@ void updateGlobalFromSession(LPWSTR sesFile)
             // Update global File attributes with values from the current local File attributes
             globalFileEle->SetAttribute(XA_LANG, localFileEle->Attribute(XA_LANG));
             globalFileEle->SetAttribute(XA_FIRSTVISIBLELINE, localFileEle->Attribute(XA_FIRSTVISIBLELINE));
-            globalFileEle->DeleteChildren();
             LOGG(21, "lang = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             // Iterate over the local Mark elements for the current local File element
+            deleteChildren(globalFileEle, XN_MARK); // XXX globalFileEle->DeleteChildren();
             localMarkEle = localFileEle->FirstChildElement(XN_MARK);
             while (localMarkEle) {
                 globalMarkEle = globalDoc.NewElement(XN_MARK);
@@ -141,6 +143,18 @@ void updateGlobalFromSession(LPWSTR sesFile)
                 LOGG(21, "Mark = %s", localMarkEle->Attribute(XA_LINE));
                 localMarkEle = localMarkEle->NextSiblingElement(XN_MARK);
             }
+            // Iterate over the local Fold elements for the current local File element
+            deleteChildren(globalFileEle, XN_FOLD); // XXX
+            localFoldEle = localFileEle->FirstChildElement(XN_FOLD);
+            while (localFoldEle) {
+                globalFoldEle = globalDoc.NewElement(XN_FOLD);
+                globalFileEle->InsertEndChild(globalFoldEle);
+                // Update global Fold attributes with values from the current local Fold attributes
+                globalFoldEle->SetAttribute(XA_LINE, localFoldEle->Attribute(XA_LINE));
+                LOGG(21, "Fold = %s", localFoldEle->Attribute(XA_LINE));
+                localFoldEle = localFoldEle->NextSiblingElement(XN_FOLD);
+            }
+            // Next local File element
             localFileEle = localFileEle->NextSiblingElement(XN_FILE);
         }
         localViewEle = localViewEle->NextSiblingElement(XN_SUBVIEW);
@@ -163,11 +177,11 @@ void updateGlobalFromSession(LPWSTR sesFile)
     are updated from the global properties, then the session is loaded. */
 void updateSessionFromGlobal(LPWSTR sesFile)
 {
-    char *buf;
+    LPSTR buf;
     DWORD lastErr;
     tXmlError xmlErr;
     bool save = false;
-    const char *target;
+    LPCSTR target;
 
     LOGF("%S", sesFile);
 
@@ -179,7 +193,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
         msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
-    tXmlEleP globalPropsEle, globalFileEle, globalMarkEle;
+    tXmlEleP globalPropsEle, globalFileEle, globalMarkEle, globalFoldEle;
     tXmlHnd globalDocHnd(&globalDoc);
     globalPropsEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).ToElement();
 
@@ -191,7 +205,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
         msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
-    tXmlEleP localViewEle, localFileEle, localMarkEle;
+    tXmlEleP localViewEle, localFileEle, localMarkEle, localFoldEle;
     tXmlHnd localDocHnd(&localDoc);
 
     // Iterate over the local View elements
@@ -213,7 +227,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
             if (globalFileEle) {
                 save = true;
                 // Update current local File attributes with values from the global File attributes
-                buf = (char*)sys_alloc(utf8ToAscii(target));
+                buf = (LPSTR)sys_alloc(utf8ToAscii(target) * sizeof CHAR);
                 if (buf == NULL) {
                     return;
                 }
@@ -221,9 +235,9 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                 localFileEle->SetAttribute(XA_FILENAME, buf);
                 sys_free(buf);
                 localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
-                localFileEle->DeleteChildren();
                 LOGG(22, "lang = '%s'", globalFileEle->Attribute(XA_LANG));
                 // Iterate over the global Mark elements for the current global File element
+                deleteChildren(localFileEle, XN_MARK); // XXX localFileEle->DeleteChildren();
                 globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
                 while (globalMarkEle) {
                     localMarkEle = localDoc.NewElement(XN_MARK);
@@ -232,6 +246,17 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                     localMarkEle->SetAttribute(XA_LINE, globalMarkEle->Attribute(XA_LINE));
                     LOGG(22, "Mark = %s", globalMarkEle->Attribute(XA_LINE));
                     globalMarkEle = globalMarkEle->NextSiblingElement(XN_MARK);
+                }
+                // Iterate over the global Fold elements for the current global File element
+                deleteChildren(localFileEle, XN_FOLD); // XXX
+                globalFoldEle = globalFileEle->FirstChildElement(XN_FOLD);
+                while (globalFoldEle) {
+                    localFoldEle = localDoc.NewElement(XN_FOLD);
+                    localFileEle->InsertEndChild(localFoldEle);
+                    // Update local Fold attributes with values from the current global Fold attributes
+                    localFoldEle->SetAttribute(XA_LINE, globalFoldEle->Attribute(XA_LINE));
+                    LOGG(22, "Fold = %s", globalFoldEle->Attribute(XA_LINE));
+                    globalFoldEle = globalFoldEle->NextSiblingElement(XN_FOLD);
                 }
             }
             //else {
@@ -263,21 +288,19 @@ void updateSessionFromGlobal(LPWSTR sesFile)
     firstVisibleLine are updated from the global properties. */
 void updateDocumentFromGlobal(INT bufferId)
 {
-    char *mbPathname;
+    LPSTR mbPathname;
     WCHAR pathname[MAX_PATH];
-    INT line, pos, view, mbLen;
+    INT line, pos, view;
     HWND hNpp = sys_getNppHandle();
 
     LOGF("%i", bufferId);
 
     // Get pathname for bufferId
     ::SendMessage(hNpp, NPPM_GETFULLPATHFROMBUFFERID, bufferId, (LPARAM)pathname);
-    mbLen = ::WideCharToMultiByte(CP_UTF8, 0, pathname, -1, NULL, 0, NULL, NULL);
-    mbPathname = (char*)sys_alloc(mbLen);
+    mbPathname = str::utf16ToUtf8(pathname);
     if (mbPathname == NULL) {
         return;
     }
-    ::WideCharToMultiByte(CP_UTF8, 0, pathname, -1, mbPathname, mbLen, NULL, NULL);
     LOGG(20, "File = %s", mbPathname);
     // Load the properties file (global file properties)
     tXmlDoc globalDoc;
@@ -288,7 +311,7 @@ void updateDocumentFromGlobal(INT bufferId)
         sys_free(mbPathname);
         return;
     }
-    tXmlEleP globalFileEle, globalMarkEle;
+    tXmlEleP globalFileEle, globalMarkEle, globalFoldEle;
     tXmlHnd globalDocHnd(&globalDoc);
     globalFileEle = globalDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_FILEPROPERTIES).FirstChildElement(XN_FILE).ToElement();
 
@@ -315,11 +338,22 @@ void updateDocumentFromGlobal(INT bufferId)
     globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
     while (globalMarkEle) {
         line = globalMarkEle->IntAttribute(XA_LINE);
-        // go to line and set mark
+        // Go to line and set mark
         ::SendMessage(sys_getSciHandle(view), SCI_GOTOLINE, line, 0);
         ::SendMessage(hNpp, NPPM_MENUCOMMAND, 0, IDM_SEARCH_TOGGLE_BOOKMARK);
         LOGG(20, "Mark = %i", line);
         globalMarkEle = globalMarkEle->NextSiblingElement(XN_MARK);
+    }
+
+    // Iterate over the global Fold elements and set them in the active document
+    globalFoldEle = globalFileEle->FirstChildElement(XN_FOLD);
+    while (globalFoldEle) {
+        line = globalFoldEle->IntAttribute(XA_LINE);
+        // Go to line and set fold
+        ::SendMessage(sys_getSciHandle(view), SCI_GOTOLINE, line, 0);
+        ::SendMessage(hNpp, NPPM_MENUCOMMAND, 0, IDM_VIEW_FOLD_CURRENT);
+        LOGG(20, "Fold = %i", line);
+        globalFoldEle = globalFoldEle->NextSiblingElement(XN_FOLD);
     }
 
     // Move cursor to the last known firstVisibleLine
@@ -337,11 +371,11 @@ namespace {
 /** If buf is non-NULL, converts a UTF-8 string to a string where all chars < 32
     or > 126 are converted to entities.
     @return the number of bytes in the converted string including the terminator */
-INT utf8ToAscii(const char *str, char *buf)
+INT utf8ToAscii(LPCSTR str, LPSTR buf)
 {
     INT bytes = 0;
-    char *b = buf;
-    const char *s = str;
+    LPSTR b = buf;
+    LPCSTR s = str;
     utf8::uint32_t cp;
     while (*s) {
         cp = utf8::unchecked::next(s);
@@ -373,7 +407,7 @@ void removeMissingFilesFromGlobal()
     tXmlError xmlErr;
     bool save = false;
     LPWSTR wPathname;
-    const char *mbPathname;
+    LPCSTR mbPathname;
     tXmlEleP propsEle, fileEle, currentFileEle;
 
     LOGF("");
@@ -393,12 +427,10 @@ void removeMissingFilesFromGlobal()
     // Iterate over the File elements and remove those whose files do not exist
     while (fileEle) {
         mbPathname = fileEle->Attribute(XA_FILENAME);
-        wLen = ::MultiByteToWideChar(CP_UTF8, 0, mbPathname, -1, NULL, 0);
-        wPathname = (LPWSTR)sys_alloc(wLen * sizeof(WCHAR));
+        wPathname = str::utf8ToUtf16(mbPathname);
         if (wPathname == NULL) {
-            return;
+            continue; // XXX was: return;
         }
-        ::MultiByteToWideChar(CP_UTF8, 0, mbPathname, -1, wPathname, wLen);
         currentFileEle = fileEle;
         fileEle = fileEle->NextSiblingElement(XN_FILE);
         if (!pth::fileExists(wPathname)) {
@@ -420,6 +452,19 @@ void removeMissingFilesFromGlobal()
             lastErr = ::GetLastError();
             msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
         }
+    }
+}
+
+/** Deletes parent's child elements having the given element name. */
+void deleteChildren(tXmlEleP parent, LPCSTR eleName)
+{
+    tXmlEleP ele, tmp;
+
+    ele = parent->FirstChildElement(eleName);
+    while (ele) {
+        tmp = ele;
+        ele = ele->NextSiblingElement(eleName);
+        parent->DeleteChild(tmp);
     }
 }
 

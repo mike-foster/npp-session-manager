@@ -76,10 +76,11 @@ Setting _settings[] = {
     { "useGlobalProperties",  "1",                true,  0, 0, 0, 0 },
     { "cleanGlobalProperties","0",                true,  0, 0, 0, 0 },
     { "useContextMenu",       "1",                true,  0, 0, 0, 0 },
+    { "backupOnStartup",      "1",                true,  0, 0, 0, 0 },
     { "sessionSaveDelay",     "3",                true,  0, 0, 0, 0 },
     { "settingsSavePoll",     "2",                true,  0, 0, 0, 0 },
     { "sessionDirectory",     "",                 false, 0, 0, 0, MAX_PATH },
-    { "sessionExtension",     ".npp-session",     false, 0, 0, 0, 25 },
+    { "sessionExtension",     ".npp-session",     false, 0, 0, 0, MAX_PATH }, // 25 },
     { "currentMark",          "9674",             true,  0, 0, 0, 0 },
     { "currentFavMark",       "9830",             true,  0, 0, 0, 0 },
     { "previousMark",         "9702",             true,  0, 0, 0, 0 },
@@ -89,16 +90,16 @@ Setting _settings[] = {
     { "favoriteMark",         "183",              true,  0, 0, 0, 0 },
     { "useFilterWildcards",   "0",                true,  0, 0, 0, 0 },
     { "sessionSortOrder",     "1",                true,  0, 0, 0, 0 },
-    { "currentSession",       "Default",          false, 0, 0, 0, SES_NAME_BUF_LEN },
-    { "previousSession",      "Default",          false, 0, 0, 0, SES_NAME_BUF_LEN },
-    { "defaultSession",       "Default",          false, 0, 0, 0, SES_NAME_BUF_LEN },
-    { "menuLabelMain",        "&Session Manager", false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
-    { "menuLabelSub1",        "&Sessions...",     false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
-    { "menuLabelSub2",        "Se&ttings...",     false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
-    { "menuLabelSub3",        "Sa&ve current",    false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
-    { "menuLabelSub4",        "Load &previous",   false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
-    { "menuLabelSub5",        "&Help",            false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
-    { "menuLabelSub6",        "&About...",        false, 0, 0, 0, MNU_MAX_NAME_LEN + 1 },
+    { "currentSession",       "Default",          false, 0, 0, 0, MAX_PATH }, // SES_NAME_BUF_LEN },
+    { "previousSession",      "Default",          false, 0, 0, 0, MAX_PATH }, // SES_NAME_BUF_LEN },
+    { "defaultSession",       "Default",          false, 0, 0, 0, MAX_PATH }, // SES_NAME_BUF_LEN },
+    { "menuLabelMain",        "&Session Manager", false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
+    { "menuLabelSub1",        "&Sessions...",     false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
+    { "menuLabelSub2",        "Se&ttings...",     false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
+    { "menuLabelSub3",        "Sa&ve current",    false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
+    { "menuLabelSub4",        "Load &previous",   false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
+    { "menuLabelSub5",        "&Help",            false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
+    { "menuLabelSub6",        "&About...",        false, 0, 0, 0, MAX_PATH }, // MNU_MAX_NAME_LEN + 1 },
     { "sessionsDialogWidth",  "0",                true,  0, 0, 0, 0 },
     { "sessionsDialogHeight", "0",                true,  0, 0, 0, 0 },
     { "settingsDialogWidth",  "0",                true,  0, 0, 0, 0 },
@@ -222,9 +223,11 @@ void putStr(SettingId cfgId, LPCSTR value)
 /** Copies value to the cfgId element of the Settings container. */
 void putStr(SettingId cfgId, LPCWSTR value)
 {
-    CHAR mbValue[MAX_PATH];
-    ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value, -1, mbValue, MAX_PATH, NULL, NULL);
-    putStr(cfgId, mbValue);
+    LPSTR mbValue = str::utf16ToUtf8(value);
+    if (mbValue) {
+        putStr(cfgId, mbValue);
+        sys_free(mbValue);
+    }
 }
 
 /** Writes the boolean value to the cfgId element of the Settings container. */
@@ -269,8 +272,7 @@ LPCWSTR getStr(ContainerId conId, INT childIndex)
     if (!mbStr) {
         return NULL;
     }
-    ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, mbStr, -1, _tmpBuffer, MAX_PATH);
-    return _tmpBuffer;
+    return str::utf8ToUtf16(mbStr, _tmpBuffer, MAX_PATH);
 }
 
 /** Copies to buf the value of the 0-based childIndex'th element of the conId container.
@@ -281,8 +283,7 @@ bool getStr(ContainerId conId, INT childIndex, LPWSTR buf, INT bufLen)
     if (!mbStr) {
         return false;
     }
-    ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, mbStr, -1, buf, bufLen);
-    return true;
+    return str::utf8ToUtf16(mbStr, buf, bufLen) != NULL;
 }
 
 /** @return a pointer to the first child of conId with value, else NULL */
@@ -306,9 +307,8 @@ tXmlEleP getChild(ContainerId conId, LPCSTR value)
 void addChild(ContainerId conId, LPCWSTR value, bool append)
 {
     if (conId != kSettings && value && *value) {
-        CHAR mbValue[MAX_PATH];
-        ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value, -1, mbValue, MAX_PATH, NULL, NULL);
-        if (!getChild(conId, mbValue)) {
+        LPSTR mbValue = str::utf16ToUtf8(value);
+        if (mbValue && !getChild(conId, mbValue)) {
             tXmlEleP cfgEle = _xmlDocument->NewElement(XN_ITEM);
             cfgEle->SetAttribute(XA_VALUE, mbValue);
             if (append) {
@@ -317,6 +317,7 @@ void addChild(ContainerId conId, LPCWSTR value, bool append)
             else {
                 _containerElements[conId]->InsertFirstChild(cfgEle);
             }
+            sys_free(mbValue);
             _isDirty = true;
         }
     }
@@ -329,17 +330,19 @@ void addChild(ContainerId conId, LPCWSTR value, bool append)
 bool moveToTop(ContainerId conId, LPCWSTR value)
 {
     if (conId != kSettings && value && *value) {
-        CHAR mbValue[MAX_PATH];
-        ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value, -1, mbValue, MAX_PATH, NULL, NULL);
-        tXmlEleP childEle = getChild(conId, mbValue);
-        if (!childEle) { // not found so add it at the top
-            addChild(conId, value, false);
-            return true;
-        }
-        if (childEle->PreviousSiblingElement()) { // found and not at top so move it to the top
-            _containerElements[conId]->InsertFirstChild(childEle);
-            _isDirty = true;
-            return true;
+        LPSTR mbValue = str::utf16ToUtf8(value);
+        if (mbValue) {
+            tXmlEleP childEle = getChild(conId, mbValue);
+            sys_free(mbValue);
+            if (!childEle) { // not found so add it at the top
+                addChild(conId, value, false);
+                return true;
+            }
+            if (childEle->PreviousSiblingElement()) { // found and not at top so move it to the top
+                _containerElements[conId]->InsertFirstChild(childEle);
+                _isDirty = true;
+                return true;
+            }
         }
     }
     return false;
@@ -437,9 +440,13 @@ bool isSortAlpha()
 
 bool isFavorite(LPCWSTR fav)
 {
-    CHAR mbFav[MAX_PATH];
-    ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, fav, -1, mbFav, SES_NAME_BUF_LEN, NULL, NULL);
-    return getChild(kFavorites, mbFav) != NULL;
+    bool isFav = false;
+    LPSTR mbFav = str::utf16ToUtf8(fav);
+    if (mbFav) {
+        isFav = getChild(kFavorites, mbFav) != NULL;
+        sys_free(mbFav);
+    }
+    return isFav;
 }
 
 } // end namespace NppPlugin::cfg
@@ -534,7 +541,7 @@ void updateCache(Setting *setting)
         setting->iCache = ::atoi(value);
     }
     else {
-         ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value, -1, setting->wCache, setting->wCacheSize);
+         str::utf8ToUtf16(value, setting->wCache, setting->wCacheSize);
     }
 }
 

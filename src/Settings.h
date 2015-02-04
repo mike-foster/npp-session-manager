@@ -41,6 +41,7 @@ enum SettingId {
     kUseGlobalProperties,
     kCleanGlobalProperties,
     kUseContextMenu,
+    kBackupOnStartup,
     kSessionSaveDelay,
     kSettingsSavePoll,
     kSessionDirectory,

@@ -90,7 +90,7 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     AUTOCHECKBOX    "Load without closing",   IDC_CFG_CHK_LWC,  63,                23,                75,                IDC_CHK_H, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Show in title bar",      IDC_CFG_CHK_SITB, 154,               IDC_MAR_1,         65,                IDC_CHK_H, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Show in status bar",     IDC_CFG_CHK_SISB, 154,               23,                75,                IDC_CHK_H, 0, WS_EX_LEFT
-    AUTOCHECKBOX    "Global bookmarks",       IDC_CFG_CHK_GBKM, 238,               IDC_MAR_1,         65,                IDC_CHK_H, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Global properties",      IDC_CFG_CHK_GBKM, 238,               IDC_MAR_1,         65,                IDC_CHK_H, 0, WS_EX_LEFT
     AUTOCHECKBOX    "Use context menu",       IDC_CFG_CHK_CTXM, 238,               23,                70,                IDC_CHK_H, 0, WS_EX_LEFT
     LTEXT           "Session files folder",   IDC_STATIC,       IDC_MAR_1,         40,                60,                IDC_LTX_H, SS_LEFT
     PUSHBUTTON      "...",                    IDC_CFG_BTN_BRW,  IDC_MAR_1,         50,                13,                IDC_BTN_H - 1, BS_CENTER

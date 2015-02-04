@@ -35,7 +35,8 @@ namespace NppPlugin {
 
 namespace {
 
-#define NPP_BOOKMARK_MARGIN_ID 1
+#define NPP_BOOKMARK_MARGIN_ID 1 // _SC_MARGE_SYBOLE
+#define NPP_FOLD_MARGIN_ID     2 // _SC_MARGE_FOLDER
 
 vector<Session> _sessions; ///< stores info on sessions read from disk
 INT _sesCurIdx;            ///< current session index
@@ -48,7 +49,7 @@ bool _sesLoading;          ///< if true, a session is loading
 bool _fileOpenedFromCmdLine;
 time_t _shutdownTimer;     ///< for determining if files are closing due to a shutdown
 time_t _titlebarTimer;     ///< for updating the titlebar text
-time_t _bookmarkTimer;     ///< for saving the session on a click in the bookmark margin
+time_t _marginClickTimer;  ///< for saving the session on a click in the bookmark or fold margin
 time_t _settingsTimer;     ///< for checking if settings need to be saved
 
 void onNppReady();
@@ -78,7 +79,7 @@ void app_onLoad()
     _bidBufferActivated = 0;
     _shutdownTimer = 0;
     _titlebarTimer = 0;
-    _bookmarkTimer = 0;
+    _marginClickTimer = 0;
     _settingsTimer = ::time(NULL);
 }
 
@@ -190,8 +191,9 @@ void app_onNotify(SCNotification *pscn)
                 }
                 break;
             case SCN_MARGINCLICK:
-                if (_appReady && !_sesLoading && cfg::getBool(kAutomaticSave) && pscn->margin == NPP_BOOKMARK_MARGIN_ID) {
-                    _bookmarkTimer = ::time(NULL);
+                if (_appReady && !_sesLoading && cfg::getBool(kAutomaticSave) &&
+                        (pscn->margin == NPP_BOOKMARK_MARGIN_ID || pscn->margin == NPP_FOLD_MARGIN_ID)) {
+                    _marginClickTimer = ::time(NULL);
                 }
                 break;
         }
@@ -215,15 +217,15 @@ void app_onNotify(SCNotification *pscn)
             app_updateNppBars();
         }
     }
-    if (_bookmarkTimer > 0) {
+    if (_marginClickTimer > 0) {
         if (_appReady && !_sesLoading) {
-            if (::time(NULL) - _bookmarkTimer > 1) {
-                _bookmarkTimer = 0;
+            if (::time(NULL) - _marginClickTimer > 1) {
+                _marginClickTimer = 0;
                 app_saveSession(_sesCurIdx);
             }
         }
         else {
-            _bookmarkTimer = 0;
+            _marginClickTimer = 0;
         }
     }
     if (_settingsTimer > 0) {

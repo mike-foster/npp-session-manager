@@ -76,17 +76,19 @@ void deleteFavorites()
     tXmlEleP ele, sepEle, favEle, sciCtxMnuEle;
 
     if (cfg::getBool(kUseContextMenu)) {
-        CHAR mbMain[MNU_MAX_NAME_LEN];
-        ::WideCharToMultiByte(CP_UTF8, 0, mnu_getMenuLabel(), -1, mbMain, MNU_MAX_NAME_LEN, NULL, NULL);
-        sepEle = getFavSeparator();
-        if (sepEle) {
-            sciCtxMnuEle = sepEle->Parent()->ToElement();
-            favEle = sepEle->NextSiblingElement(XN_ITEM);
-            while (favEle && favEle->Attribute(XA_FOLDERNAME, mbMain)) {
-                ele = favEle;
-                favEle = favEle->NextSiblingElement(XN_ITEM);
-                sciCtxMnuEle->DeleteChild(ele);
+        LPSTR mbMain = str::utf16ToUtf8(mnu_getMenuLabel());
+        if (mbMain) {
+            sepEle = getFavSeparator();
+            if (sepEle) {
+                sciCtxMnuEle = sepEle->Parent()->ToElement();
+                favEle = sepEle->NextSiblingElement(XN_ITEM);
+                while (favEle && favEle->Attribute(XA_FOLDERNAME, mbMain)) {
+                    ele = favEle;
+                    favEle = favEle->NextSiblingElement(XN_ITEM);
+                    sciCtxMnuEle->DeleteChild(ele);
+                }
             }
+            sys_free(mbMain);
         }
         _pCtxLastFav = NULL;
     }
@@ -154,8 +156,8 @@ tXmlEleP getFavSeparator()
     DWORD lastErr;
     tXmlError xmlErr;
     bool changed = false;
-    tXmlEleP sepEle;
-    CHAR mbMain[MNU_MAX_NAME_LEN], mbAbout[MNU_MAX_NAME_LEN];
+    tXmlEleP sepEle = NULL;
+    LPSTR mbMain, mbAbout;
 
     // Load the contextMenu file if not already loaded
     if (!_pCtxXmlDoc) {
@@ -172,33 +174,35 @@ tXmlEleP getFavSeparator()
     sciCtxMnuEle = ctxDocHnd.FirstChildElement(XN_NOTEPADPLUS).FirstChildElement(XN_SCINTILLACONTEXTMENU).ToElement();
 
     // the main menu item label
-    ::WideCharToMultiByte(CP_UTF8, 0, mnu_getMenuLabel(), -1, mbMain, MNU_MAX_NAME_LEN, NULL, NULL);
+    mbMain = str::utf16ToUtf8(mnu_getMenuLabel());
     // the About item label
-    ::WideCharToMultiByte(CP_UTF8, 0, mnu_getMenuLabel(MNU_BASE_MAX_ITEMS - 1), -1, mbAbout, MNU_MAX_NAME_LEN, NULL, NULL);
-
-    // Iterate over the Item elements looking for our About item
-    itemEle = sciCtxMnuEle->FirstChildElement(XN_ITEM);
-    while (itemEle) {
-        if (itemEle->Attribute(XA_FOLDERNAME, mbMain) && itemEle->Attribute(XA_ITEMNAMEAS, mbAbout)) {
-            break; // found it
+    mbAbout = str::utf16ToUtf8(mnu_getMenuLabel(MNU_BASE_MAX_ITEMS - 1));
+    if (mbMain && mbAbout) {
+        // Iterate over the Item elements looking for our About item
+        itemEle = sciCtxMnuEle->FirstChildElement(XN_ITEM);
+        while (itemEle) {
+            if (itemEle->Attribute(XA_FOLDERNAME, mbMain) && itemEle->Attribute(XA_ITEMNAMEAS, mbAbout)) {
+                break; // found it
+            }
+            itemEle = itemEle->NextSiblingElement(XN_ITEM);
         }
-        itemEle = itemEle->NextSiblingElement(XN_ITEM);
-    }
-    if (!itemEle) { // not found so need to create our entire context menu
-        sepEle = createContextMenu(sciCtxMnuEle);
-        changed = true;
-    }
-    else { // found it so check if a separator follows it, if not then add it
-        sepEle = itemEle->NextSiblingElement(XN_ITEM);
-        if (!sepEle->Attribute(XA_FOLDERNAME, mbMain) || !sepEle->Attribute(XA_ID, "0")) {
-            sepEle = newItemElement();
-            sciCtxMnuEle->InsertAfterChild(itemEle, sepEle);
+        if (!itemEle) { // not found so need to create our entire context menu
+            sepEle = createContextMenu(sciCtxMnuEle);
             changed = true;
         }
-    }
-
-    if (changed) {
-        ctx::saveContextMenu();
+        else { // found it so check if a separator follows it, if not then add it
+            sepEle = itemEle->NextSiblingElement(XN_ITEM);
+            if (!sepEle->Attribute(XA_FOLDERNAME, mbMain) || !sepEle->Attribute(XA_ID, "0")) {
+                sepEle = newItemElement();
+                sciCtxMnuEle->InsertAfterChild(itemEle, sepEle);
+                changed = true;
+            }
+        }
+        if (changed) {
+            ctx::saveContextMenu();
+        }
+        sys_free(mbMain);
+        sys_free(mbAbout);
     }
 
     return sepEle;
@@ -224,23 +228,28 @@ tXmlEleP createContextMenu(tXmlEleP sciCtxMnuEle)
 /** @return a new Item element */
 tXmlEleP newItemElement(LPCWSTR itemName)
 {
-    tXmlEleP ele;
-    CHAR mbMain[MNU_MAX_NAME_LEN];
+    tXmlEleP ele = NULL;
 
-    ::WideCharToMultiByte(CP_UTF8, 0, mnu_getMenuLabel(), -1, mbMain, MNU_MAX_NAME_LEN, NULL, NULL);
-    ele = _pCtxXmlDoc->NewElement(XN_ITEM);
-    ele->SetAttribute(XA_FOLDERNAME, mbMain);
-    if (!itemName) { // separator
-        ele->SetAttribute(XA_ID, "0");
-    }
-    else {
-        CHAR mbMainNoAmp[MNU_MAX_NAME_LEN], mbBuf[MNU_MAX_NAME_LEN], mbBufNoAmp[MNU_MAX_NAME_LEN];
-        str::removeAmp(mbMain, mbMainNoAmp);
-        ::WideCharToMultiByte(CP_UTF8, 0, itemName, -1, mbBuf, MNU_MAX_NAME_LEN, NULL, NULL);
-        str::removeAmp(mbBuf, mbBufNoAmp);
-        ele->SetAttribute(XA_PLUGINENTRYNAME, mbMainNoAmp);
-        ele->SetAttribute(XA_ITEMNAMEAS, mbBuf);
-        ele->SetAttribute(XA_PLUGINCOMMANDITEMNAME, mbBufNoAmp);
+    LPSTR mbMain = str::utf16ToUtf8(mnu_getMenuLabel());
+    if (mbMain) {
+        ele = _pCtxXmlDoc->NewElement(XN_ITEM);
+        ele->SetAttribute(XA_FOLDERNAME, mbMain);
+        if (!itemName) { // separator
+            ele->SetAttribute(XA_ID, "0");
+        }
+        else {
+            CHAR mbMainNoAmp[MNU_MAX_NAME_LEN], mbBufNoAmp[MNU_MAX_NAME_LEN];
+            LPSTR mbBuf = str::utf16ToUtf8(itemName);
+            if (mbBuf) {
+                str::removeAmp(mbMain, mbMainNoAmp);
+                str::removeAmp(mbBuf, mbBufNoAmp);
+                ele->SetAttribute(XA_PLUGINENTRYNAME, mbMainNoAmp);
+                ele->SetAttribute(XA_ITEMNAMEAS, mbBuf);
+                ele->SetAttribute(XA_PLUGINCOMMANDITEMNAME, mbBufNoAmp);
+                sys_free(mbBuf);
+            }
+        }
+        sys_free(mbMain);
     }
 
     return ele;

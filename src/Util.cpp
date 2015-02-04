@@ -74,7 +74,7 @@ void error(DWORD lastError, LPCWSTR format, ...)
 
 /** Writes a formatted UTF-8 string to the debug log file. In format, use "%s"
     for ASCII strings and "%S" for wide strings. */
-void log(const char *format, ...)
+void log(LPCSTR format, ...)
 {
     if (gDbgLvl) {
         LPCWSTR logFile = cfg::getStr(kDebugLogFile);
@@ -169,7 +169,7 @@ bool fileExists(LPCWSTR pathname)
 }
 
 /** Creates a new file with initial contents, if the file doesn't already exist. */
-void createFileIfMissing(LPCWSTR pathname, const char *contents)
+void createFileIfMissing(LPCWSTR pathname, LPCSTR contents)
 {
     BOOL suc;
     HANDLE hFile;
@@ -219,6 +219,7 @@ void removeAmp(LPCSTR src, LPSTR dst)
     *dst = 0;
 }
 
+/** Case-insensitive wildcard match. */
 bool wildcardMatchI(LPCWSTR wild, LPCWSTR str)
 {
     WCHAR lcWild[MAX_PATH], lcStr[MAX_PATH];
@@ -230,8 +231,8 @@ bool wildcardMatchI(LPCWSTR wild, LPCWSTR str)
     return wildcardMatch(lcWild, lcStr);
 }
 
-// Originally written by Jack Handy and slightly modified by Mike Foster.
-// http://www.codeproject.com/Articles/1088/Wildcard-string-compare-globbing
+/** Originally written by Jack Handy and slightly modified by Mike Foster.
+    http://www.codeproject.com/Articles/1088/Wildcard-string-compare-globbing */
 bool wildcardMatch(LPCWSTR wild, LPCWSTR str)
 {
     LPCWSTR cp = NULL, mp = NULL;
@@ -269,6 +270,110 @@ bool wildcardMatch(LPCWSTR wild, LPCWSTR str)
     return !*wild;
 }
 
+/** cStr must be zero-terminated.
+    @return a pointer to an allocated buffer which caller must free, else NULL
+    on error */
+LPWSTR utf8ToUtf16(LPCSTR cStr)
+{
+    return utf8ToUtf16(cStr, NULL, 0);
+}
+
+/** cStr must be zero-terminated.
+    @return if buf is NULL, a pointer to an allocated buffer which caller must
+    free, else buf, or NULL on error */
+LPWSTR utf8ToUtf16(LPCSTR cStr, LPWSTR buf, size_t bufLen)
+{
+    size_t wLen;
+    LPWSTR wBuf = NULL;
+
+    wLen = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, cStr, -1, NULL, 0);
+    if (wLen > 0) {
+        if (buf) {
+            if (bufLen >= wLen) {
+                if (::MultiByteToWideChar(CP_UTF8, 0, cStr, -1, buf, bufLen)) {
+                    wBuf = buf;
+                }
+                else {
+                    LOG("Failed converting \"%s\".", cStr);
+                }
+            }
+            else {
+                LOG("Provided buffer size (%i) is smaller than required (%i) for \"%s\".", bufLen, wLen, cStr);
+            }
+        }
+        else {
+            wBuf = (LPWSTR)sys_alloc(wLen * sizeof(WCHAR));
+            if (wBuf) {
+                if (!::MultiByteToWideChar(CP_UTF8, 0, cStr, -1, wBuf, wLen)) {
+                    sys_free(wBuf);
+                    wBuf = NULL;
+                    LOG("Failed converting \"%s\".", cStr);
+                }
+            }
+            else {
+                LOG("Allocation failed for \"%s\".", cStr);
+            }
+        }
+    }
+    else {
+        LOG("Invalid characters in \"%s\".", cStr);
+    }
+
+    return wBuf;
+}
+
+/** wStr must be zero-terminated.
+    @return a pointer to an allocated buffer which caller must free, else NULL
+    on error */
+LPSTR utf16ToUtf8(LPCWSTR wStr)
+{
+    return utf16ToUtf8(wStr, NULL, 0);
+}
+
+/** wStr must be zero-terminated.
+    @return if buf is NULL, a pointer to an allocated buffer which caller must
+    free, else buf, or NULL on error */
+LPSTR utf16ToUtf8(LPCWSTR wStr, LPSTR buf, size_t bufLen)
+{
+    size_t cLen;
+    LPSTR cBuf = NULL;
+
+    cLen = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wStr, -1, NULL, 0, NULL, NULL);
+    if (cLen > 0) {
+        if (buf) {
+            if (bufLen >= cLen) {
+                if (::WideCharToMultiByte(CP_UTF8, 0, wStr, -1, buf, bufLen, NULL, NULL)) {
+                    cBuf = buf;
+                }
+                else {
+                    LOG("Failed converting \"%s\".", wStr);
+                }
+            }
+            else {
+                LOG("Provided buffer size (%i) is smaller than required (%i) for \"%s\".", bufLen, cLen, wStr);
+            }
+        }
+        else {
+            cBuf = (LPSTR)sys_alloc(cLen * sizeof(CHAR));
+            if (cBuf) {
+                if (!::WideCharToMultiByte(CP_UTF8, 0, wStr, -1, cBuf, cLen, NULL, NULL)) {
+                    sys_free(cBuf);
+                    cBuf = NULL;
+                    LOG("Failed converting \"%s\".", wStr);
+                }
+            }
+            else {
+                LOG("Allocation failed for \"%s\".", wStr);
+            }
+        }
+    }
+    else {
+        LOG("Invalid characters in \"%s\".", wStr);
+    }
+
+    return cBuf;
+}
+
 } // end namespace NppPlugin::str
 
 //------------------------------------------------------------------------------
@@ -284,7 +389,7 @@ void setText(HWND hDlg, UINT idCtrl, LPCWSTR text)
     }
 }
 
-void getText(HWND hDlg, UINT idCtrl, LPWSTR buf, INT bufLen)
+void getText(HWND hDlg, UINT idCtrl, LPWSTR buf, size_t bufLen)
 {
     HWND hCtrl = ::GetDlgItem(hDlg, idCtrl);
     if (hCtrl) {

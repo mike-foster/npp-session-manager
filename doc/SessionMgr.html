@@ -1,8 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
 <title>Session Manager Help</title>
+<meta charset="utf-8">
+<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="0">
 <link rel="stylesheet" type="text/css" href="SessionMgr.css">
 </head>
 <body>
@@ -10,7 +13,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 1.3.1</h1>
+  <h1>Session Manager 1.4</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -19,9 +22,7 @@
   &nbsp;|&nbsp;
   <a href="http://notepad-plus-plus.org/">Notepad++ Home</a>
   &nbsp;|&nbsp;
-  <a href="https://sourceforge.net/p/notepad-plus/discussion/">Notepad++ Forums</a>
-  &nbsp;|&nbsp;
-  <a href="http://npp-wiki.tuxfamily.org/index.php?title=Plugin_Central">Plugin Central</a>
+  <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/">Notepad++ Plugin Forum</a>
 </div>
 
 <div id='layout-main-col'>
@@ -35,7 +36,13 @@
     <li><a href="#ContextMenu">Context Menu</a></li>
     <li><a href="#SessionsDialog">Sessions Dialog</a></li>
     <li><a href="#SettingsDialog">Settings Dialog</a></li>
-    <li><a href="#Tips">Tips &amp; Tricks</a></li>
+    <li><a href="#Tips">Tips &amp; Tricks</a>
+      <ul>
+        <li><a href="#Tips-Categories">Categories</a></li>
+        <li><a href="#Tips-CombiningSessions">Combining Sessions</a></li>
+        <li><a href="#Tips-ChangesNotSaved">Changes Not Saved</a></li>
+      </ul>
+    </li>
     <li><a href="#Feedback">Feedback &amp; Support</a></li>
     <li><a href="#Advanced">Advanced</a>
       <ul>
@@ -77,7 +84,7 @@
 
 <h2 id="BasicConcepts">Basic Concepts</h2>
 <div>
-  <p><b>Session</b>: A Notepad++ session consists of the pathnames of all the currently open files, their containing view, their tab order, their language setting, their cursor position, and more. These properties are stored in an XML file referred to as a session file. Some of these properties can be synchronized across different session files. See <a href="#Advanced-GlobalProperties">Global Properties</a> for details.</p>
+  <p><b>Session</b>: A Notepad++ session consists of the pathnames of all the currently open files, their containing view, their tab order, their language, their folded lines, their cursor position, and more. These properties are stored in an XML file referred to as a session file. Some of these properties can be synchronized across different session files. See <a href="#Advanced-GlobalProperties">Global Properties</a> for details.</p>
   <p><b>Selected</b>: The selected session is the highlighted session in the list of session names on the Sessions dialog.</p>
   <p><b>Current</b>: The current session is the active session &ndash; the one most recently loaded. In the sessions list it is marked with a diamond (&#9674;, or &#9830; if also a favorite) and is selected when the Sessions dialog is opened.</p>
   <p><b>Previous</b>: The previous session is the prior current session. In the sessions list it is marked with a bullet (&#9702;, or &#8226; if also a favorite).</p>
@@ -149,7 +156,7 @@
     <ul>
       <li>when any file is saved;</li>
       <li>when a file's language changes;</li>
-      <li>when a file's bookmark margin is clicked;</li>
+      <li>when a bookmark or fold margin is clicked;</li>
       <li>before a new session is loaded;</li>
       <!-- <li>when the order of file tabs changes;</li> -->
       <li>when any file is opened, except when files are being opened due to a session being loaded;</li>
@@ -162,7 +169,7 @@
   <p><b>Load without closing</b>: This setting is applied any time a session is loaded except on startup where it is considered enabled. It also determines the initial state of the <tt>Load without closing</tt> checkbox on the Sessions dialog. The default is disabled.</p>
   <p><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default is disabled.</p>
   <p><b>Show in status bar</b>: If this is enabled the current and previous session names will be displayed in the Notepad++ status bar. The default is disabled.</p>
-  <p><b>Global bookmarks</b>: This enables or disables the global bookmarks feature (see the <a href="#Advanced-GlobalProperties">Global Properties</a> section). Note that if <tt>Auto save</tt> is disabled your global bookmarks will only get updated when you manually save the current session. The default for <tt>Global bookmarks</tt> is enabled.</p>
+  <p><b>Global properties</b>: This enables or disables the global properties feature (see the <a href="#Advanced-GlobalProperties">Global Properties</a> section). Note that if <tt>Auto save</tt> is disabled your global properties will only get updated when you manually save the current session. The default for <tt>Global properties</tt> is enabled.</p>
   <p><b>Use context menu</b>: This enables or disables the creation of a Session Manager submenu in the context (right-click) menu. The submenu is only created or updated when you make a change to your favorite sessions. The default for <tt>Use context menu</tt> is enabled.</p>
   <p><b>Session files folder</b>: This specifies the location of the session files Session Manager will display in the Sessions dialog. Click the <tt>...</tt> button to browse for a folder. Set to an empty string to get the default value: <tt>plugins\config\SessionMgr\sessions</tt>.</p>
   <p><b>Session file extension</b>: This specifies the file name extension of the session files Session Manager will display in the Sessions dialog. Set to an empty string to get the default value: <tt>.npp-session</tt>.</p>
@@ -176,7 +183,7 @@
 <h2 id="Tips">Tips &amp; Tricks</h2>
 <div>
   <p>Here are some tips for using Session Manager more efficiently.</p>
-  <h3>Categories</h3>
+  <h3 id="Tips-Categories">Categories</h3>
   <p>Name your sessions with categorized prefixes or suffixes. This will group related sessions together in the list when it is sorted alphabetically. For example, I prefix some sessions with an underscore because I want those to appear at the top of the list. I have many web-related projects and I prefix those session names with "www_". An example of using a suffix is: "my-project_trunk", "my-project_rev-123", etc. That keeps them grouped together in the list when sorted alphabetically.</p>
   <h3>Usage Scenarios</h3>
   <p>Here are two basic usage scenarios.
@@ -185,7 +192,7 @@
       <li>Open the Sessions dialog and load a "main" session. Open the Settings dialog. Enable <tt>Load into current</tt> and disable <tt>Load without closing</tt>. Now the main session is always current. When other sessions are loaded they are loaded into the main session. Other sessions do not change but always contain the same files and the main session always contains the most recently edited files.</li>
     </ul>
   </p>
-  <h3>Combining Sessions</h3>
+  <h3 id="Tips-CombiningSessions">Combining Sessions</h3>
   <p>Let's say the Sessions dialog is open and you have two sessions, A and B. Session A is current and session B is selected.
     <ul>
       <li>Add B to A: Check the <tt>Load into current</tt> checkbox. The <tt>Load without closing</tt> checkbox is automatically checked. Load session B. Now session A is current and includes all of session B's files.</li>
@@ -193,11 +200,29 @@
       <li>Replace A with B: Check the <tt>Load into current</tt> checkbox and uncheck the <tt>Load without closing</tt> checkbox. Load session B. Now session A is current and only contains session B's files (it is now a copy of B).</li>
     </ul>
   </p>
+  <h3 id="Tips-ChangesNotSaved">Changes Not Saved</h3>
+  <p>Here are a few ways changes may not get saved to the session file.
+    <ul>
+      <li>If you change bookmarks or folded lines via the menu or a keyboard shortcut then terminate Notepad++ without doing anything that would cause the session to be saved. This is because a plugin cannot detect those events. Clicking in the bookmark or fold margins <i>is</i> detected.</li>
+      <li>If you close a file then immediately terminate Notepad++ (see <tt>sessionSaveDelay</tt> in <a href="#Advanced-ManualSettings">Manual Settings</a>).</li>
+      <li>If you do anything that results in a change to one of the following then immediately terminate Notepad++ (see <tt>settingsSavePoll</tt> in <a href="#Advanced-ManualSettings">Manual Settings</a>).
+        <ul>
+          <li>bookmarks</li>
+          <li>folded lines</li>
+          <li>filters</li>
+          <li>favorites</li>
+          <li>sort order</li>
+          <li>dialog window sizes</li>
+          <li>default session name</li>
+        </ul>
+      </li>
+    </ul>
+  </p>
 </div>
 
 <h2 id="Feedback">Feedback &amp; Support</h2>
 <div>
-  <p>There is an <a href='https://sourceforge.net/p/notepad-plus/discussion/482781/thread/3b372eec/'>ongoing discussion</a> at the Notepad++ plugins forum. Join us!</p>
+  <p>There is an <a href='https://sourceforge.net/p/notepad-plus/discussion/482781/thread/dea823d0/'>ongoing discussion</a> at the Notepad++ plugins forum. Join us!</p>
 </div>
 
 <h2 id="Advanced">Advanced</h2>
@@ -213,18 +238,19 @@
     <p>There are some changes you might want to make which cannot be made from the plugin's dialogs but must be made by editing the "settings.xml" file directly. Close Notepad++ and use some other editor to edit that file, then restart Notepad++.</p>
     <p>To reset all settings to their defaults, close Notepad++, delete the "settings.xml" file, then restart Notepad++.</p>
     <p><b>cleanGlobalProperties</b>: If this is enabled, at startup the "global.xml" file will be cleaned of any File nodes whose files do not exist on disk. Previously this was enabled by default, but now it is disabled by default. Having it enabled all the time can cause problems, for example when you switch branches in svn or git.</p>
-    <p><b>sessionSaveDelay</b>: See the <a href="#Advanced-Shutdown">Shutdown</a> section for details. The default value is <tt>3</tt>.</p>
+    <p><b>backupOnStartup</b>: On startup the "settings.xml" and "global.xml" files, Notepad++'s "contextMenu.xml" file, and all session files are copied to a backup folder under the Session Manager configuration folder. The default value is <tt>enabled</tt>.</p>
+    <p><b>sessionSaveDelay</b>: See the <a href="#Advanced-Shutdown">Shutdown</a> section for details. The default value is <tt>3</tt> seconds.</p>
     <p><b>settingsSavePoll</b>: This is the interval at which settings are checked for changes. If anything has changed the settings are saved to disk. The default value is <tt>2</tt> seconds.</p>
     <p>
       <b>*Mark</b>: These settings optionally define the characters used as marks in the sessions list. The values must be decimal integers representing unicode characters. If any of these settings are missing, or have no values, the following defaults will be used.
       <pre>
-&lt;currentMark value="9674"/&gt;
-&lt;currentFavMark value="9830"/&gt;
-&lt;previousMark value="9702"/&gt;
-&lt;previousFavMark value="8226"/&gt;
-&lt;defaultMark value="9653"/&gt;
-&lt;defaultFavMark value="9652"/&gt;
-&lt;favoriteMark value="183"/&gt;
+&lt;currentMark value="9674"/&gt;     &lt;!-- &#9674; --&gt;
+&lt;currentFavMark value="9830"/&gt;  &lt;!-- &#9830; --&gt;
+&lt;previousMark value="9702"/&gt;    &lt;!-- &#9702; --&gt;
+&lt;previousFavMark value="8226"/&gt; &lt;!-- &#8226; --&gt;
+&lt;defaultMark value="9653"/&gt;     &lt;!-- &#9653; --&gt;
+&lt;defaultFavMark value="9652"/&gt;  &lt;!-- &#9652; --&gt;
+&lt;favoriteMark value="183"/&gt;     &lt;!-- &#183; --&gt;
 </pre>
     </p>
     <p>
@@ -246,25 +272,25 @@
   </div>
   <h3 id="Advanced-P2PAPI">Plugin-To-Plugin API</h3>
   <div>
-    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has documentation for this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr.dll"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Clients can load sessions, save the current session, get the current session name, set the session directory, and more.</p>
+    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has documentation for this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr.dll"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Clients can load sessions, save the current session, get the current session name, set the session folder, and more.</p>
   <div>
   <h3 id="Advanced-GlobalProperties">Global Properties</h3>
   <div>
-    <p>Notepad++ saves a file's bookmarks (and other properties) in the session file, so the same file in different sessions will not have the same bookmarks. Session Manager can keep files' bookmarks (and a little more) synchronized across different sessions (See <tt>Global bookmarks</tt> in the <a href="#SettingsDialog">Settings Dialog</a> section).</p>
-    <p>The file "global.xml", in the Session Manager configuration directory, stores bookmarks, firstVisibleLine and language for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
+    <p>Notepad++ saves a file's bookmarks, folded lines and other properties in the session file, so the same file in different sessions will not have the same bookmarks, folded lines, etc. Session Manager can keep files' bookmarks, folded lines, first visible line and language synchronized across different sessions (See <tt>Global properties</tt> in the <a href="#SettingsDialog">Settings Dialog</a> section).</p>
+    <p>The file "global.xml", in the Session Manager configuration folder, stores global properties for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
       <ul>
-        <li>After a session is saved, the global bookmarks, firstVisibleLine and language are updated from the session properties.</li>
-        <li>When a session is about to be loaded, the session bookmarks and language are updated from the global properties, then the session is loaded.</li>
-        <li>When an existing document is added to a session, its bookmarks and firstVisibleLine are updated from the global properties, then the session is saved.</li>
+        <li>After a session is saved, the global properties are updated from the session properties.</li>
+        <li>When a session is about to be loaded, the session properties are updated from the global properties, then the session is loaded.</li>
+        <li>When an existing document is added to a session, its properties are updated from the global properties, then the session is saved.</li>
       </ul>
-    <p>If you remove a certain file from all sessions then later add it to a session it will have bookmarks and firstVisibleLine restored from the last time it was part of a session.</p>
-    <p>The global properties feature was introduced in Session Manager 0.8, so if you have been using version &lt;= 0.7.1 and you install version &gt;= 0.8, the global properties file will be initially empty. Your global bookmarks will get updated as you load different sessions. You can speed up this process by loading all your sessions, one by one, in order from earliest to latest last-modified time, or in order from least to most important.</p>
+    <p>If you remove a certain file from all sessions then later add it to a session it will have bookmarks, folded lines and first visible line restored from the last time it was part of a session.</p>
+    <p>The global properties feature was introduced in Session Manager 0.8, so if you have been using version &lt;= 0.7.1 and you install version &gt;= 0.8, the global properties file will be initially empty. Your global properties will get updated as you load different sessions. You can speed up this process by loading all your sessions, one by one, in order from earliest to latest last-modified time, or in order from least to most important.</p>
   </div>
   <h3 id="Advanced-Shutdown">Shutdown</h3>
   <div>
-    <p>Session Manager does not immediately save the current session when a file is closed. It must determine if a shutdown is in progress in which case <i>all</i> files will be closed. We don't want to save the session if files are being closed due to a shutdown. When Notepad++ is about to shutdown it closes all files <i>before</i> it sends the shutdown notification to plugins. To work around this, when a file is closed Session Manager waits for <tt>saveDelay</tt> seconds (see the <a href="#manual-settings">Manual Settings</a> section). If the shutdown notification has not been received at the end of that time then the current session is saved.</p>
+    <p>Session Manager does not immediately save the current session when a file is closed. It must determine if a shutdown is in progress in which case <i>all</i> files will be closed. We don't want to save the session if files are being closed due to a shutdown. When Notepad++ is about to shutdown it closes all files <i>before</i> it sends the shutdown notification to plugins. To work around this, when a file is closed Session Manager waits for <tt>sessionSaveDelay</tt> seconds (see the <a href="#manual-settings">Manual Settings</a> section). If the shutdown notification has not been received at the end of that time then the current session is saved.</p>
     <p>This is not an ideal solution but it is very rare for a session to be saved incorrectly. When you initiate a shutdown Notepad++ first checks all open files. If a file is modified Notepad++ will offer to let you save the file, not save the file, or cancel the shutdown. If you choose to save the file then the plugin will receive NPPN_FILEBEFORESAVE, SCN_SAVEPOINTREACHED and then NPPN_FILESAVED, as usual. Notepad++ then continues checking open files and prompting you if any are modified. Only after all files have been checked does Notepad++ begin closing files.</p>
-    <p>So far, there is only one scenario I have found where Session Manager will save the session incorrectly. If you close one or more files and then quit Notepad++ before <tt>saveDelay</tt> seconds have elapsed then those closed files will still be part of that session.</p>
+    <p>So far, there is only one scenario I have found where Session Manager will save the session incorrectly. If you close one or more files and then quit Notepad++ before <tt>sessionSaveDelay</tt> seconds have elapsed then those closed files will still be part of that session.</p>
     <p>Ideally, Notepad++ would issue NPPN_BEFORESHUTDOWN, then close all files, then issue NPPN_SHUTDOWN. In the case where the user cancels the shutdown it would issue NPPN_CANCELSHUTDOWN.</p>
   </div>
 </div> <!-- end Advanced -->
@@ -272,6 +298,15 @@
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
   <p><b>If you are upgrading from a version older than v1.2 you must configure your settings again after the upgrade.</b></p>
+  <h3>1.4, 04Feb2015</h3>
+  <ul>
+    <li>Bug-fix: The global properties feature was removing folded lines from session files. Folded lines are now supported in session files as well as being saved as global properties. Thanks very much for the bug report from jpw411!</li>
+    <li>Improvement: The current session is now saved when there is a click in the "fold" margin, but note that it is not saved when folds change via the menu or a keyboard shortcut.</li>
+    <li>Improvement: Better unicode support and better logging when utf8/utf16 conversions fail. Thanks very much for bug reports and feedback from MrBig Ouzo!</li>
+    <li>New feature: On startup the "settings.xml" and "global.xml" files, Notepad++'s "contextMenu.xml" file, and all session files are copied to a backup folder under the Session Manager configuration folder. There is a new setting for this, "backupOnStartup", but it is not on the Settings Dialog. The default value is enabled.</li>
+    <li>Changed the "Global bookmarks" label to "Global properties" on the Settings Dialog.</li>
+    <li>Made improvements and updates to the help page.</li>
+  </ul>
   <h3>1.3.1, 27Jan2015</h3>
   <ul>
     <li>Bug-fix: If auto-save is enabled and auto-load is disabled, on startup current would point to the session last loaded even tho it was not loaded on this startup, so it would get saved while no files were open. Now, if on startup and auto-load is disabled then set new previous to old current and new current to default. Thanks very much for bug reports from Doug Henderson, MrBig Ouzo and light2some!</li>
