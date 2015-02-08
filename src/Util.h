@@ -27,8 +27,8 @@ namespace NppPlugin {
 #define LOGG(lvl, fmt, ...) if (gDbgLvl >= lvl) { LOG(fmt, __VA_ARGS__); }
 #define LOGE(lvl, fmt, ...) if (gDbgLvl == lvl) { LOG(fmt, __VA_ARGS__); }
 #define LOGR(l1, l2, fmt, ...) if (gDbgLvl >= l1 && gDbgLvl <= l2) { LOG(fmt, __VA_ARGS__); }
-#define LOGNN(ntf) LOG("%-20s\t%8i\t%i", ntf, bufferId, _bidBufferActivated)
-#define LOGSN(ntf) LOG("%-20s\t%8s\t%i", ntf, "", _bidBufferActivated)
+#define LOGNN(ntf) LOG("%-20s\t%8u\t%u", ntf, bufferId, _bidBufferActivated)
+#define LOGSN(ntf) LOG("%-20s\t%8s\t%u", ntf, "", _bidBufferActivated)
 #define __W(x) L ## x
 #define _W(x) __W(x)
 #define EMPTY_STR L""
@@ -41,6 +41,15 @@ namespace NppPlugin {
 
 inline LPCWSTR boolToStr(const bool b) { return b ? L"true" : L"false"; }
 inline const bool uintToBool(UINT n) { return n == 0 ? false : true; }
+
+//------------------------------------------------------------------------------
+/// @namespace NppPlugin::api Contains functions called only from DllMain.
+
+namespace api {
+
+void util_init();
+
+} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 /** @namespace NppPlugin::msg Contains functions for displaying error and

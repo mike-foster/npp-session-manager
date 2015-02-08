@@ -1,7 +1,7 @@
 @echo off
 
-set sesmgr_old_ver=1.3.1
-set sesmgr_new_ver=1.4
+set sesmgr_old_ver=1.4
+set sesmgr_new_ver=1.4.1
 set release_dir=c:\prj\npp-session-manager\dist\%sesmgr_new_ver%
 set zip_exe="c:\Program Files\7-Zip\7z.exe"
 set md5_exe=c:\bin\md5sums\md5sums.exe

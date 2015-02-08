@@ -38,6 +38,7 @@ INT _minWidth = 0, _minHeight = 0;
 WCHAR _currentFilter[FILTER_BUF_LEN];
 
 void onInit(HWND hDlg);
+void closeDialog(HWND hDlg, INT_PTR nResult);
 bool onOk(HWND hDlg);
 bool onFilterChange(HWND hDlg, WORD ntfy);
 bool onNew(HWND hDlg);
@@ -126,7 +127,7 @@ INT_PTR CALLBACK dlgSes_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 break;
             case IDCANCEL:
             case IDC_SES_BTN_CANCEL:
-                ::EndDialog(hDlg, 0);
+                closeDialog(hDlg, 0);
                 if (_favoriteChanged) {
                     app_updateFavorites();
                 }
@@ -189,6 +190,7 @@ void onInit(HWND hDlg)
     RECT r;
     bool alpha;
 
+    LOG("Opening sessions dialog.");
     _favoriteChanged = false;
     _inInit = true;
     if (_minWidth == 0) {
@@ -217,9 +219,15 @@ void onInit(HWND hDlg)
     _inInit = false;
 }
 
+void closeDialog(HWND hDlg, INT_PTR nResult)
+{
+    LOG("Closing sessions dialog with %u.", nResult);
+    ::EndDialog(hDlg, nResult);
+}
+
 bool onOk(HWND hDlg)
 {
-    ::EndDialog(hDlg, 1);
+    closeDialog(hDlg, 1);
     if (_favoriteChanged) {
         app_updateFavorites();
     }
@@ -256,7 +264,7 @@ bool onFilterChange(HWND hDlg, WORD ntfy)
             case CBN_SELENDCANCEL: LOG("CBN_SELENDCANCEL prv='%S'\tcur='%S'", _currentFilter, buf); break;
             case CBN_DBLCLK:       LOG("CBN_DBLCLK       prv='%S'\tcur='%S'", _currentFilter, buf); break;
             case CBN_ERRSPACE:     LOG("CBN_ERRSPACE"); break;
-            default:               LOG("Unknown %i", ntfy);
+            default:               LOG("Unknown %u", ntfy);
         }
     }
     if (buf[0] != 0) {
@@ -293,7 +301,7 @@ bool onFilterChange(HWND hDlg, WORD ntfy)
 
 bool onPrevious(HWND hDlg)
 {
-    ::EndDialog(hDlg, 1);
+    closeDialog(hDlg, 1);
     if (_favoriteChanged) {
         app_updateFavorites();
     }

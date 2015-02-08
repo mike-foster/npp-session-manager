@@ -21,6 +21,7 @@
 #include "Settings.h"
 #include "Properties.h"
 #include "ContextMenu.h"
+#include "Util.h"
 
 using namespace NppPlugin::api;
 
@@ -28,7 +29,7 @@ using namespace NppPlugin::api;
 
 namespace {
 
-INT dllCount = 0;
+INT _dllCount = 0;
 
 } // end namespace
 
@@ -38,14 +39,14 @@ BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
     switch (dwReason) {
         case DLL_PROCESS_ATTACH:
-            if (++dllCount == 1) {
+            if (++_dllCount == 1) {
                 sys_onLoad(hInstance);
                 app_onLoad();
                 mnu_onLoad();
             }
             break;
         case DLL_PROCESS_DETACH:
-            if (--dllCount == 0) {
+            if (--_dllCount == 0) {
                 ctx_onUnload();
                 mnu_onUnload();
                 app_onUnload();
@@ -61,6 +62,7 @@ BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 extern "C" __declspec(dllexport) void setInfo(NppData nppd)
 {
     sys_init(nppd);
+    util_init();
     app_init();
     mnu_init();
     prp_init();

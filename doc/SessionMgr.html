@@ -13,16 +13,16 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 1.4</h1>
+  <h1>Session Manager 1.4.1</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
 <div id="layout-hmenu">
   <a href="http://mfoster.com/npp/download.html">Downloads</a>
   &nbsp;|&nbsp;
-  <a href="http://notepad-plus-plus.org/">Notepad++ Home</a>
+  <a href="http://notepad-plus-plus.org/">Notepad++</a>
   &nbsp;|&nbsp;
-  <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/">Notepad++ Plugin Forum</a>
+  <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/">Plugins Forum</a>
 </div>
 
 <div id='layout-main-col'>
@@ -298,6 +298,11 @@
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
   <p><b>If you are upgrading from a version older than v1.2 you must configure your settings again after the upgrade.</b></p>
+  <h3>1.4.1, 08Feb2015</h3>
+  <ul>
+    <li>For all Windows versions, use 0 instead of MB_ERR_INVALID_CHARS and WC_ERR_INVALID_CHARS in MultiByteToWideChar and WideCharToMultiByte calls.</li>
+    <li>Fix error logging bug in utf16ToUtf8. Log Windows error code when utf8/utf16 conversions fail. Other minor logging improvements.</li>
+  </ul>
   <h3>1.4, 04Feb2015</h3>
   <ul>
     <li>Bug-fix: The global properties feature was removing folded lines from session files. Folded lines are now supported in session files as well as being saved as global properties. Thanks very much for the bug report from jpw411!</li>

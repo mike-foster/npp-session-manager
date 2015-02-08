@@ -128,7 +128,7 @@ void saveContextMenu()
             xmlErr = _pCtxXmlDoc->SaveFile(sys_getContextMenuFile());
             if (xmlErr != kXmlSuccess) {
                 lastErr = ::GetLastError();
-                msg::error(lastErr, L"%s: Error %i saving the context menu file.", _W(__FUNCTION__), xmlErr);
+                msg::error(lastErr, L"%s: Error %u saving the context menu file.", _W(__FUNCTION__), xmlErr);
             }
         }
     }
@@ -165,7 +165,7 @@ tXmlEleP getFavSeparator()
         xmlErr = _pCtxXmlDoc->LoadFile(sys_getContextMenuFile());
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
-            msg::error(lastErr, L"%s: Error %i loading the context menu file.", _W(__FUNCTION__), xmlErr);
+            msg::error(lastErr, L"%s: Error %u loading the context menu file.", _W(__FUNCTION__), xmlErr);
             return NULL;
         }
     }

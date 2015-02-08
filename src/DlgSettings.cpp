@@ -35,8 +35,9 @@ namespace {
 INT _minWidth = 0, _minHeight = 0;
 bool _inInit, _opChanged, _dirChanged;
 
-INT onOk(HWND hDlg);
 void onInit(HWND hDlg);
+void closeDialog(HWND hDlg, INT_PTR nResult);
+INT onOk(HWND hDlg);
 void onResize(HWND hDlg, INT w = 0, INT h = 0);
 void onGetMinSize(HWND hDlg, LPMINMAXINFO p);
 bool getFolderName(HWND parent, LPWSTR buf);
@@ -59,11 +60,11 @@ INT_PTR CALLBACK dlgCfg_msgProc(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM 
                 if (okStatus == 2) {
                     msg::show(L"An error occurred while creating the new session directory.\nThis setting was not changed.", M_WARN);
                 }
-                ::EndDialog(hDlg, 1);
+                closeDialog(hDlg, 1);
                 status = TRUE;
                 break;
             case IDCANCEL:
-                ::EndDialog(hDlg, 0);
+                closeDialog(hDlg, 0);
                 status = TRUE;
                 break;
             case IDC_CFG_CHK_ASV:
@@ -132,6 +133,7 @@ void onInit(HWND hDlg)
 {
     RECT r;
 
+    LOG("Opening settings dialog.");
     _inInit = true;
     _opChanged = false;
     _dirChanged = false;
@@ -163,6 +165,12 @@ void onInit(HWND hDlg)
     onResize(hDlg);
     ::ShowWindow(hDlg, SW_SHOW);
     _inInit = false;
+}
+
+void closeDialog(HWND hDlg, INT_PTR nResult)
+{
+    LOG("Closing settings dialog with %u.", nResult);
+    ::EndDialog(hDlg, nResult);
 }
 
 /** Gets values, if changed, from dialog box controls. Updates the global

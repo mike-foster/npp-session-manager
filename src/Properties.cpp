@@ -89,7 +89,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
     xmlErr = globalDoc.LoadFile(sys_getPropsFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
+        msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
     tXmlEleP globalPropsEle, globalFileEle, globalMarkEle, globalFoldEle;
@@ -101,7 +101,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
     xmlErr = localDoc.LoadFile(sesFile);
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
+        msg::error(lastErr, L"%s: Error %u loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
     tXmlEleP localViewEle, localFileEle, localMarkEle, localFoldEle;
@@ -133,7 +133,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
             globalFileEle->SetAttribute(XA_FIRSTVISIBLELINE, localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             LOGG(21, "lang = '%s', firstVisibleLine = %s", localFileEle->Attribute(XA_LANG), localFileEle->Attribute(XA_FIRSTVISIBLELINE));
             // Iterate over the local Mark elements for the current local File element
-            deleteChildren(globalFileEle, XN_MARK); // XXX globalFileEle->DeleteChildren();
+            deleteChildren(globalFileEle, XN_MARK);
             localMarkEle = localFileEle->FirstChildElement(XN_MARK);
             while (localMarkEle) {
                 globalMarkEle = globalDoc.NewElement(XN_MARK);
@@ -144,7 +144,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
                 localMarkEle = localMarkEle->NextSiblingElement(XN_MARK);
             }
             // Iterate over the local Fold elements for the current local File element
-            deleteChildren(globalFileEle, XN_FOLD); // XXX
+            deleteChildren(globalFileEle, XN_FOLD);
             localFoldEle = localFileEle->FirstChildElement(XN_FOLD);
             while (localFoldEle) {
                 globalFoldEle = globalDoc.NewElement(XN_FOLD);
@@ -168,7 +168,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
     xmlErr = globalDoc.SaveFile(sys_getPropsFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
+        msg::error(lastErr, L"%s: Error %u saving the global properties file.", _W(__FUNCTION__), xmlErr);
     }
 }
 
@@ -190,7 +190,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
     xmlErr = globalDoc.LoadFile(sys_getPropsFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
+        msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
     tXmlEleP globalPropsEle, globalFileEle, globalMarkEle, globalFoldEle;
@@ -202,7 +202,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
     xmlErr = localDoc.LoadFile(sesFile);
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
+        msg::error(lastErr, L"%s: Error %u loading session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         return;
     }
     tXmlEleP localViewEle, localFileEle, localMarkEle, localFoldEle;
@@ -237,7 +237,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                 localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
                 LOGG(22, "lang = '%s'", globalFileEle->Attribute(XA_LANG));
                 // Iterate over the global Mark elements for the current global File element
-                deleteChildren(localFileEle, XN_MARK); // XXX localFileEle->DeleteChildren();
+                deleteChildren(localFileEle, XN_MARK);
                 globalMarkEle = globalFileEle->FirstChildElement(XN_MARK);
                 while (globalMarkEle) {
                     localMarkEle = localDoc.NewElement(XN_MARK);
@@ -248,7 +248,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
                     globalMarkEle = globalMarkEle->NextSiblingElement(XN_MARK);
                 }
                 // Iterate over the global Fold elements for the current global File element
-                deleteChildren(localFileEle, XN_FOLD); // XXX
+                deleteChildren(localFileEle, XN_FOLD);
                 globalFoldEle = globalFileEle->FirstChildElement(XN_FOLD);
                 while (globalFoldEle) {
                     localFoldEle = localDoc.NewElement(XN_FOLD);
@@ -278,7 +278,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
         xmlErr = localDoc.SaveFile(sesFile);
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
-            msg::error(lastErr, L"%s: Error %i saving session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
+            msg::error(lastErr, L"%s: Error %u saving session file \"%s\".", _W(__FUNCTION__), xmlErr, sesFile);
         }
     }
 }
@@ -307,7 +307,7 @@ void updateDocumentFromGlobal(INT bufferId)
     tXmlError xmlErr = globalDoc.LoadFile(sys_getPropsFile());
     if (xmlErr != kXmlSuccess) {
         DWORD lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
+        msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
         sys_free(mbPathname);
         return;
     }
@@ -417,7 +417,7 @@ void removeMissingFilesFromGlobal()
     xmlErr = globalDoc.LoadFile(sys_getPropsFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
-        msg::error(lastErr, L"%s: Error %i loading the global properties file.", _W(__FUNCTION__), xmlErr);
+        msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
         return;
     }
     tXmlHnd globalDocHnd(&globalDoc);
@@ -450,7 +450,7 @@ void removeMissingFilesFromGlobal()
         xmlErr = globalDoc.SaveFile(sys_getPropsFile());
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
-            msg::error(lastErr, L"%s: Error %i saving the global properties file.", _W(__FUNCTION__), xmlErr);
+            msg::error(lastErr, L"%s: Error %u saving the global properties file.", _W(__FUNCTION__), xmlErr);
         }
     }
 }

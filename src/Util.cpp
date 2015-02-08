@@ -24,6 +24,31 @@ namespace NppPlugin {
 
 //------------------------------------------------------------------------------
 
+namespace {
+
+DWORD _mbConversionFlag = 0;
+DWORD _wcConversionFlag = 0;
+
+} // end namespace
+
+//------------------------------------------------------------------------------
+
+namespace api {
+
+void util_init()
+{
+    LRESULT winVer = ::SendMessage(sys_getNppHandle(), NPPM_GETWINDOWSVERSION, 0, 0);
+    LOG("winVer %lu", winVer);
+    //if (winVer >= WV_VISTA) {
+    //    _mbConversionFlag = MB_ERR_INVALID_CHARS;
+    //    _wcConversionFlag = WC_ERR_INVALID_CHARS;
+    //}
+}
+
+} // end namespace NppPlugin::api
+
+//------------------------------------------------------------------------------
+
 namespace msg {
 
 /** Displays a simple message box. For title/options see the M_* constants. */
@@ -43,7 +68,7 @@ void error(DWORD lastError, LPCWSTR format, ...)
     len = ::_vscwprintf(format, argptr);
     buf1 = (LPWSTR)sys_alloc((len + 2) * sizeof(WCHAR));
     if (buf1 == NULL) {
-        log("Error in msg::error allocating memory for: \"%S\".", format);
+        log("Error allocating %u bytes for: \"%S\".", (len + 2) * sizeof(WCHAR), format);
         return;
     }
     ::vswprintf_s(buf1, len + 1, format, argptr);
@@ -54,7 +79,7 @@ void error(DWORD lastError, LPCWSTR format, ...)
         FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
             NULL, lastError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), lastErrorMsg, 0, NULL);
         lem = lastErrorMsg == NULL ? EMPTY_STR : lastErrorMsg;
-        LPCWSTR fmt = L"%s\nError %i: %s";
+        LPCWSTR fmt = L"%s\nError %lu: %s";
         len = ::_scwprintf(fmt, buf1, lastError, lem);
         buf2 = (LPWSTR)sys_alloc((len + 2) * sizeof(WCHAR));
         if (buf2) {
@@ -284,9 +309,10 @@ LPWSTR utf8ToUtf16(LPCSTR cStr)
 LPWSTR utf8ToUtf16(LPCSTR cStr, LPWSTR buf, size_t bufLen)
 {
     size_t wLen;
+    DWORD lastError;
     LPWSTR wBuf = NULL;
 
-    wLen = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, cStr, -1, NULL, 0);
+    wLen = ::MultiByteToWideChar(CP_UTF8, _mbConversionFlag, cStr, -1, NULL, 0);
     if (wLen > 0) {
         if (buf) {
             if (bufLen >= wLen) {
@@ -294,29 +320,32 @@ LPWSTR utf8ToUtf16(LPCSTR cStr, LPWSTR buf, size_t bufLen)
                     wBuf = buf;
                 }
                 else {
-                    LOG("Failed converting \"%s\".", cStr);
+                    lastError = ::GetLastError();
+                    LOG("Error %lu for \"%s\".", lastError, cStr);
                 }
             }
             else {
-                LOG("Provided buffer size (%i) is smaller than required (%i) for \"%s\".", bufLen, wLen, cStr);
+                LOG("Error. Provided buffer size (%i) is smaller than required (%i) for \"%s\".", bufLen, wLen, cStr);
             }
         }
         else {
             wBuf = (LPWSTR)sys_alloc(wLen * sizeof(WCHAR));
             if (wBuf) {
                 if (!::MultiByteToWideChar(CP_UTF8, 0, cStr, -1, wBuf, wLen)) {
+                    lastError = ::GetLastError();
+                    LOG("Error %lu for \"%s\".", lastError, cStr);
                     sys_free(wBuf);
                     wBuf = NULL;
-                    LOG("Failed converting \"%s\".", cStr);
                 }
             }
             else {
-                LOG("Allocation failed for \"%s\".", cStr);
+                LOG("Error allocating %u bytes for \"%s\".", wLen * sizeof(WCHAR), cStr);
             }
         }
     }
     else {
-        LOG("Invalid characters in \"%s\".", cStr);
+        lastError = ::GetLastError();
+        LOG("Error %lu. Invalid characters in \"%s\".", lastError, cStr);
     }
 
     return wBuf;
@@ -336,9 +365,10 @@ LPSTR utf16ToUtf8(LPCWSTR wStr)
 LPSTR utf16ToUtf8(LPCWSTR wStr, LPSTR buf, size_t bufLen)
 {
     size_t cLen;
+    DWORD lastError;
     LPSTR cBuf = NULL;
 
-    cLen = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wStr, -1, NULL, 0, NULL, NULL);
+    cLen = ::WideCharToMultiByte(CP_UTF8, _wcConversionFlag, wStr, -1, NULL, 0, NULL, NULL);
     if (cLen > 0) {
         if (buf) {
             if (bufLen >= cLen) {
@@ -346,29 +376,32 @@ LPSTR utf16ToUtf8(LPCWSTR wStr, LPSTR buf, size_t bufLen)
                     cBuf = buf;
                 }
                 else {
-                    LOG("Failed converting \"%s\".", wStr);
+                    lastError = ::GetLastError();
+                    LOG("Error %lu for \"%S\".", lastError, wStr);
                 }
             }
             else {
-                LOG("Provided buffer size (%i) is smaller than required (%i) for \"%s\".", bufLen, cLen, wStr);
+                LOG("Error. Provided buffer size (%i) is smaller than required (%i) for \"%S\".", bufLen, cLen, wStr);
             }
         }
         else {
             cBuf = (LPSTR)sys_alloc(cLen * sizeof(CHAR));
             if (cBuf) {
                 if (!::WideCharToMultiByte(CP_UTF8, 0, wStr, -1, cBuf, cLen, NULL, NULL)) {
+                    lastError = ::GetLastError();
+                    LOG("Error %lu for \"%S\".", lastError, wStr);
                     sys_free(cBuf);
                     cBuf = NULL;
-                    LOG("Failed converting \"%s\".", wStr);
                 }
             }
             else {
-                LOG("Allocation failed for \"%s\".", wStr);
+                LOG("Error allocating %u bytes for \"%S\".", cLen * sizeof(WCHAR), wStr);
             }
         }
     }
     else {
-        LOG("Invalid characters in \"%s\".", wStr);
+        lastError = ::GetLastError();
+        LOG("Error %lu. Invalid characters in \"%S\".", lastError, wStr);
     }
 
     return cBuf;

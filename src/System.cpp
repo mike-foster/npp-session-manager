@@ -79,7 +79,6 @@ void sys_init(NppData nppd)
     _ctxFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
     _propsFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
 
-    // Get Npp version to verify plugin compatibility
     //_nppVersion = ::SendMessage(_hNpp, NPPM_GETNPPVERSION, 0, 0);
 
     // Get NPP's contextMenu.xml pathname.
@@ -158,7 +157,7 @@ LPVOID sys_alloc(INT bytes)
 {
     LPVOID p = ::HeapAlloc(_hHeap, HEAP_ZERO_MEMORY, bytes);
     if (p == NULL) {
-        LOG("Error allocating %i bytes.", bytes);
+        LOG("Error allocating %u bytes.", bytes);
         msg::show(L"Memory allocation failed.", M_ERR);
     }
     return p;

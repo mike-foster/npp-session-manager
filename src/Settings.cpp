@@ -169,7 +169,7 @@ void saveSettings()
         xmlErr = _xmlDocument->SaveFile(sys_getSettingsFile());
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
-            msg::error(lastErr, L"%s: Error %i saving the settings file.", _W(__FUNCTION__), xmlErr);
+            msg::error(lastErr, L"%s: Error %u saving the settings file.", _W(__FUNCTION__), xmlErr);
         }
         else {
             _isDirty = false;
@@ -473,7 +473,7 @@ bool readSettingsFile()
         xmlErr = _xmlDocument->LoadFile(settingsFile);
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
-            msg::error(lastErr, L"%s: Error %i loading the settings file.", _W(__FUNCTION__), xmlErr);
+            msg::error(lastErr, L"%s: Error %u loading the settings file.", _W(__FUNCTION__), xmlErr);
             return false;
         }
     }
