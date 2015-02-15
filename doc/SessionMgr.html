@@ -13,7 +13,7 @@
 <div id="layout-container">
 
 <div id="layout-header">
-  <h1>Session Manager 1.4.1</h1>
+  <h1>Session Manager 1.4.2</h1>
   <p>A Plugin for Notepad++</p>
 </div>
 
@@ -48,9 +48,9 @@
       <ul>
         <li><a href="#Advanced-ContextMenu">Context Menu</a></li>
         <li><a href="#Advanced-ManualSettings">Manual Settings</a></li>
-        <li><a href="#Advanced-P2PAPI">P2P API</a></li>
         <li><a href="#Advanced-GlobalProperties">Global Properties</a></li>
         <li><a href="#Advanced-Shutdown">Shutdown</a></li>
+        <li><a href="#Advanced-P2PAPI">P2P API</a></li>
       </ul>
     </li>
     <li><a href="#RevisionHistory">Revision History</a></li>
@@ -67,8 +67,8 @@
     <li>Exit Notepad++.</li>
     <li>When upgrading from a previous version:
       <ul>
-        <li>Rename the existing <tt>SessionMgr.dll</tt> file (located in the Notepad++ <tt>plugins</tt> folder) so that it does not have a <tt>.dll</tt> extension, for example: <tt>SessionMgr-1.1.1.dll.bak</tt> (assuming its version is 1.1.1).</li>
-        <li>Make a backup copy of all existing session files, the <tt>settings.xml</tt> file, and the <tt>global.xml</tt> file.</li>
+        <li>Rename the existing <tt>SessionMgr.dll</tt> file (located in the Notepad++ <tt>plugins</tt> folder) so that it does not have a <tt>.dll</tt> extension, for example: <tt>SessionMgr-1.3.dll.bak</tt> (assuming its version is 1.3).</li>
+        <li>Make backup copies of all existing session files, the <tt>settings.xml</tt> file, and the <tt>global.xml</tt> file. If you are running v1.4 or newer Session Manager has already made these backups for you unless you have disabled this feature.</li>
         <li>If you are upgrading from a version older than v1.2 you will have <tt>settings.ini</tt> instead of <tt>settings.xml</tt>. Version 1.2 or higher will create <tt>settings.xml</tt> after which you should configure your settings again. You can then delete <tt>settings.ini</tt>.</li>
         <li>If you are upgrading from a version older than v0.8 you will not have <tt>global.xml</tt>.</li>
       </ul>
@@ -96,7 +96,7 @@
 
 <h2 id="PluginsMenu">Plugins Menu</h2>
 <div>
-  <p>Session Manager creates a submenu in the Notepad++ Plugins menu. You can customize Session Manager's menu items (see the <a href="#Advanced-ManualSettings">Manual Settings</a> section). The default labels and shortcuts follow. You can also configure your own shortcuts with the Notepad++ Shortcut Mapper. Favorite sessions are listed after the About item.</p>
+  <p>Session Manager creates a submenu in the Notepad++ Plugins menu. You can customize Session Manager's menu item labels and shortcut keys (see the <a href="#Advanced-ManualSettings">Manual Settings</a> section). The default labels and shortcuts follow. Favorite sessions are listed after the About item.</p>
   <h3>Main Menu Item</h3>
   <p><b>Session Manager</b> (<tt>alt+p,s</tt>): Opens the Session Manager submenu.</p>
   <h3>Submenu Items</h3>
@@ -111,6 +111,7 @@
 <h2 id="ContextMenu">Context Menu</h2>
 <div>
   <p>Session Manager creates a submenu in the context (right-click) menu if you have <tt>Use context menu</tt> checked in Settings. The submenu is only created or updated when you make a change to your favorite sessions. You must restart Notepad++ for the changes to appear in the menus. The menu labels used in the context submenu are the same as those used in the Plugins menu and favorite sessions are listed after the About item.</p>
+  <p>If you have <tt>Use context menu</tt> enabled and you change existing <tt>menuLabel*</tt> settings, Session Manager does not remove the old items from the "contextMenu.xml" file. You have to remove those manually. See the <a href="#Advanced-ContextMenu">Advanced/ContextMenu</a> section for more information.</p>
 </div>
 
 <h2 id="SessionsDialog">Sessions Dialog</h2>
@@ -164,7 +165,7 @@
     </ul>
     <p>If <tt>Auto save</tt> is disabled sessions will only be saved when you select <tt>Save current</tt> from the plugin menu or click the <tt>Save</tt> button on the Sessions dialog. The default for <tt>Auto save</tt> is enabled.</p>
   </p>
-  <p><b>Auto load</b>: If this is enabled the most recently opened session will be loaded when Notepad++ starts up. If you enable <tt>Auto load</tt> you should disable the Notepad++ <i class="smaller">Remember current session for next launch</i> feature. The default for <tt>Auto load</tt> is disabled.</p>
+  <p><b>Auto load</b>: If this is enabled the most recently opened session will be loaded when Notepad++ starts up. <b>Important</b>: If you enable <tt>Auto load</tt> you must disable the Notepad++ <i class="smaller">Remember current session for next launch</i> feature. The default for <tt>Auto load</tt> is disabled.</p>
   <p><b>Load into current</b>: This setting is applied any time a session is loaded. It also determines the initial state of the <tt>Load into current</tt> checkbox on the Sessions dialog. The default is disabled.</p>
   <p><b>Load without closing</b>: This setting is applied any time a session is loaded except on startup where it is considered enabled. It also determines the initial state of the <tt>Load without closing</tt> checkbox on the Sessions dialog. The default is disabled.</p>
   <p><b>Show in title bar</b>: If this is enabled the current session name will be prepended to the text in the Notepad++ title bar. The default is disabled.</p>
@@ -222,7 +223,7 @@
 
 <h2 id="Feedback">Feedback &amp; Support</h2>
 <div>
-  <p>There is an <a href='https://sourceforge.net/p/notepad-plus/discussion/482781/thread/dea823d0/'>ongoing discussion</a> at the Notepad++ plugins forum. Join us!</p>
+  <p>Look for the newest Session Manager thread in the Notepad++ <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/">Plugins Forum</a>. Ask questions, request features, submit bug reports, or just drop in to chat. We look forward to hearing what you think about Session Manager!</p>
 </div>
 
 <h2 id="Advanced">Advanced</h2>
@@ -230,8 +231,18 @@
   <p>This section contains advanced and technical topics which are not necessary to understand for normal usage of Session Manager.</p>
   <h3 id="Advanced-ContextMenu">Context Menu</h3>
   <div>
-    <p>For this feature Session Manager makes changes to the Notepad++ "contextMenu.xml" file. If the Session Manager submenu does not already exist it will be added to the end of the context menu. You can move it to a different location simply by cutting all Session Manager <tt>Item</tt> elements and pasting them somewhere else in the file. The <tt>Item</tt> element with <tt>id="0"</tt> creates a separator and you can add those wherever you want. Before editing the file disable the <tt>Use context menu</tt> setting and reenable it after editing the file or Session Manager may overwrite your changes.</p>
-    <p>If you have <tt>Use context menu</tt> enabled and you change existing <tt>menuLabel*</tt> settings, Session Manager does not remove the old items from the "contextMenu.xml" file. You have to remove those manually.</p>
+    <p>For this feature Session Manager makes changes to Notepad++'s "contextMenu.xml" file. If the Session Manager submenu does not already exist it will be added to the end of the context menu. You can move it to a different location simply by cutting all Session Manager <tt>Item</tt> elements and pasting them somewhere else in the file. The <tt>Item</tt> element with <tt>id="0"</tt> creates a separator and you can add those wherever you want. Before editing the file disable the <tt>Use context menu</tt> setting and reenable it after editing the file or Session Manager may overwrite your changes.</p>
+    <p>If you have <tt>Use context menu</tt> enabled and you change existing <tt>menuLabel*</tt> settings, Session Manager does not remove the old items from the "contextMenu.xml" file. You have to remove those manually. Here's a procedure for that:</p>
+    <ol>
+      <li>Open Session Manager's Settings dialog, <b>un</b>check the <tt>Use context menu</tt> option and save the change.</li>
+      <li>Open Notepad++'s "contextMenu.xml" file.</li>
+      <li>Delete all Session Manager <tt>Item</tt> elements.</li>
+      <li>Save the changes to "contextMenu.xml".</li>
+      <li>Restart Notepad++.</li>
+      <li>Open Session Manager's Settings dialog, check the <tt>Use context menu</tt> option and save the change.</li>
+      <li>Open Session Manager's Sessions dialog, select some favorites and close the dialog.</li>
+      <li>Restart Notepad++.</li>
+    </ol>
   </div>
   <h3 id="Advanced-ManualSettings">Manual Settings</h3>
   <div>
@@ -254,13 +265,13 @@
 </pre>
     </p>
     <p>
-      <b>menuLabel*</b>: These settings optionally define the labels for the Session Manager plugin menu and context submenu. Session Manager will use default values (see the <a href="#PluginsMenu">Plugin Menu</a> section) for any items not defined here. Here is an example of customizing the menu items:
+      <b>menuLabel*</b>: These settings optionally define the labels and shortcut keys for the Session Manager plugin menu and context submenu. Session Manager will use default values (see the <a href="#PluginsMenu">Plugin Menu</a> section) for any items not defined here. Here is an example of customizing the menu items:
       <pre>
 &lt;menuLabelMain value="Session &amp;Manager"/&gt;
 &lt;menuLabelSub1 value="&amp;Open..."/&gt;
 &lt;menuLabelSub2 value="&amp;Configure..."/&gt;
 &lt;menuLabelSub3 value="&amp;Save current"/&gt;
-&lt;menuLabelSub4 value="&amp;Load previous"/&gt;
+&lt;menuLabelSub4 value="Load &amp;previous"/&gt;
 &lt;menuLabelSub5 value="&amp;Help"/&gt;
 &lt;menuLabelSub6 value="&amp;About..."/&gt;</pre>
     </p>
@@ -270,19 +281,15 @@
     <p><b>Favorites</b>: These items define the favorites. You can edit these or add more, or delete these if you want to clear all favorites. Note that Session Manager supports session names up to 100 characters but Notepad++ only allows menu items up to 64 characters.</p>
     <p><b>Filters</b>: These items define the filters. You can edit these or add more, or delete these if you want to clear the filters list. On startup a "*" filter will be automatically added.</p>
   </div>
-  <h3 id="Advanced-P2PAPI">Plugin-To-Plugin API</h3>
-  <div>
-    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has documentation for this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr.dll"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Clients can load sessions, save the current session, get the current session name, set the session folder, and more.</p>
-  <div>
   <h3 id="Advanced-GlobalProperties">Global Properties</h3>
   <div>
     <p>Notepad++ saves a file's bookmarks, folded lines and other properties in the session file, so the same file in different sessions will not have the same bookmarks, folded lines, etc. Session Manager can keep files' bookmarks, folded lines, first visible line and language synchronized across different sessions (See <tt>Global properties</tt> in the <a href="#SettingsDialog">Settings Dialog</a> section).</p>
     <p>The file "global.xml", in the Session Manager configuration folder, stores global properties for each unique pathname in all your sessions. There are 3 cases where these global properties are used...</p>
-      <ul>
-        <li>After a session is saved, the global properties are updated from the session properties.</li>
-        <li>When a session is about to be loaded, the session properties are updated from the global properties, then the session is loaded.</li>
-        <li>When an existing document is added to a session, its properties are updated from the global properties, then the session is saved.</li>
-      </ul>
+    <ul>
+      <li>After a session is saved, the global properties are updated from the session properties.</li>
+      <li>When a session is about to be loaded, the session properties are updated from the global properties, then the session is loaded.</li>
+      <li>When an existing document is added to a session, its properties are updated from the global properties, then the session is saved.</li>
+    </ul>
     <p>If you remove a certain file from all sessions then later add it to a session it will have bookmarks, folded lines and first visible line restored from the last time it was part of a session.</p>
     <p>The global properties feature was introduced in Session Manager 0.8, so if you have been using version &lt;= 0.7.1 and you install version &gt;= 0.8, the global properties file will be initially empty. Your global properties will get updated as you load different sessions. You can speed up this process by loading all your sessions, one by one, in order from earliest to latest last-modified time, or in order from least to most important.</p>
   </div>
@@ -293,11 +300,21 @@
     <p>So far, there is only one scenario I have found where Session Manager will save the session incorrectly. If you close one or more files and then quit Notepad++ before <tt>sessionSaveDelay</tt> seconds have elapsed then those closed files will still be part of that session.</p>
     <p>Ideally, Notepad++ would issue NPPN_BEFORESHUTDOWN, then close all files, then issue NPPN_SHUTDOWN. In the case where the user cancels the shutdown it would issue NPPN_CANCELSHUTDOWN.</p>
   </div>
+  <h3 id="Advanced-P2PAPI">Plugin-To-Plugin API</h3>
+  <div>
+    <p>Session Manager provides an API which can be used by Notepad++ or other plugins. The "SessionMgrApi.h" file has documentation for this feature. A client sends an <tt>NPPM_MSGTOPLUGIN</tt> message to Notepad++ with <tt>wParam</tt> pointing to <tt>L"SessionMgr.dll"</tt> and <tt>lParam</tt> pointing to a <tt>SessionMgrApiData</tt> object. Session Manager exposes all its settings and features through the API.</p>
+  <div>
 </div> <!-- end Advanced -->
 
 <h2 id="RevisionHistory">Revision History</h2>
 <div>
   <p><b>If you are upgrading from a version older than v1.2 you must configure your settings again after the upgrade.</b></p>
+  <h3>1.4.2, 15Feb2015</h3>
+  <ul>
+    <li>Bug-fix: The context menu feature assumed "contextMenu.xml" to be in Notepad++'s installation folder, but now it determines if it is there or in %AppData%.</li>
+    <li>Improvement: The P2P API is now much more comprehensive.</li>
+    <li>Made improvements to the help page.</li>
+  </ul>
   <h3>1.4.1, 08Feb2015</h3>
   <ul>
     <li>For all Windows versions, use 0 instead of MB_ERR_INVALID_CHARS and WC_ERR_INVALID_CHARS in MultiByteToWideChar and WideCharToMultiByte calls.</li>
@@ -499,11 +516,9 @@
 <div id="layout-footer">
   <a href="http://mfoster.com/npp/download.html">Downloads</a>
   &nbsp;|&nbsp;
-  <a href="http://notepad-plus-plus.org/">Notepad++ Home</a>
+  <a href="http://notepad-plus-plus.org/">Notepad++</a>
   &nbsp;|&nbsp;
-  <a href="https://sourceforge.net/p/notepad-plus/discussion/">Notepad++ Forums</a>
-  &nbsp;|&nbsp;
-  <a href="http://npp-wiki.tuxfamily.org/index.php?title=Plugin_Central">Plugin Central</a>
+  <a href="https://sourceforge.net/p/notepad-plus/discussion/482781/">Plugins Forum</a>
 </div>
 
 </div> <!-- end layout-container -->

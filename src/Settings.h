@@ -16,6 +16,7 @@
 #ifndef NPP_PLUGIN_SETTINGS_H
 #define NPP_PLUGIN_SETTINGS_H
 
+#include "SessionMgrApi.h"
 #include "xml\tinyxml.h"
 
 //------------------------------------------------------------------------------
@@ -31,48 +32,7 @@ enum ContainerId {
     kContainersCount
 };
 
-enum SettingId {
-    kAutomaticSave = 0,
-    kAutomaticLoad,
-    kLoadIntoCurrent,
-    kLoadWithoutClosing,
-    kShowInTitlebar,
-    kShowInStatusbar,
-    kUseGlobalProperties,
-    kCleanGlobalProperties,
-    kUseContextMenu,
-    kBackupOnStartup,
-    kSessionSaveDelay,
-    kSettingsSavePoll,
-    kSessionDirectory,
-    kSessionExtension,
-    kCurrentMark,
-    kCurrentFavMark,
-    kPreviousMark,
-    kPreviousFavMark,
-    kDefaultMark,
-    kDefaultFavMark,
-    kFavoriteMark,
-    kUseFilterWildcards,
-    kSessionSortOrder,
-    kCurrentSession,
-    kPreviousSession,
-    kDefaultSession,
-    kMenuLabelMain,
-    kMenuLabelSub1,
-    kMenuLabelSub2,
-    kMenuLabelSub3,
-    kMenuLabelSub4,
-    kMenuLabelSub5,
-    kMenuLabelSub6,
-    kSessionsDialogWidth,
-    kSessionsDialogHeight,
-    kSettingsDialogWidth,
-    kSettingsDialogHeight,
-    kDebugLogLevel,
-    kDebugLogFile,
-    kSettingsCount
-};
+// See SessionMgrApi.h for enum SettingId
 
 #define SORT_ORDER_ALPHA 1
 #define SORT_ORDER_DATE  2

@@ -40,11 +40,13 @@ void sys_init(NppData nppd);
 
 LPWSTR sys_getCfgDir();
 LPWSTR sys_getSettingsFile();
-LPWSTR sys_getPropsFile();
-LPCWSTR sys_getContextMenuFile();
+LPWSTR sys_getGlobalFile();
+LPCWSTR sys_getNppCtxMnuFile();
 HINSTANCE sys_getDllHandle();
 HWND sys_getNppHandle();
 HWND sys_getSciHandle(INT v);
+DWORD sys_getNppVer();
+UINT sys_getWinVer();
 LPVOID sys_alloc(INT bytes);
 void sys_free(LPVOID p);
 

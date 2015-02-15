@@ -125,7 +125,7 @@ void saveContextMenu()
 
     if (cfg::getBool(kUseContextMenu)) {
         if (_pCtxXmlDoc) {
-            xmlErr = _pCtxXmlDoc->SaveFile(sys_getContextMenuFile());
+            xmlErr = _pCtxXmlDoc->SaveFile(sys_getNppCtxMnuFile());
             if (xmlErr != kXmlSuccess) {
                 lastErr = ::GetLastError();
                 msg::error(lastErr, L"%s: Error %u saving the context menu file.", _W(__FUNCTION__), xmlErr);
@@ -162,7 +162,7 @@ tXmlEleP getFavSeparator()
     // Load the contextMenu file if not already loaded
     if (!_pCtxXmlDoc) {
         _pCtxXmlDoc = new tinyxml2::XMLDocument();
-        xmlErr = _pCtxXmlDoc->LoadFile(sys_getContextMenuFile());
+        xmlErr = _pCtxXmlDoc->LoadFile(sys_getNppCtxMnuFile());
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
             msg::error(lastErr, L"%s: Error %u loading the context menu file.", _W(__FUNCTION__), xmlErr);

@@ -24,7 +24,6 @@
 #include "System.h"
 #include "Properties.h"
 #include "Util.h"
-#include "utf8\unchecked.h"
 
 //------------------------------------------------------------------------------
 
@@ -50,7 +49,6 @@ namespace {
 #define XA_FIRSTVISIBLELINE "firstVisibleLine"
 #define XA_LINE             "line"
 
-INT utf8ToAscii(LPCSTR str, LPSTR buf = NULL);
 void removeMissingFilesFromGlobal();
 void deleteChildren(tXmlEleP parent, LPCSTR eleName);
 
@@ -86,7 +84,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
 
     // Load the properties file (global file properties)
     tXmlDoc globalDoc;
-    xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    xmlErr = globalDoc.LoadFile(sys_getGlobalFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
@@ -165,7 +163,7 @@ void updateGlobalFromSession(LPWSTR sesFile)
         globalDoc.InsertFirstChild(globalDoc.NewDeclaration());
     }
     // Save changes to the properties file
-    xmlErr = globalDoc.SaveFile(sys_getPropsFile());
+    xmlErr = globalDoc.SaveFile(sys_getGlobalFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %u saving the global properties file.", _W(__FUNCTION__), xmlErr);
@@ -187,7 +185,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
 
     // Load the properties file (global file properties)
     tXmlDoc globalDoc;
-    xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    xmlErr = globalDoc.LoadFile(sys_getGlobalFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
@@ -227,11 +225,11 @@ void updateSessionFromGlobal(LPWSTR sesFile)
             if (globalFileEle) {
                 save = true;
                 // Update current local File attributes with values from the global File attributes
-                buf = (LPSTR)sys_alloc(utf8ToAscii(target) * sizeof CHAR);
+                buf = (LPSTR)sys_alloc(str::utf8ToAscii(target) * sizeof CHAR);
                 if (buf == NULL) {
                     return;
                 }
-                utf8ToAscii(target, buf); // NPP expects the pathname to be encoded like this
+                str::utf8ToAscii(target, buf); // NPP expects the pathname to be encoded like this
                 localFileEle->SetAttribute(XA_FILENAME, buf);
                 sys_free(buf);
                 localFileEle->SetAttribute(XA_LANG, globalFileEle->Attribute(XA_LANG));
@@ -304,7 +302,7 @@ void updateDocumentFromGlobal(INT bufferId)
     LOGG(20, "File = %s", mbPathname);
     // Load the properties file (global file properties)
     tXmlDoc globalDoc;
-    tXmlError xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    tXmlError xmlErr = globalDoc.LoadFile(sys_getGlobalFile());
     if (xmlErr != kXmlSuccess) {
         DWORD lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
@@ -368,41 +366,9 @@ void updateDocumentFromGlobal(INT bufferId)
 
 namespace {
 
-/** If buf is non-NULL, converts a UTF-8 string to a string where all chars < 32
-    or > 126 are converted to entities.
-    @return the number of bytes in the converted string including the terminator */
-INT utf8ToAscii(LPCSTR str, LPSTR buf)
-{
-    INT bytes = 0;
-    LPSTR b = buf;
-    LPCSTR s = str;
-    utf8::uint32_t cp;
-    while (*s) {
-        cp = utf8::unchecked::next(s);
-        if (cp < 32 || cp > 126) {
-            if (buf) {
-                ::sprintf_s(b, 9, "&#x%04X;", cp);
-                b += 8;
-            }
-            bytes += 8;
-        }
-        else {
-            if (buf) {
-                *b++ = (unsigned char)cp;
-            }
-            ++bytes;
-        }
-    }
-    if (buf) {
-        *b = 0;
-    }
-    return bytes + 1;
-}
-
 /** Removes global File elements whose files do not exist on disk. */
 void removeMissingFilesFromGlobal()
 {
-    INT wLen;
     DWORD lastErr;
     tXmlError xmlErr;
     bool save = false;
@@ -414,7 +380,7 @@ void removeMissingFilesFromGlobal()
 
     // Load the properties file (global file properties)
     tXmlDoc globalDoc;
-    xmlErr = globalDoc.LoadFile(sys_getPropsFile());
+    xmlErr = globalDoc.LoadFile(sys_getGlobalFile());
     if (xmlErr != kXmlSuccess) {
         lastErr = ::GetLastError();
         msg::error(lastErr, L"%s: Error %u loading the global properties file.", _W(__FUNCTION__), xmlErr);
@@ -447,7 +413,7 @@ void removeMissingFilesFromGlobal()
             globalDoc.InsertFirstChild(globalDoc.NewDeclaration());
         }
         // Save changes to the properties file
-        xmlErr = globalDoc.SaveFile(sys_getPropsFile());
+        xmlErr = globalDoc.SaveFile(sys_getGlobalFile());
         if (xmlErr != kXmlSuccess) {
             lastErr = ::GetLastError();
             msg::error(lastErr, L"%s: Error %u saving the global properties file.", _W(__FUNCTION__), xmlErr);

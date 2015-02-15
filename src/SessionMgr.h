@@ -78,7 +78,7 @@ void app_getSessionFile(INT si, LPWSTR buf);
 Session* app_getSessionObject(INT si);
 void app_confirmDefaultSession();
 void app_updateNppBars();
-void app_updateFavorites();
+void app_updateFavorites(bool clearAll = false);
 INT app_getLbIdxStartingWith(WCHAR targetChar);
 
 } // end namespace NppPlugin

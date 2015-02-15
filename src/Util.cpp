@@ -16,36 +16,12 @@
 #include "System.h"
 #include "SessionMgr.h"
 #include "Util.h"
+#include "utf8\unchecked.h"
 #include <strsafe.h>
 
 //------------------------------------------------------------------------------
 
 namespace NppPlugin {
-
-//------------------------------------------------------------------------------
-
-namespace {
-
-DWORD _mbConversionFlag = 0;
-DWORD _wcConversionFlag = 0;
-
-} // end namespace
-
-//------------------------------------------------------------------------------
-
-namespace api {
-
-void util_init()
-{
-    LRESULT winVer = ::SendMessage(sys_getNppHandle(), NPPM_GETWINDOWSVERSION, 0, 0);
-    LOG("winVer %lu", winVer);
-    //if (winVer >= WV_VISTA) {
-    //    _mbConversionFlag = MB_ERR_INVALID_CHARS;
-    //    _wcConversionFlag = WC_ERR_INVALID_CHARS;
-    //}
-}
-
-} // end namespace NppPlugin::api
 
 //------------------------------------------------------------------------------
 
@@ -257,7 +233,7 @@ bool wildcardMatchI(LPCWSTR wild, LPCWSTR str)
 }
 
 /** Originally written by Jack Handy and slightly modified by Mike Foster.
-    http://www.codeproject.com/Articles/1088/Wildcard-string-compare-globbing */
+    @see http://www.codeproject.com/Articles/1088/Wildcard-string-compare-globbing */
 bool wildcardMatch(LPCWSTR wild, LPCWSTR str)
 {
     LPCWSTR cp = NULL, mp = NULL;
@@ -295,6 +271,37 @@ bool wildcardMatch(LPCWSTR wild, LPCWSTR str)
     return !*wild;
 }
 
+/** Converts a UTF-8 string to a string where all chars < 32 or > 126 are
+    converted to entities. Pass NULL for buf to get the size needed for buf.
+    @return the number of bytes in the converted string including the terminator */
+INT utf8ToAscii(LPCSTR str, LPSTR buf)
+{
+    INT bytes = 0;
+    LPSTR b = buf;
+    LPCSTR s = str;
+    utf8::uint32_t cp;
+    while (*s) {
+        cp = utf8::unchecked::next(s);
+        if (cp < 32 || cp > 126) {
+            if (buf) {
+                ::sprintf_s(b, 9, "&#x%04X;", cp);
+                b += 8;
+            }
+            bytes += 8;
+        }
+        else {
+            if (buf) {
+                *b++ = (unsigned char)cp;
+            }
+            ++bytes;
+        }
+    }
+    if (buf) {
+        *b = 0;
+    }
+    return bytes + 1;
+}
+
 /** cStr must be zero-terminated.
     @return a pointer to an allocated buffer which caller must free, else NULL
     on error */
@@ -312,7 +319,7 @@ LPWSTR utf8ToUtf16(LPCSTR cStr, LPWSTR buf, size_t bufLen)
     DWORD lastError;
     LPWSTR wBuf = NULL;
 
-    wLen = ::MultiByteToWideChar(CP_UTF8, _mbConversionFlag, cStr, -1, NULL, 0);
+    wLen = ::MultiByteToWideChar(CP_UTF8, 0, cStr, -1, NULL, 0);
     if (wLen > 0) {
         if (buf) {
             if (bufLen >= wLen) {
@@ -368,7 +375,7 @@ LPSTR utf16ToUtf8(LPCWSTR wStr, LPSTR buf, size_t bufLen)
     DWORD lastError;
     LPSTR cBuf = NULL;
 
-    cLen = ::WideCharToMultiByte(CP_UTF8, _wcConversionFlag, wStr, -1, NULL, 0, NULL, NULL);
+    cLen = ::WideCharToMultiByte(CP_UTF8, 0, wStr, -1, NULL, 0, NULL, NULL);
     if (cLen > 0) {
         if (buf) {
             if (bufLen >= cLen) {
@@ -509,7 +516,7 @@ void getCbSelText(HWND hDlg, UINT idCtrl, LPWSTR buf)
     }
 }
 
-// http://stackoverflow.com/questions/1823883/updating-text-in-a-c-win32-api-static-control-drawn-with-ws-ex-transparent
+/** @see http://stackoverflow.com/questions/1823883/updating-text-in-a-c-win32-api-static-control-drawn-with-ws-ex-transparent */
 void redrawControl(HWND hDlg, HWND hCtrl)
 {
     RECT r;

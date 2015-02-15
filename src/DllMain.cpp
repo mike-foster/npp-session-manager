@@ -21,7 +21,6 @@
 #include "Settings.h"
 #include "Properties.h"
 #include "ContextMenu.h"
-#include "Util.h"
 
 using namespace NppPlugin::api;
 
@@ -62,7 +61,6 @@ BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 extern "C" __declspec(dllexport) void setInfo(NppData nppd)
 {
     sys_init(nppd);
-    util_init();
     app_init();
     mnu_init();
     prp_init();

@@ -43,15 +43,6 @@ inline LPCWSTR boolToStr(const bool b) { return b ? L"true" : L"false"; }
 inline const bool uintToBool(UINT n) { return n == 0 ? false : true; }
 
 //------------------------------------------------------------------------------
-/// @namespace NppPlugin::api Contains functions called only from DllMain.
-
-namespace api {
-
-void util_init();
-
-} // end namespace NppPlugin::api
-
-//------------------------------------------------------------------------------
 /** @namespace NppPlugin::msg Contains functions for displaying error and
     informational messages to the user and for logging to the debug log file. */
 
@@ -88,6 +79,7 @@ void removeAmp(LPCWSTR src, LPWSTR dst);
 void removeAmp(LPCSTR src, LPSTR dst);
 bool wildcardMatchI(LPCWSTR wild, LPCWSTR str);
 bool wildcardMatch(LPCWSTR wild, LPCWSTR str);
+INT utf8ToAscii(LPCSTR str, LPSTR buf = NULL);
 LPWSTR utf8ToUtf16(LPCSTR cStr);
 LPWSTR utf8ToUtf16(LPCSTR cStr, LPWSTR buf, size_t bufLen);
 LPSTR utf16ToUtf8(LPCWSTR wStr);

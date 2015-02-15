@@ -206,14 +206,13 @@ extern "C" void cbHelp()
 
 extern "C" void cbAbout()
 {
-    const size_t s = 7 * MAX_PATH;
-    WCHAR m[s + 1], b[MAX_PATH];
+    const size_t s = 450;
+    WCHAR m[s];
 
     ::StringCchCopyW(m, s, PLUGIN_ABOUT);
-    ::StringCchCatW(m, s, L"\n\nConfiguration directory:\n");
-    ::StringCchCatW(m, s, sys_getCfgDir());
-    ::StringCchCatW(m, s, L"\n\nSpecial thanks to...\n- Don Ho, for Notepad++\n- Dave Brotherstone, for PluginManager\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Jack Handy, for wildcardMatch\n- Jens Lorenz and Thell Fowler, for example code\n- Users at the plugin forum, for testing and feedback\n- You! for using Session Manager");
+    ::StringCchCatW(m, s, L"\n\nSpecial thanks to....\n\n- Don Ho and team, for Notepad++\n- You! for using Session Manager\n- Dave Brotherstone, for PluginManager\n- Jack Handy, for wildcardMatch\n- Jens Lorenz and Thell Fowler, for example code\n- Julien Audo, for ResEdit\n- Lee Thomason, for TinyXML2\n- Nemanja Trifunovic, for UTF8-CPP\n- Users at the plugin forum, for testing and feedback");
     msg::show(m, L"About Session Manager", MB_ICONINFORMATION);
+    //LOG("strlen = %u", ::wcslen(m));
 }
 
 void loadFavorite(INT mnuOfs)

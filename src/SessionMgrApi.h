@@ -12,7 +12,7 @@
     @file      SessionMgrApi.h
     @copyright Copyright 2014,2015 Michael Foster <http://mfoster.com/npp/>
 
-    Session Manager API
+    Session Manager P2P API
 
     Clients should send NPPM_MSGTOPLUGIN to NPP with wParam pointing to
     L"SessionMgr.dll" and lParam pointing to a SessionMgrApiData object.
@@ -21,81 +21,151 @@
 #ifndef NPP_PLUGIN_SESSIONMGRAPI_H
 #define NPP_PLUGIN_SESSIONMGRAPI_H
 
-#define SESMGR_NULL   0
-#define SESMGR_OK    -1
-#define SESMGR_ERROR -2
-#define SESMGR_BUSY  -3
+#define SM_NULL    0
+#define SM_OK     -1
+#define SM_BUSY   -2
+#define SM_ERROR  -3
+#define SM_INVMSG -4
+#define SM_INVARG -5
 
 /** This is compatible with casting to NPP's CommunicationInfo struct.
-    @since v1.1
-    @see   npp\Notepad_plus_msgs.h */
-typedef struct SessionMgrApiData_tag {
-    long    message;         ///< one of the SESMGRM_ message codes
+    @see npp\Notepad_plus_msgs.h */
+struct SessionMgrApiData {
+    long    message;         ///< one of the SMM_ message codes
     LPCWSTR caller;          ///< for NPP but not used as of v6.6.9
     INT     iData;           ///< input and output API usage
     WCHAR   wData[MAX_PATH]; ///< input or output API usage
-} SessionMgrApiData;
+};
+
+enum SettingId {
+    kAutomaticSave = 0,
+    kAutomaticLoad,
+    kLoadIntoCurrent,
+    kLoadWithoutClosing,
+    kShowInTitlebar,
+    kShowInStatusbar,
+    kUseGlobalProperties,
+    kCleanGlobalProperties,
+    kUseContextMenu,
+    kBackupOnStartup,
+    kSessionSaveDelay,
+    kSettingsSavePoll,
+    kSessionDirectory,
+    kSessionExtension,
+    kCurrentMark,
+    kCurrentFavMark,
+    kPreviousMark,
+    kPreviousFavMark,
+    kDefaultMark,
+    kDefaultFavMark,
+    kFavoriteMark,
+    kUseFilterWildcards,
+    kSessionSortOrder,
+    kCurrentSession,
+    kPreviousSession,
+    kDefaultSession,
+    kMenuLabelMain,
+    kMenuLabelSub1,
+    kMenuLabelSub2,
+    kMenuLabelSub3,
+    kMenuLabelSub4,
+    kMenuLabelSub5,
+    kMenuLabelSub6,
+    kSessionsDialogWidth,
+    kSessionsDialogHeight,
+    kSettingsDialogWidth,
+    kSettingsDialogHeight,
+    kDebugLogLevel,
+    kDebugLogFile,
+    kSettingsCount
+};
+
+//------------------------------------------------------------------------------
 
 /** Loads a session from the current sessions list.
     @pre  wData = session name, no path or extension
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_ERROR if not in the list, else SESMGR_OK */
-#define SESMGRM_SES_LOAD     (WM_APP + 1)
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY or SM_INVARG */
+#define SMM_SES_LOAD     (WM_APP + 1)
 
 /** Loads the previous session.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK */
-#define SESMGRM_SES_LOAD_PRV (WM_APP + 2)
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY */
+#define SMM_SES_LOAD_PRV (WM_APP + 2)
 
 /** Loads the default session.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK */
-#define SESMGRM_SES_LOAD_DEF (WM_APP + 3)
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY */
+#define SMM_SES_LOAD_DEF (WM_APP + 3)
 
 /** Saves the current session.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK */
-#define SESMGRM_SES_SAVE     (WM_APP + 4)
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY */
+#define SMM_SES_SAVE     (WM_APP + 4)
 
 /** Gets the current session name, no path or extension.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY
     @post wData = name */
-#define SESMGRM_SES_GET_NAME (WM_APP + 5)
+#define SMM_SES_GET_NAME (WM_APP + 5)
 
-/** Gets the fully qualified name of the current session.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK
+/** Gets the fully qualified name of the current session file.
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY
     @post wData = fqn */
-#define SESMGRM_SES_GET_FQN  (WM_APP + 6)
+#define SMM_SES_GET_FQN  (WM_APP + 6)
 
-/** Gets the current session directory.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK
-    @post wData = directory */
-#define SESMGRM_CFG_GET_DIR  (WM_APP + 7)
+/** Gets the integer value of a setting.
+    @pre  iData    = SettingId
+    @post iData    = SM_OK else SM_BUSY or SM_INVARG
+    @post wData[0] = value of setting */
+#define SMM_CFG_GET_INT  (WM_APP + 7)
 
-/** Gets the current session file extension.
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK
-    @post wData = extension */
-#define SESMGRM_CFG_GET_EXT  (WM_APP + 8)
+/** Sets the integer value of a setting.
+    @pre  iData    = SettingId
+    @pre  wData[0] = value to set
+    @post iData    = SM_OK else SM_BUSY or SM_INVARG */
+#define SMM_CFG_PUT_INT  (WM_APP + 8)
 
-/** Sets the current session directory. Creates the directory if needed, saves
-    the settings file, then reloads the current sessions list.
-    @pre  wData = directory
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_ERROR if directory creation failed, else SESMGR_OK */
-#define SESMGRM_CFG_SET_DIR  (WM_APP + 9)
+/** Gets the string value of a setting.
+    @pre  iData = SettingId
+    @post iData = SM_OK else SM_BUSY or SM_INVARG
+    @post wData = value of setting */
+#define SMM_CFG_GET_STR  (WM_APP + 9)
 
-/** Sets the current session file extension. Saves the settings file then
-    reloads the current sessions list.
-    @pre  wData = extension
-    @pre  iData = SESMGR_NULL
-    @post iData = SESMGR_OK */
-#define SESMGRM_CFG_SET_EXT  (WM_APP + 10)
+/** Sets the string value of a setting.
+    @pre  iData = SettingId
+    @pre  wData = value to set
+    @post iData = SM_OK else SM_BUSY, SM_INVARG or SM_ERROR */
+#define SMM_CFG_PUT_STR  (WM_APP + 10)
 
-/** TODO: Read/write access to favorites, filters and more settings.
-*/
+/** Removes all favorites.
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY */
+#define SMM_FAV_CLR      (WM_APP + 11)
+
+/** Adds or removes a session as a favorite.
+    @pre  wData = session name, no path or extension
+    @pre  iData = 0: remove, 1: add
+    @post iData = SM_OK else SM_BUSY, SM_INVARG or SM_ERROR */
+#define SMM_FAV_SET      (WM_APP + 12)
+
+/** Removes all filters.
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY */
+#define SMM_FIL_CLR      (WM_APP + 13)
+
+/** Adds a filter. It is moved to the top if it is already in the list.
+    @pre  wData = filter
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY */
+#define SMM_FIL_ADD      (WM_APP + 14)
+
+/** Gets NPP's configuration directory.
+    @pre  iData = SM_NULL
+    @post iData = SM_OK else SM_BUSY or SM_ERROR
+    @post wData = path */
+#define SMM_NPP_CFG_DIR  (WM_APP + 15)
+
 
 #endif // NPP_PLUGIN_SESSIONMGRAPI_H

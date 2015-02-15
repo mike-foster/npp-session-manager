@@ -19,7 +19,6 @@
 #include "Util.h"
 #include "Properties.h"
 #include "ContextMenu.h"
-#include "SessionMgrApi.h"
 #include <algorithm>
 #include <strsafe.h>
 #include <time.h>
@@ -92,7 +91,9 @@ void app_onUnload()
 
 void app_init()
 {
-    LOG("-------------- START %S %s with debug level %i", PLUGIN_FULL_NAME, RES_VERSION_S, cfg::getInt(kDebugLogLevel));
+    DWORD nppVer = sys_getNppVer();
+    LOG("-------------- START %S %s", PLUGIN_FULL_NAME, RES_VERSION_S);
+    LOG("win:%u, npp:%u.%u, dbg:%u, cfg:\"%S\", ctx:\"%S\"", sys_getWinVer(), HIWORD(nppVer), LOWORD(nppVer), gDbgLvl, sys_getCfgDir(), sys_getNppCtxMnuFile());
     app_readSessionDirectory(true);
 }
 
@@ -238,83 +239,182 @@ void app_onNotify(SCNotification *pscn)
     }
 }
 
-/** Session Manager API. Handles messages from NPP or a plugin.
-    @since v0.8.4.1
-    @see   SessionMgrApi.h */
+/** Session Manager P2P API. Handles messages from NPP or a plugin.
+    @see SessionMgrApi.h */
 LRESULT app_msgProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
-    if (Message == NPPM_MSGTOPLUGIN) {
-        INT si;
-        SessionMgrApiData *api = (SessionMgrApiData*)lParam;
-        if (gDbgLvl >= 10) {
-            switch (api->message) {
-                case SESMGRM_SES_LOAD:     LOG("SESMGRM_SES_LOAD"); break;
-                case SESMGRM_SES_LOAD_PRV: LOG("SESMGRM_SES_LOAD_PRV"); break;
-                case SESMGRM_SES_LOAD_DEF: LOG("SESMGRM_SES_LOAD_DEF"); break;
-                case SESMGRM_SES_SAVE:     LOG("SESMGRM_SES_SAVE"); break;
-                case SESMGRM_SES_GET_NAME: LOG("SESMGRM_SES_GET_NAME"); break;
-                case SESMGRM_SES_GET_FQN:  LOG("SESMGRM_SES_GET_FQN"); break;
-                case SESMGRM_CFG_GET_DIR:  LOG("SESMGRM_CFG_GET_DIR"); break;
-                case SESMGRM_CFG_GET_EXT:  LOG("SESMGRM_CFG_GET_EXT"); break;
-                case SESMGRM_CFG_SET_DIR:  LOG("SESMGRM_CFG_SET_DIR"); break;
-                case SESMGRM_CFG_SET_EXT:  LOG("SESMGRM_CFG_SET_EXT"); break;
+    if (Message != NPPM_MSGTOPLUGIN) {
+        return 1;
+    }
+    SessionMgrApiData *api = (SessionMgrApiData*)lParam;
+    LOGG(10, "API msg=%u, iData=%i, wData=\"%S\"", api->message, api->iData, api->wData);
+    if (!_appReady || _sesLoading) {
+        LOGG(10, "SM_BUSY");
+        api->iData = SM_BUSY;
+        return 1;
+    }
+
+    INT i;
+    SettingId si;
+    Session *ses;
+
+    switch (api->message) {
+        case SMM_SES_LOAD:
+            i = app_getSessionIndex(api->wData);
+            if (i <= SI_NONE) {
+                api->iData = SM_INVARG; // session not found in current list
             }
-        }
-        if (!_appReady || _sesLoading) {
-            LOGG(10, "SESMGR_BUSY");
-            api->iData = SESMGR_BUSY;
-            return 1;
-        }
-        switch (api->message) {
-            case SESMGRM_SES_LOAD:
-                si = app_getSessionIndex((LPWSTR)api->wData);
-                if (si <= SI_NONE) {
-                    api->iData = SESMGR_ERROR; // session not found in current list
+            else {
+                app_loadSession(i);
+                api->iData = SM_OK;
+            }
+            break;
+        case SMM_SES_LOAD_PRV:
+            app_loadSession(SI_PREVIOUS);
+            api->iData = SM_OK;
+            break;
+        case SMM_SES_LOAD_DEF:
+            app_loadSession(SI_DEFAULT);
+            api->iData = SM_OK;
+            break;
+        case SMM_SES_SAVE:
+            app_saveSession(SI_CURRENT);
+            api->iData = SM_OK;
+            break;
+        case SMM_SES_GET_NAME:
+            ::StringCchCopyW(api->wData, MAX_PATH, app_getSessionName(SI_CURRENT));
+            api->iData = SM_OK;
+            break;
+        case SMM_SES_GET_FQN:
+            app_getSessionFile(SI_CURRENT, api->wData);
+            api->iData = SM_OK;
+            break;
+        case SMM_CFG_GET_INT:
+            si = (SettingId)api->iData;
+            if ((si >= kAutomaticSave && si <= kSettingsSavePoll) ||
+                (si >= kCurrentMark && si <= kSessionSortOrder) ||
+                (si >= kSessionsDialogWidth && si <= kDebugLogLevel))
+            {
+                api->wData[0] = (WCHAR)cfg::getInt(si);
+                api->iData = SM_OK;
+            }
+            else {
+                api->iData = SM_INVARG;
+            }
+            break;
+        case SMM_CFG_PUT_INT:
+            si = (SettingId)api->iData;
+            if ((si >= kAutomaticSave && si <= kSettingsSavePoll) ||
+                (si >= kCurrentMark && si <= kSessionSortOrder) ||
+                si == kDebugLogLevel)
+            {
+                i = (INT)api->wData[0];
+                if (si == kShowInTitlebar) {
+                    cfg::setShowInTitlebar(i != 0);
+                }
+                else if (si == kShowInStatusbar) {
+                    cfg::setShowInStatusbar(i != 0);
+                }
+                else if (si == kUseContextMenu) {
+                    if (cfg::getBool(kUseContextMenu) && !i) {
+                        ctx::unload();
+                    }
+                    cfg::putInt(si, i);
                 }
                 else {
-                    app_loadSession(si);
+                    cfg::putInt(si, i);
                 }
-                break;
-            case SESMGRM_SES_LOAD_PRV:
-                app_loadSession(SI_PREVIOUS);
-                break;
-            case SESMGRM_SES_LOAD_DEF:
-                app_loadSession(SI_DEFAULT);
-                break;
-            case SESMGRM_SES_SAVE:
-                app_saveSession(SI_CURRENT);
-                break;
-            case SESMGRM_SES_GET_NAME:
-                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, app_getSessionName(SI_CURRENT));
-                break;
-            case SESMGRM_SES_GET_FQN:
-                app_getSessionFile(SI_CURRENT, (LPWSTR)api->wData);
-                break;
-            case SESMGRM_CFG_GET_DIR:
-                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, cfg::getStr(kSessionDirectory));
-                break;
-            case SESMGRM_CFG_SET_DIR:
-                if (!cfg::setSessionDirectory((LPWSTR)api->wData)) {
-                    api->iData = SESMGR_ERROR; // error creating directory
+                api->iData = SM_OK;
+            }
+            else {
+                api->iData = SM_INVARG;
+            }
+            break;
+        case SMM_CFG_GET_STR:
+            si = (SettingId)api->iData;
+            if (si >= 0 && si <= kDebugLogFile) {
+                cfg::getStr(si, api->wData, MAX_PATH);
+                api->iData = SM_OK;
+            }
+            else {
+                api->iData = SM_INVARG;
+            }
+            break;
+        case SMM_CFG_PUT_STR:
+            si = (SettingId)api->iData;
+            if ((si >= kSessionDirectory && si <= kSessionExtension) ||
+                (si >= kMenuLabelMain && si <= kMenuLabelSub6) ||
+                si == kDebugLogFile)
+            {
+                if (si == kSessionDirectory) {
+                    if (!cfg::setSessionDirectory(api->wData)) {
+                        api->iData = SM_ERROR; // error creating directory
+                    }
+                    else {
+                        cfg::saveSettings();
+                        app_readSessionDirectory();
+                        api->iData = SM_OK;
+                    }
                 }
-                else {
+                else if (si == kSessionExtension) {
+                    cfg::setSessionExtension(api->wData);
                     cfg::saveSettings();
                     app_readSessionDirectory();
+                    api->iData = SM_OK;
                 }
-                break;
-            case SESMGRM_CFG_GET_EXT:
-                ::StringCchCopyW((LPWSTR)api->wData, MAX_PATH, cfg::getStr(kSessionExtension));
-                break;
-            case SESMGRM_CFG_SET_EXT:
-                cfg::setSessionExtension((LPWSTR)api->wData);
-                cfg::saveSettings();
-                app_readSessionDirectory();
-                break;
-        }
-        if (api->iData == SESMGR_NULL) {
-            api->iData = SESMGR_OK;
-        }
+                else {
+                    cfg::putStr(si, api->wData);
+                    api->iData = SM_OK;
+                }
+            }
+            else {
+                api->iData = SM_INVARG;
+            }
+            break;
+        case SMM_NPP_CFG_DIR:
+            ::StringCchCopyW(api->wData, MAX_PATH, sys_getNppCtxMnuFile());
+            if (pth::removeName(api->wData, MAX_PATH) != 0) {
+                api->iData = SM_ERROR;
+            }
+            else {
+                api->iData = SM_OK;
+            }
+            break;
+        case SMM_FAV_CLR:
+            app_updateFavorites(true);
+            api->iData = SM_OK;
+            break;
+        case SMM_FAV_SET:
+            i = app_getSessionIndex(api->wData);
+            if (i <= SI_NONE) {
+                api->iData = SM_INVARG; // session not found in current list
+            }
+            else {
+                ses = app_getSessionObject(i);
+                if (!ses) {
+                    api->iData = SM_ERROR;
+                }
+                else {
+                    ses->isFavorite = (bool)api->iData;
+                    app_updateFavorites();
+                    api->iData = SM_OK;
+                }
+            }
+            break;
+        case SMM_FIL_CLR:
+            cfg::deleteChildren(kFilters);
+            cfg::addChild(kFilters, L"*");
+            api->iData = SM_OK;
+            break;
+        case SMM_FIL_ADD:
+            cfg::moveToTop(kFilters, api->wData);
+            api->iData = SM_OK;
+            break;
+        default:
+            api->iData = SM_INVMSG;
+            break;
     }
+
     return 1;
 }
 
@@ -673,16 +773,16 @@ void app_updateNppBars()
     }
 }
 
-/** Removes all favorites from settings then adds all the currently marked
-    favorite sessions. */
-void app_updateFavorites()
+/** Removes all favorites then adds all the currently marked favorite sessions. */
+void app_updateFavorites(bool clearAll)
 {
-    INT i = 0;
-
     cfg::deleteChildren(kFavorites);
     ctx::deleteFavorites();
-    for (vector<Session>::const_iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
-        if (it->isFavorite) {
+    for (vector<Session>::iterator it = _sessions.begin(); it != _sessions.end(); ++it) {
+        if (clearAll) {
+            it->isFavorite = false;
+        }
+        else if (it->isFavorite) {
             cfg::addChild(kFavorites, it->name);
             ctx::addFavorite(it->name);
         }

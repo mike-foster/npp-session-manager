@@ -17,6 +17,7 @@
 #include "SessionMgr.h"
 #include "Util.h"
 #include <strsafe.h>
+//#include <shlobj.h> // for findNppCtxMnuFile
 
 //------------------------------------------------------------------------------
 
@@ -28,20 +29,25 @@ namespace {
 
 #define INI_FILE_NAME L"settings.ini"
 #define CFG_FILE_NAME L"settings.xml"
-#define PROPS_FILE_NAME L"global.xml"
-#define PROPS_DEFAULT_CONTENT "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<NotepadPlus><FileProperties></FileProperties></NotepadPlus>\n"
+#define CTX_FILE_NAME L"contextMenu.xml"
+#define GLB_FILE_NAME L"global.xml"
+#define GLB_DEFAULT_CONTENT "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<NotepadPlus><FileProperties></FileProperties></NotepadPlus>\n"
+#define BAK_DIR_NAME L"backup"
+#define BAK_SES_DIR_NAME L"sessions"
 
 HWND _hNpp;
 HWND _hSci1;
 HWND _hSci2;
 HANDLE _hHeap;
 HINSTANCE _hDll;
-//UINT _nppVersion;
-LPWSTR _cfgDir;    ///< SessionMgr's config directory, includes trailing slash
-LPWSTR _cfgFile;   ///< pathname of settings.xml
-LPWSTR _ctxFile;   ///< pathname of NPP's contextMenu.xml file
-LPWSTR _propsFile; ///< pathname of global.xml
+UINT _nppVersion;
+UINT _winVersion;
+LPWSTR _cfgDir;  ///< SessionMgr's config directory, includes trailing slash
+LPWSTR _cfgFile; ///< pathname of settings.xml
+LPWSTR _glbFile; ///< pathname of global.xml
+LPWSTR _ctxFile; ///< pathname of NPP's contextMenu.xml file
 
+//void findNppCtxMnuFile();
 void backupFiles();
 void backupConfigFiles(LPCWSTR backupDir);
 void backupSessionFiles(LPCWSTR backupDir);
@@ -59,10 +65,10 @@ void sys_onLoad(HINSTANCE hDLLInstance)
 
 void sys_onUnload()
 {
-    sys_free(_cfgDir);
-    sys_free(_cfgFile);
     sys_free(_ctxFile);
-    sys_free(_propsFile);
+    sys_free(_glbFile);
+    sys_free(_cfgFile);
+    sys_free(_cfgDir);
 }
 
 void sys_init(NppData nppd)
@@ -76,31 +82,40 @@ void sys_init(NppData nppd)
     // Allocate buffers
     _cfgDir = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
     _cfgFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
+    _glbFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
     _ctxFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
-    _propsFile = (LPWSTR)sys_alloc(MAX_PATH * sizeof WCHAR);
 
-    //_nppVersion = ::SendMessage(_hNpp, NPPM_GETNPPVERSION, 0, 0);
+    _nppVersion = ::SendMessage(_hNpp, NPPM_GETNPPVERSION, 0, 0);
+    _winVersion = ::SendMessage(_hNpp, NPPM_GETWINDOWSVERSION, 0, 0);
 
-    // Get NPP's contextMenu.xml pathname.
-    ::SendMessage(_hNpp, NPPM_GETNPPDIRECTORY, MAX_PATH, (LPARAM)_ctxFile);
-    pth::appendSlash(_ctxFile, MAX_PATH);
-    ::StringCchCatW(_ctxFile, MAX_PATH, L"contextMenu.xml");
-    // Get plugin config directory from NPP.
-    ::SendMessage(_hNpp, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)_cfgDir);
-    // Get SessionMgr config directory and create it if not present.
+    // Get NPP's "plugins\Config" directory.
+    ::SendMessage(_hNpp, NPPM_GETPLUGINSCONFIGDIR, MAX_PATH, (LPARAM)_ctxFile);
+
+    // Get SessionMgr config directory and create it if missing.
+    ::StringCchCopyW(_cfgDir, MAX_PATH, _ctxFile);
     pth::appendSlash(_cfgDir, MAX_PATH);
     ::StringCchCatW(_cfgDir, MAX_PATH, PLUGIN_DLL_NAME);
     ::StringCchCatW(_cfgDir, MAX_PATH, L"\\");
     ::CreateDirectoryW(_cfgDir, NULL);
 
+    // Get the global.xml file pathname and create it if missing.
+    ::StringCchCopyW(_glbFile, MAX_PATH, _cfgDir);
+    ::StringCchCatW(_glbFile, MAX_PATH, GLB_FILE_NAME);
+    pth::createFileIfMissing(_glbFile, GLB_DEFAULT_CONTENT);
+
     // Get the settings.xml file pathname and load the configuration.
     ::StringCchCopyW(_cfgFile, MAX_PATH, _cfgDir);
     ::StringCchCatW(_cfgFile, MAX_PATH, CFG_FILE_NAME);
     cfg::loadSettings();
-    // Create sessions directory if it doesn't exist.
+    // Create sessions directory if missing.
     ::CreateDirectoryW(cfg::getStr(kSessionDirectory), NULL);
-    // Create default session file if it doesn't exist.
+    // Create default session file if missing.
     app_confirmDefaultSession();
+
+    // Get NPP's contextMenu.xml pathname (two directories up from "plugins\Config").
+    LPWSTR p = ::wcsstr(_ctxFile, L"plugins\\Config");
+    ::StringCchCopyW(p, MAX_PATH, CTX_FILE_NAME);
+
     // Backup existing config and session files.
     if (cfg::getBool(kBackupOnStartup)) {
         backupFiles();
@@ -121,17 +136,12 @@ LPWSTR sys_getSettingsFile()
     return _cfgFile;
 }
 
-LPWSTR sys_getPropsFile()
+LPWSTR sys_getGlobalFile()
 {
-    if (!_propsFile[0]) {
-        ::StringCchCopyW(_propsFile, MAX_PATH, _cfgDir);
-        ::StringCchCatW(_propsFile, MAX_PATH, PROPS_FILE_NAME);
-        pth::createFileIfMissing(_propsFile, PROPS_DEFAULT_CONTENT);
-    }
-    return _propsFile;
+    return _glbFile;
 }
 
-LPCWSTR sys_getContextMenuFile()
+LPCWSTR sys_getNppCtxMnuFile()
 {
     return _ctxFile;
 }
@@ -153,6 +163,19 @@ HWND sys_getSciHandle(INT v)
     else return NULL;
 }
 
+/** @return NPP version with major in hiword and minor in loword */
+DWORD sys_getNppVer()
+{
+    return _nppVersion;
+}
+
+/** @return a winVer enum
+    @see npp/Notepad_plus_msgs.h */
+UINT sys_getWinVer()
+{
+    return _winVersion;
+}
+
 LPVOID sys_alloc(INT bytes)
 {
     LPVOID p = ::HeapAlloc(_hHeap, HEAP_ZERO_MEMORY, bytes);
@@ -172,21 +195,76 @@ void sys_free(LPVOID p)
 
 namespace {
 
+/* Gets the pathname of NPP's contextMenu.xml. Now not used. Just assume the
+   file is two directories up from "plugins\Config".
+void findNppCtxMnuFile()
+{
+    ITEMIDLIST *pidl;
+    bool isLocal = false;
+    WCHAR tmp[MAX_PATH], nppDir[MAX_PATH];
+
+    ::SendMessage(_hNpp, NPPM_GETNPPDIRECTORY, MAX_PATH, (LPARAM)nppDir);
+    pth::appendSlash(nppDir, MAX_PATH);
+    ::StringCchCopyW(tmp, MAX_PATH, nppDir);
+    ::StringCchCatW(tmp, MAX_PATH, L"doLocalConf.xml");
+    if (pth::fileExists(tmp)) {
+        isLocal = true;
+        LOGG(12, "Found doLocalConf.xml");
+    }
+
+    // See NppParameters::load in NPP's Parameters.cpp...
+    if (isLocal && _winVersion >= WV_VISTA) {
+        if (::SHGetSpecialFolderLocation(NULL, CSIDL_PROGRAM_FILES, &pidl) == S_OK) {
+            if (::SHGetPathFromIDList(pidl, tmp)) {
+                LOGG(12, "prg=\"%S\", npp=\"%S\"", tmp, nppDir);
+                if  (::_wcsnicmp(tmp, nppDir, wcslen(tmp)) == 0) {
+                    isLocal = false;
+                }
+            }
+            else LOGG(12, "SHGetPathFromIDList failed for CSIDL_PROGRAM_FILES");
+            //::CoTaskMemFree(pidl);
+        }
+        else LOGG(12, "SHGetSpecialFolderLocation failed for CSIDL_PROGRAM_FILES");
+    }
+    ::StringCchCopyW(_ctxFile, MAX_PATH, nppDir);
+    if (!isLocal) {
+        if (::SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA, &pidl) == S_OK) {
+            if (::SHGetPathFromIDList(pidl, tmp)) {
+                pth::appendSlash(tmp, MAX_PATH);
+                ::StringCchCatW(tmp, MAX_PATH, L"Notepad++");
+                if (pth::dirExists(tmp)) {
+                    LOGG(12, "Found \"%S\"", tmp);
+                    ::StringCchCopyW(_ctxFile, MAX_PATH, tmp);
+                }
+                else LOGG(12, "Could not find \"%S\"", tmp);
+            }
+            else LOGG(12, "SHGetPathFromIDList failed for CSIDL_APPDATA");
+            //::CoTaskMemFree(pidl);
+        }
+        else LOGG(12, "SHGetSpecialFolderLocation failed for CSIDL_APPDATA");
+    }
+
+    pth::appendSlash(_ctxFile, MAX_PATH);
+    ::StringCchCatW(_ctxFile, MAX_PATH, CTX_FILE_NAME);
+    LOGG(12, "Will use \"%S\"", _ctxFile);
+}
+*/
+
 void backupFiles()
 {
     WCHAR backupDir[MAX_PATH];
 
-    // Create main backup directory if it doesn't exist and copy config files.
+    // Create main backup directory if missing and copy config files.
     ::StringCchCopyW(backupDir, MAX_PATH, _cfgDir);
-    ::StringCchCatW(backupDir, MAX_PATH, L"backup");
+    ::StringCchCatW(backupDir, MAX_PATH, BAK_DIR_NAME);
     if (!pth::dirExists(backupDir)) {
         ::CreateDirectoryW(backupDir, NULL);
     }
     if (pth::dirExists(backupDir)) {
         ::StringCchCatW(backupDir, MAX_PATH, L"\\");
         backupConfigFiles(backupDir);
-        // Create backup directory for session files if it doesn't exist and copy session files.
-        ::StringCchCatW(backupDir, MAX_PATH, L"sessions");
+        // Create backup directory for session files if missing and copy session files.
+        ::StringCchCatW(backupDir, MAX_PATH, BAK_SES_DIR_NAME);
         if (!pth::dirExists(backupDir)) {
             ::CreateDirectoryW(backupDir, NULL);
         }
@@ -208,15 +286,15 @@ void backupConfigFiles(LPCWSTR backupDir)
         ::CopyFileW(_cfgFile, dstFile, FALSE);
     }
     // Copy global.xml
-    if (pth::fileExists(sys_getPropsFile())) {
+    if (pth::fileExists(_glbFile)) {
         ::StringCchCopyW(dstFile, MAX_PATH, backupDir);
-        ::StringCchCatW(dstFile, MAX_PATH, PROPS_FILE_NAME);
-        ::CopyFileW(_propsFile, dstFile, FALSE);
+        ::StringCchCatW(dstFile, MAX_PATH, GLB_FILE_NAME);
+        ::CopyFileW(_glbFile, dstFile, FALSE);
     }
     // Copy NPP's contextMenu.xml
     if (pth::fileExists(_ctxFile)) {
         ::StringCchCopyW(dstFile, MAX_PATH, backupDir);
-        ::StringCchCatW(dstFile, MAX_PATH, L"contextMenu.xml");
+        ::StringCchCatW(dstFile, MAX_PATH, CTX_FILE_NAME);
         ::CopyFileW(_ctxFile, dstFile, FALSE);
     }
 }
