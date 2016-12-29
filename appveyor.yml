@@ -1,0 +1,53 @@
+version: 1.4.3.{build}
+image: Visual Studio 2017
+
+environment:
+    matrix:
+      - PlatformToolset: v140_xp
+      #- PlatformToolset: v141_xp
+
+platform:
+    - x64
+    - x86
+
+configuration:
+    - Release
+    #- Debug
+
+install:
+    - if "%platform%"=="x64" set archi=amd64
+    - if "%platform%"=="x86" set archi=x86
+    - if "%PlatformToolset%"=="v140_xp" call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %archi%
+    - if "%PlatformToolset%"=="v141_xp" call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %archi%
+
+build_script:
+    - cd "%APPVEYOR_BUILD_FOLDER%"
+    - nmake
+
+after_build:
+    - cd "%APPVEYOR_BUILD_FOLDER%"
+    - ps: >-
+        Push-AppveyorArtifact "obj\SessionMgr.dll" -FileName SessionMgr.dll
+
+        if ($($env:APPVEYOR_REPO_TAG) -eq "true" -and $env:CONFIGURATION -eq "Release" -and $env:PLATFORMTOOLSET -eq "v140_xp") {
+            $ZipFileName = "SessionMgr_$($env:APPVEYOR_REPO_TAG_NAME)_$env:PLATFORM.zip"
+            7z a $ZipFileName "$($env:APPVEYOR_BUILD_FOLDER)\obj\SessionMgr.dll"
+            7z a $ZipFileName "$($env:APPVEYOR_BUILD_FOLDER)\doc"
+        }
+
+artifacts:
+  - path: SessionMgr_*.zip
+    name: releases
+
+deploy:
+    provider: GitHub
+    auth_token:
+        secure: PhNXrhw03Z0rJZssX/UYyoIofw669wU1GBy/hGq+WJPCXd7mbxDu6Il32Rx0LBH6
+    artifact: releases
+    draft: false
+    prerelease: false
+    force_update: true
+    on:
+        appveyor_repo_tag: true
+        PlatformToolset: v140_xp
+        configuration: Release

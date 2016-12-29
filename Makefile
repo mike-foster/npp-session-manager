@@ -16,7 +16,7 @@ X=src\xml
 
 # http://msdn.microsoft.com/en-us/library/fwkeyyhe.aspx
 CXX=cl
-CXXFLAGS=/O2 /EHs /GR- /MT /nologo /W3 /WX- /Gd /Gm- /Fo$O\ /fp:fast /wd4995 \
+CXXFLAGS=/O2 /EHs /GR- /MT /nologo /W3 /WX- /Gd /Gm- /Fo$O\ /fp:fast \
          /errorReport:none /Zc:wchar_t /DWIN32 /DNDEBUG /D_WINDOWS /D_USRDLL \
          /D_WINDLL /DUNICODE /D_UNICODE /c
 
@@ -24,7 +24,7 @@ CXXFLAGS=/O2 /EHs /GR- /MT /nologo /W3 /WX- /Gd /Gm- /Fo$O\ /fp:fast /wd4995 \
 LD=link
 LIBS=user32.lib shell32.lib
 LDFLAGS=/DLL /nologo /OUT:$O\$(PRJ).dll /INCREMENTAL:NO /MANIFEST:NO \
-        /MACHINE:X86 /ERRORREPORT:NONE
+        /ERRORREPORT:NONE
 
 RC=rc
 RCFLAGS=/nologo /fo$O\$(PRJ).res

@@ -36,7 +36,7 @@ namespace prp {
 
 void updateGlobalFromSession(LPWSTR sesFile);
 void updateSessionFromGlobal(LPWSTR sesFile);
-void updateDocumentFromGlobal(INT bufferId);
+void updateDocumentFromGlobal(LRESULT bufferId);
 
 } // end namespace NppPlugin::prp
 

@@ -284,7 +284,7 @@ void updateSessionFromGlobal(LPWSTR sesFile)
 /** Updates document properties from global file properties.
     When an existing document is added to a session, its bookmarks and
     firstVisibleLine are updated from the global properties. */
-void updateDocumentFromGlobal(INT bufferId)
+void updateDocumentFromGlobal(LRESULT bufferId)
 {
     LPSTR mbPathname;
     WCHAR pathname[MAX_PATH];
