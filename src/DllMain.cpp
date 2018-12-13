@@ -68,7 +68,7 @@ extern "C" __declspec(dllexport) void setInfo(NppData nppd)
 
 extern "C" __declspec(dllexport) LPCWSTR getName()
 {
-    return app_getName();
+    return PLUGIN_FULL_NAME;
 }
 
 extern "C" __declspec(dllexport) FuncItem* getFuncsArray(INT *pnbFuncItems)

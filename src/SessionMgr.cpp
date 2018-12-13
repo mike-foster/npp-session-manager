@@ -41,8 +41,8 @@ vector<Session> _sessions; ///< stores info on sessions read from disk
 INT _sesCurIdx;            ///< current session index
 INT _sesPrvIdx;            ///< previous session index
 INT _sesDefIdx;            ///< default session index
-INT _bidFileOpened;        ///< bufferId from most recent NPPN_FILEOPENED
-INT _bidBufferActivated;   ///< XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
+LRESULT _bidFileOpened;        ///< bufferId from most recent NPPN_FILEOPENED
+LRESULT _bidBufferActivated;   ///< XXX experimental. bufferId from most recent NPPN_BUFFERACTIVATED
 bool _appReady;            ///< if false, plugin should do nothing
 bool _sesLoading;          ///< if true, a session is loading
 bool _fileOpenedFromCmdLine;
