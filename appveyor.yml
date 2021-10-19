@@ -1,14 +1,15 @@
 version: 1.4.3.{build}
-image: Visual Studio 2017
+image: Visual Studio 2019
 
 environment:
     matrix:
-      - PlatformToolset: v140_xp
-      #- PlatformToolset: v141_xp
+      - PlatformToolset: v141_xp
+      - PlatformToolset: v142
 
 platform:
     - x64
     - x86
+    - arm64
 
 configuration:
     - Release
@@ -17,8 +18,10 @@ configuration:
 install:
     - if "%platform%"=="x64" set archi=amd64
     - if "%platform%"=="x86" set archi=x86
-    - if "%PlatformToolset%"=="v140_xp" call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" %archi%
+    - if "%platform%"=="arm64" set archi=amd64_arm64
+
     - if "%PlatformToolset%"=="v141_xp" call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %archi%
+    - if "%PlatformToolset%"=="v142" call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" %archi%
 
 build_script:
     - cd "%APPVEYOR_BUILD_FOLDER%"
@@ -29,7 +32,7 @@ after_build:
     - ps: >-
         Push-AppveyorArtifact "obj\SessionMgr.dll" -FileName SessionMgr.dll
 
-        if ($($env:APPVEYOR_REPO_TAG) -eq "true" -and $env:CONFIGURATION -eq "Release" -and $env:PLATFORMTOOLSET -eq "v140_xp") {
+        if ($($env:APPVEYOR_REPO_TAG) -eq "true" -and $env:CONFIGURATION -eq "Release" -and $env:PLATFORMTOOLSET -eq "v141_xp") {
             $ZipFileName = "SessionMgr_$($env:APPVEYOR_REPO_TAG_NAME)_$env:PLATFORM.zip"
             7z a $ZipFileName "$($env:APPVEYOR_BUILD_FOLDER)\obj\SessionMgr.dll"
             7z a $ZipFileName "$($env:APPVEYOR_BUILD_FOLDER)\doc"
@@ -49,5 +52,5 @@ deploy:
     force_update: true
     on:
         appveyor_repo_tag: true
-        PlatformToolset: v140_xp
+        PlatformToolset: v141_xp
         configuration: Release
