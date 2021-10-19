@@ -1,9 +1,8 @@
-version: 1.4.3.{build}
+version: 1.4.4.{build}
 image: Visual Studio 2019
 
 environment:
     matrix:
-      - PlatformToolset: v141_xp
       - PlatformToolset: v142
 
 platform:
@@ -20,7 +19,6 @@ install:
     - if "%platform%"=="x86" set archi=x86
     - if "%platform%"=="arm64" set archi=amd64_arm64
 
-    - if "%PlatformToolset%"=="v141_xp" call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %archi%
     - if "%PlatformToolset%"=="v142" call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" %archi%
 
 build_script:
@@ -32,7 +30,7 @@ after_build:
     - ps: >-
         Push-AppveyorArtifact "obj\SessionMgr.dll" -FileName SessionMgr.dll
 
-        if ($($env:APPVEYOR_REPO_TAG) -eq "true" -and $env:CONFIGURATION -eq "Release" -and $env:PLATFORMTOOLSET -eq "v141_xp") {
+        if ($($env:APPVEYOR_REPO_TAG) -eq "true" -and $env:CONFIGURATION -eq "Release" -and $env:PLATFORMTOOLSET -eq "v142") {
             $ZipFileName = "SessionMgr_$($env:APPVEYOR_REPO_TAG_NAME)_$env:PLATFORM.zip"
             7z a $ZipFileName "$($env:APPVEYOR_BUILD_FOLDER)\obj\SessionMgr.dll"
             7z a $ZipFileName "$($env:APPVEYOR_BUILD_FOLDER)\doc"
@@ -52,5 +50,5 @@ deploy:
     force_update: true
     on:
         appveyor_repo_tag: true
-        PlatformToolset: v141_xp
+        PlatformToolset: v142
         configuration: Release
